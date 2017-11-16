@@ -8,4 +8,6 @@ class RestfulPrediction(Resource):
 
   @namespace.doc('create_new_prediction_for_team')
   def post(self):
+    # Assume input here is github repo
+    # List out all the jobs that need to happen when this happens
     return '', 201
