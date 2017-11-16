@@ -9,3 +9,5 @@ RUN pip install -r /tmp/requirements.txt
 
 # Copy the current directory contents into the container at /app
 COPY ./app /app
+
+ENV ENVIRON dev
