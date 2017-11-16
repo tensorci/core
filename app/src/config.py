@@ -1,5 +1,3 @@
-import inspect
-import json
 import os
 from helpers.env import env
 
@@ -8,32 +6,31 @@ class Config:
   DEBUG = True
   SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-  def as_dict(self):
-    attrs = inspect.getmembers(self, lambda a: not(inspect.isroutine(a)))
-    attrs = [a for a in attrs if not (a[0].startswith('__') and a[0].endswith('__'))]
-    return dict(attrs)
-
-  def as_json_string(self):
-    return json.dumps(self.as_dict(), sort_keys=True, indent=2)
-
 
 class ProdConfig(Config):
   DEBUG = False
-  URL = 'https://yourprodurl.com'
+  DOMAIN = 'glimpse.ai'
+
+  def __init__(self):
+    self.SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
+
+
+class StagingConfig(Config):
+  DOMAIN = 'staging.glimpse.ai'
 
   def __init__(self):
     self.SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
 
 
 class DevConfig(Config):
-  URL = 'http://localhost:3000'
+  DOMAIN = 'dev.glimpse.ai'
 
   def __init__(self):
     self.SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
 
 
 class TestConfig(Config):
-  URL = 'http://localhost:3000'
+  DOMAIN = 'test.glimpse.ai'
 
   def __init__(self):
     self.SQLALCHEMY_DATABASE_URI = os.environ.get('TEST_DB_URL')
