@@ -8,8 +8,6 @@ class RestfulTeam(Resource):
 
   @namespace.doc('create_new_team')
   def post(self):
-    # TODO: Add more things to the DB throughout this function once you've designed DB schema
-
     # Get user from token
 
     # Validate user exists

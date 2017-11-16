@@ -3,6 +3,7 @@ Tables:
 
   Team
   User
+  Token
   TeamUser
   Cluster
   Prediction
@@ -11,6 +12,8 @@ Relationships:
 
   Team --> has_many --> team_users
   User --> has_many --> team_users
+  User --> has_many --> tokens
+  Token --> belongs_to --> User
   TeamUser --> belongs_to --> Team
   TeamUser --> belongs_to --> User
   Team --> has_one --> Cluster
@@ -72,6 +75,20 @@ class User(db.Model):
   def __repr__(self):
     return '<User id={}, uid={}, email={}, name={}, verification_status={}, is_destroyed={}, created_at={}>'.format(
       self.id, self.uid, self.email, self.name, self.verification_status, self.is_destroyed, self.created_at)
+
+
+class Token(db.Model):
+  id = db.Column(db.Integer, primary_key=True)
+  user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True, nullable=False)
+  user = db.relationship('User', backref='tokens')
+  secret = db.Column(db.String(64))
+
+  def __init__(self, user=None, secret=None):
+    self.user = user
+    self.secret = secret or auth_util.fresh_secret()
+
+  def __repr__(self):
+    return '<Token id={}, user_id={}>'.format(self.id, self.user_id)
 
 
 class TeamUser(db.Model):

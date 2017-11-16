@@ -23,7 +23,7 @@ from flask_script import Manager
 migrate = Migrate(app, db)
 manager = Manager(app)
 
-from src.models import Team, User, TeamUser, Cluster, Prediction
+from src.models import Team, User, Token, TeamUser, Cluster, Prediction
 
 manager.add_command('db', MigrateCommand)
 
