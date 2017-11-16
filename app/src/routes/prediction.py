@@ -31,6 +31,7 @@ class RestfulPrediction(Resource):
     if not team:
       return TEAM_NOT_FOUND
 
+    # Make sure this User is the owner of this Team (and therefore can create a Prediction)
     owner = dbi.find_one(TeamUser, {
       'team': team,
       'user': user,
@@ -43,11 +44,12 @@ class RestfulPrediction(Resource):
     prediction_name = api.payload['name']
     prediction_slug = slugify(prediction_name, separator='-', to_lower=True)
 
-    # Ensure there's no prediction with the same name for this team
+    # Ensure there's no Prediction with the same name for this Team
     if dbi.find_one(Prediction, {'team': team, 'slug': prediction_slug}):
       return PREDICTION_NAME_TAKEN
 
     try:
+      # Create new prediction
       prediction = dbi.create(Prediction, {
         'team': team,
         'name': prediction_name,
