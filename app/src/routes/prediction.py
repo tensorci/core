@@ -1,5 +1,17 @@
-from flask_restplus import Resource
+from flask_restplus import Resource, fields
 from src.routes import namespace, api
+from src.models import TeamUser, Team, Prediction
+from src import logger, dbi
+from src.helpers.user_helper import current_user
+from src.api_responses.errors import *
+from src.api_responses.success import *
+from slugify import slugify
+
+create_prediction_model = api.model('Prediction', {
+  'team_uid': fields.String(required=True),
+  'name': fields.String(required=True),
+  'git_repo': fields.String(required=True)
+})
 
 
 @namespace.route('/prediction')
@@ -7,21 +19,48 @@ class RestfulPrediction(Resource):
   """Restful Prediction Interface"""
 
   @namespace.doc('create_new_prediction_for_team')
+  @namespace.expect(create_prediction_model, validate=True)
   def post(self):
-    # Assume input here is github repo
+    user = current_user()
 
-    # Get user from token
+    if not user:
+      return UNAUTHORIZED
 
-    # Validate user exists
+    team = dbi.find_one(Team, {'uid': api.payload['team_uid']})
 
-    # Get team from user
+    if not team:
+      return TEAM_NOT_FOUND
 
-    # INSERT new Prediction to DB
+    owner = dbi.find_one(TeamUser, {
+      'team': team,
+      'user': user,
+      'role': TeamUser.roles.OWNER
+    })
 
-    # Take the github repo, give it the training docker file, build an image from that, upload that image,
-    # and then deploy the training image to your training cluster
+    if not owner:
+      return FORBIDDEN
 
-    return '', 201
+    prediction_name = api.payload['name']
+    prediction_slug = slugify(prediction_name, separator='-', to_lower=True)
+
+    # Ensure there's no prediction with the same name for this team
+    if dbi.find_one(Prediction, {'team': team, 'slug': prediction_slug}):
+      return PREDICTION_NAME_TAKEN
+
+    try:
+      prediction = dbi.create(Prediction, {
+        'team': team,
+        'name': prediction_name,
+        'git_repo': api.payload['git_repo']
+      })
+
+      # Schedule the prediction's repo to be trained
+    except BaseException as e:
+      logger.error('Error creating Prediction(name={}, team={}, git_repo={}): {}'.format(
+        prediction_name, team, api.payload['git_repo'], e))
+      return UNKNOWN_ERROR
+
+    return PREDICTION_CREATION_SUCCESS
 
 
 @namespace.route('/prediction/trained')
@@ -58,6 +97,6 @@ class PredictionIsTrained(Resource):
 
     # Else...
 
-      # Hit the team's API Cluster's API telling it to fetch the latest trained model from S3
+      # Hit the team's API Cluster
 
     return '', 200
