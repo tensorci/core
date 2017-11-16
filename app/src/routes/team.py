@@ -18,14 +18,4 @@ class RestfulTeam(Resource):
 
     # INSERT Team record to DB
 
-    # Create S3 Bucket for this cluster
-
-    # Create Route 53 hosted zone, returning the list of nameserver addresses associated with that zone
-
-    # Register NS records for each of the nameserver addresses returned by last command
-    #   domain: <team_slug>-cluster.domain.ai
-    #   record: <address>
-
-    # Create cluster with kops with name <team_slug>-cluster.domain.ai
-
     return '', 201
