@@ -14,7 +14,7 @@ app.config.from_object(get_config())
 if is_prod():
   app.logger.addHandler(StreamHandler(sys.stdout))
 else:
-  app.logger.addHandler(FileHandler('main.log'))
+  app.logger.addHandler(FileHandler('dev.log'))
 
 app.logger.setLevel(INFO)
 logger = app.logger
