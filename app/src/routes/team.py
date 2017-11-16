@@ -3,9 +3,9 @@ from flask_restplus import Resource
 from src.routes import namespace, api
 
 
-@namespace.route('/company')
-class RestfulCompany(Resource):
-  """Restful Company Interface"""
+@namespace.route('/team')
+class RestfulTeam(Resource):
+  """Restful Team Interface"""
 
   @namespace.doc('example_get_request')
   def get(self):
