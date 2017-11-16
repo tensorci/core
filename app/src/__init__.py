@@ -3,8 +3,8 @@ import os
 import sys
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from src.config import get_config
-from src.helpers.env import is_prod
+from config import get_config
+from helpers.env import is_prod
 
 # Create and configure the Flask app
 app = Flask(__name__)
@@ -23,7 +23,7 @@ logger = app.logger
 # db = SQLAlchemy(app)
 
 # Set up API routes
-from src.routes import api
+from routes import api
 api.init_app(app)
 
 if is_prod() and os.environ.get('REQUIRE_SSL') == 'true':

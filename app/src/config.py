@@ -1,7 +1,7 @@
 import inspect
 import json
 import os
-from src.helpers.env import env
+from helpers.env import env
 
 
 class Config:
