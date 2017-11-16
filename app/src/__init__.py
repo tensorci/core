@@ -20,7 +20,7 @@ app.logger.setLevel(INFO)
 logger = app.logger
 
 # Set up Postgres DB
-db = SQLAlchemy(app)
+# db = SQLAlchemy(app)
 
 # Set up API routes
 from src.routes import api
