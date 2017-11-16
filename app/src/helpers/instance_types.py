@@ -1,0 +1,1 @@
+MICRO = 't2.micro'

@@ -22,7 +22,7 @@ import datetime
 from slugify import slugify
 from sqlalchemy.dialects.postgresql import JSON
 from src import db
-from src.helpers import auth_util
+from src.helpers import auth_util, team_user_roles, user_verification_statuses, instance_types
 from uuid import uuid4
 from config import get_config
 
@@ -49,24 +49,25 @@ class Team(db.Model):
 
 
 class User(db.Model):
+  ver_statuses = user_verification_statuses
   id = db.Column(db.Integer, primary_key=True)
   uid = db.Column(db.String, index=True, unique=True)
   email = db.Column(db.String(120), index=True, unique=True)
   name = db.Column(db.String(120), nullable=True)
   hashed_pw = db.Column(db.String(120), nullable=True)
-  verification_secret = db.Column(db.String(64))
   verification_status = db.Column(db.Integer)
+  verification_secret = db.Column(db.String(64))
   reset_pw_secret = db.Column(db.String(64))
   is_destroyed = db.Column(db.Boolean, server_default='f')
   created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
-  def __init__(self, email=None, name=None, hashed_pw=None, verification_status=0):
+  def __init__(self, email=None, name=None, hashed_pw=None, verification_status=user_verification_statuses.NOT_CONTACTED):
     self.uid = uuid4().hex
     self.email = email
     self.name = name
     self.hashed_pw = hashed_pw
-    self.verification_secret = auth_util.fresh_secret()
     self.verification_status = verification_status
+    self.verification_secret = auth_util.fresh_secret()
 
   def __repr__(self):
     return '<User id={}, uid={}, email={}, name={}, verification_status={}, is_destroyed={}, created_at={}>'.format(
@@ -74,6 +75,7 @@ class User(db.Model):
 
 
 class TeamUser(db.Model):
+  roles = team_user_roles
   id = db.Column(db.Integer, primary_key=True)
   team_id = db.Column(db.Integer, db.ForeignKey('team.id'), index=True, nullable=False)
   team = db.relationship('Team', backref='team_users')
@@ -83,7 +85,7 @@ class TeamUser(db.Model):
   is_destroyed = db.Column(db.Boolean, server_default='f')
   created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
-  def __init__(self, team=None, user=None, team_id=None, user_id=None, role=0):
+  def __init__(self, team=None, user=None, team_id=None, user_id=None, role=team_user_roles.MEMBER):
     if team_id:
       self.team_id = team_id
     else:
@@ -117,7 +119,7 @@ class Cluster(db.Model):
   created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
   def __init__(self, team=None, ns_addresses=None, zones=None,
-               master_type='t2.micro', node_type='t2.micro', image='ubuntu-16.04'):
+               master_type=instance_types.MICRO, node_type=instance_types.MICRO, image='ubuntu-16.04'):
     self.uid = uuid4().hex
     self.team = team
     self.name = '{}-cluster.{}'.format(team.slug, config.DOMAIN)
@@ -126,9 +128,7 @@ class Cluster(db.Model):
     self.master_type = master_type
     self.node_type = node_type
     self.image = image
-
-  def bucket(self):
-    return 's3://{}'.format(self.team.slug)
+    self.bucket = 's3://{}'.format(self.team.slug)
 
   def __repr__(self):
     return '<Cluster id={}, uid={}, team_id={}, name={}, ns_addresses={}, zones={}, master_type={}, ' \
