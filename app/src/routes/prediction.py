@@ -6,6 +6,10 @@ from src.helpers.user_helper import current_user
 from src.api_responses.errors import *
 from src.api_responses.success import *
 from slugify import slugify
+from src.utils import deployer, clusters, image_names
+from src.config import get_config
+
+config = get_config()
 
 create_prediction_model = api.model('Prediction', {
   'team_uid': fields.String(required=True),
@@ -56,7 +60,13 @@ class RestfulPrediction(Resource):
         'git_repo': api.payload['git_repo']
       })
 
-      # Schedule the prediction's repo to be trained
+      image = '{}/{}'.format(config.IMAGE_REPO_OWNER, image_names.BUILD_SERVER)
+
+      # Deploy to Build Server
+      deployer.deploy(prediction.name,
+                      image=image,
+                      to_cluster=clusters.BUILD_SERVER,
+                      for_cluster=clusters.TRAIN)
     except BaseException as e:
       logger.error('Error creating Prediction(name={}, team={}, git_repo={}): {}'.format(
         prediction_name, team, api.payload['git_repo'], e))

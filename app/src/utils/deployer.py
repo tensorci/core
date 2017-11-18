@@ -1,7 +1,8 @@
 from kubernetes import client, config
+import clusters
 
 
-def deploy(name, image=None, cluster=None, replicas=3):
+def deploy(name, image=None, to_cluster=None, for_cluster=None, replicas=3):
   config.load_kube_config()
 
   container = config_container(name, image, cluster)
@@ -27,7 +28,7 @@ def api_instance():
 def config_container(name, image, cluster):
   ports = None
 
-  if cluster == 'api':
+  if cluster == clusters.API:
     ports = [client.V1ContainerPort(container_port=80)]
 
   return client.V1Container(
