@@ -67,6 +67,7 @@ class RestfulPrediction(Resource):
                       image=image,
                       to_cluster=clusters.BUILD_SERVER,
                       for_cluster=clusters.TRAIN)
+
     except BaseException as e:
       logger.error('Error creating Prediction(name={}, team={}, git_repo={}): {}'.format(
         prediction_name, team, api.payload['git_repo'], e))
