@@ -3,9 +3,10 @@ import clusters
 
 
 def deploy(name, image=None, to_cluster=None, for_cluster=None, replicas=3):
+  # Get config info for to_cluster
   config.load_kube_config()
 
-  container = config_container(name, image, cluster)
+  container = config_container(name, image, for_cluster)
 
   template = config_template_spec(name, container)
 
@@ -25,10 +26,10 @@ def api_instance():
   return client.ExtensionsV1beta1Api()
 
 
-def config_container(name, image, cluster):
+def config_container(name, image, for_cluster):
   ports = None
 
-  if cluster == clusters.API:
+  if for_cluster == clusters.API:
     ports = [client.V1ContainerPort(container_port=80)]
 
   return client.V1Container(

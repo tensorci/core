@@ -25,9 +25,10 @@ import datetime
 from slugify import slugify
 from sqlalchemy.dialects.postgresql import JSON
 from src import db
-from src.helpers import auth_util, team_user_roles, user_verification_statuses, instance_types
+from helpers import auth_util, team_user_roles, user_verification_statuses, instance_types
 from uuid import uuid4
 from config import get_config
+from statuses import pred_statuses
 
 config = get_config()
 
@@ -155,6 +156,7 @@ class Cluster(db.Model):
 
 
 class Prediction(db.Model):
+  statuses = pred_statuses
   id = db.Column(db.Integer, primary_key=True)
   uid = db.Column(db.String, index=True, unique=True)
   team_id = db.Column(db.Integer, db.ForeignKey('team.id'), index=True, nullable=False)
@@ -166,11 +168,12 @@ class Prediction(db.Model):
   git_repo = db.Column(db.String(240))
   image_repo_owner = db.Column(db.String(120))
   image_version = db.Column(db.String(60))
+  status = db.Column(db.Integer)
   is_destroyed = db.Column(db.Boolean, server_default='f')
   created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
   def __init__(self, team=None, team_id=None, name=None, elb=None, domain=None,
-               git_repo=None, image_repo_owner=None, image_version='0.0.1'):
+               git_repo=None, image_repo_owner=None, image_version='0.0.1', status=pred_statuses.CREATED):
     self.uid = uuid4().hex
 
     if team_id:
@@ -185,6 +188,7 @@ class Prediction(db.Model):
     self.git_repo = git_repo
     self.image_repo_owner = image_repo_owner or config.IMAGE_REPO_OWNER
     self.image_version = image_version
+    self.status = status
 
   def __repr__(self):
     return '<Prediction id={}, uid={}, team_id={}, name={}, slug={}, elb={}, domain={}, ' \
