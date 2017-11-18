@@ -12,9 +12,7 @@ def deploy(name, image=None, cluster=None, replicas=3):
 
   deployment = create_deployment(name, deploy_spec)
 
-  api = api_instance()
-
-  resp = api.create_namespaced_deployment(
+  resp = api_instance().create_namespaced_deployment(
     namespace='default',
     body=deployment
   )
@@ -29,7 +27,6 @@ def api_instance():
 def config_container(name, image, cluster):
   ports = None
 
-  # We only need to open ports for the API cluster
   if cluster == 'api':
     ports = [client.V1ContainerPort(container_port=80)]
 
