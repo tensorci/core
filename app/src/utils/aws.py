@@ -22,8 +22,6 @@ def create_s3_bucket(name):
 
 # make name <team.slug>-cluster.<config.DOMAIN>
 def create_route53_hosted_zone(name):
-  name_servers = None
-
   try:
     route53 = boto3.client('route53')
 
@@ -32,8 +30,38 @@ def create_route53_hosted_zone(name):
       CallerReference=uuid4().hex
     )
 
+    hosted_zone_id = resp.get('HostedZone', {}).get('Id')
     name_servers = resp.get('DelegationSet', {}).get('NameServers') or []
   except BaseException as e:
     logger.error('Error Creating Route 53 Hosted Zone (name={}) with error: {}'.format(name, e))
+    return None
 
-  return name_servers
+  return hosted_zone_id, name_servers
+
+
+def add_dns_records(hosted_zone_id, records):
+  changes = []
+
+  for zone in records:
+    changes.append({
+      'Action': 'UPSERT',
+      'ResourceRecordSet': {
+        'Name': zone.get('domain'),
+        'Type': zone.get('type'),
+        'TTL': 300,
+        'ResourceRecords': [{'Value': zone.get('record')}]
+      }
+    })
+
+  try:
+    route53 = boto3.client('route53')
+
+    route53.change_resource_record_sets(
+      HostedZoneId=hosted_zone_id,
+      ChangeBatch={'Changes': changes}
+    )
+  except BaseException as e:
+    logger.error('Error Adding DNS records to hosted_zone_id() with error: {}'.format(hosted_zone_id, e))
+    return False
+
+  return True

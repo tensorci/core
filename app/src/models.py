@@ -128,6 +128,7 @@ class Cluster(db.Model):
   team = db.relationship('Team', back_populates='cluster')
   name = db.Column(db.String(360), nullable=False)
   ns_addresses = db.Column(JSON)
+  hosted_zone_id = db.Column(db.String(120))
   zones = db.Column(JSON)
   master_type = db.Column(db.String(120))
   node_type = db.Column(db.String(120))
@@ -136,12 +137,13 @@ class Cluster(db.Model):
   is_destroyed = db.Column(db.Boolean, server_default='f')
   created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
-  def __init__(self, team=None, ns_addresses=None, zones=None,
+  def __init__(self, team=None, ns_addresses=None, hosted_zone_id=None, zones=None,
                master_type=instance_types.MICRO, node_type=instance_types.MICRO, image='ubuntu-16.04'):
     self.uid = uuid4().hex
     self.team = team
     self.name = '{}-cluster.{}'.format(team.slug, config.DOMAIN)
     self.ns_addresses = ns_addresses or []
+    self.hosted_zone_id = hosted_zone_id
     self.zones = zones or ['us-west-2a']  # TODO: Ensure zones are all us-west-2
     self.master_type = master_type
     self.node_type = node_type
@@ -149,9 +151,9 @@ class Cluster(db.Model):
     self.bucket = 's3://{}'.format(self.team.slug)
 
   def __repr__(self):
-    return '<Cluster id={}, uid={}, team_id={}, name={}, ns_addresses={}, zones={}, master_type={}, ' \
-           'node_type={}, image={}, valiated={}, is_destroyed={}, created_at={}>'.format(
-      self.id, self.uid, self.team_id, self.name, self.ns_addresses, self.zones, self.master_type,
+    return '<Cluster id={}, uid={}, team_id={}, name={}, ns_addresses={}, hosted_zone_id={}, zones={}, master_type={}, ' \
+           'node_type={}, image={}, validated={}, is_destroyed={}, created_at={}>'.format(
+      self.id, self.uid, self.team_id, self.name, self.ns_addresses, self.hosted_zone_id, self.zones, self.master_type,
       self.node_type, self.image, self.validated, self.is_destroyed, self.created_at)
 
 
