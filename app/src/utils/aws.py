@@ -1,6 +1,7 @@
 import os
 import boto3
 from src import logger
+from uuid import uuid4
 
 
 def create_s3_bucket(name):
@@ -17,3 +18,22 @@ def create_s3_bucket(name):
     return False
 
   return True
+
+
+# make name <team.slug>-cluster.<config.DOMAIN>
+def create_route53_hosted_zone(name):
+  name_servers = None
+
+  try:
+    route53 = boto3.client('route53')
+
+    resp = route53.create_hosted_zone(
+      Name=name,
+      CallerReference=uuid4().hex
+    )
+
+    name_servers = resp.get('DelegationSet', {}).get('NameServers') or []
+  except BaseException as e:
+    logger.error('Error Creating Route 53 Hosted Zone (name={}) with error: {}'.format(name, e))
+
+  return name_servers
