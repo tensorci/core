@@ -1,12 +1,15 @@
 from kubernetes import client, config
 from src.utils import clusters
+from src import dbi
+from src.models import Prediction
 
 
 class AbstractDeploy(object):
 
-  def __init__(self, prediction=None):
-    self.prediction = prediction
-    self.team = prediction.team
+  def __init__(self, prediction_uid=None):
+    self.prediction_uid = prediction_uid
+    self.prediction = dbi.find_one(Prediction, {'uid': prediction_uid})
+    self.team = self.prediction.team
     self.api = client.ExtensionsV1beta1Api()
     self.client = client
     self.config = config

@@ -75,7 +75,7 @@ class RestfulPrediction(Resource):
 
       # Schedule a deploy to the build server
       create_deploy(BuildServerDeploy, {
-        'prediction': prediction,
+        'prediction_uid': prediction.uid,
         'build_for': clusters.TRAIN
       })
     except BaseException as e:
