@@ -9,8 +9,10 @@ from slugify import slugify
 from src.utils import deployer, clusters
 from src.config import get_config
 from src.statuses.pred_statuses import pstatus
-from services.prediction_services import status_update_svcs
-from services.deploy_services.build_server_deploy import BuildServerDeploy
+from src.services.prediction_services import status_update_svcs
+from src.services.deploy_services.build_server_deploy import BuildServerDeploy
+from src.services.deploy_services import create_deploy
+from src.scheduler import delayed, delay_class_method
 
 config = get_config()
 
@@ -33,23 +35,26 @@ class RestfulPrediction(Resource):
   @namespace.doc('create_new_prediction_for_team')
   @namespace.expect(create_prediction_model, validate=True)
   def post(self):
+    # Get current user
     user = current_user()
 
     if not user:
       return UNAUTHORIZED
 
+    # Get requested team
     team = dbi.find_one(Team, {'uid': api.payload['team_uid']})
 
     if not team:
       return TEAM_NOT_FOUND
 
-    # Make sure this User is the owner of this Team (and therefore can create a Prediction)
+    # Make sure the current user is the owner of this Team (and therefore can create a Prediction)
     owner = dbi.find_one(TeamUser, {
       'team': team,
       'user': user,
       'role': TeamUser.roles.OWNER
     })
 
+    # Only owners can create predictions
     if not owner:
       return FORBIDDEN
 
@@ -68,10 +73,11 @@ class RestfulPrediction(Resource):
         'git_repo': api.payload['git_repo']
       })
 
-      # Deploy to Build Server
-      deploy = BuildServerDeploy(prediction, build_for=clusters.TRAIN)
-      # TODO: Figure out if you can delay this as a class method or if it needs to be a module instead
-      deploy.perform()
+      # Schedule a deploy to the build server
+      create_deploy(BuildServerDeploy, {
+        'prediction': prediction,
+        'build_for': clusters.TRAIN
+      })
     except BaseException as e:
       logger.error('Error creating Prediction(name={}, team={}, git_repo={}): {}'.format(
         prediction_name, team, api.payload['git_repo'], e))
@@ -86,9 +92,11 @@ class PredictionIsTrained(Resource):
   @namespace.doc('update_prediction_status')
   @namespace.expect(update_prediction_status_model, validate=True)
   def put(self):
+    # Get required params
     prediction_uid = api.payload['prediction_uid']
     desired_status = api.payload['status']
 
+    # Find prediction for the requested uid
     prediction = dbi.find_one(Prediction, {'uid': prediction_uid})
 
     # Ensure prediction exists
@@ -117,7 +125,8 @@ class PredictionIsTrained(Resource):
       logger.error(err)
       return err
 
-    # TODO: delay this
-    update_svc(prediction_uid)
+    # Schedule the service to be performed
+    delayed.add_job(delay_class_method,
+                    args=[update_svc, {'prediction_uid': prediction_uid}])
 
     return '', 200

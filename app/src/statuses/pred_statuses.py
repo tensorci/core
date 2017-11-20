@@ -1,3 +1,4 @@
+# TODO: move this shit into the Prediction model
 class PredictionStatus:
   CREATED = 'created'
   BUILDING_FOR_TRAIN = 'train_building'
@@ -22,5 +23,11 @@ class PredictionStatus:
 
   def proceeds(self, a, b):
     return self.statuses.index(b) == self.statuses.index(a) + 1
+
+  def next_status(self, a):
+    if a == self.statuses[-1]:
+      return self.statuses[-1]
+
+    return self.statuses[self.statuses.index(a) + 1]
 
 pstatus = PredictionStatus()

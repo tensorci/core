@@ -2,19 +2,22 @@ import os
 from abstract_deploy import AbstractDeploy
 from src.utils import deployer, image_names, clusters
 from src.config import get_config
+from src import dbi
+from src.statuses.pred_statuses import pstatus
 
 config = get_config()
 
 
 class BuildServerDeploy(AbstractDeploy):
 
-  def __init__(self, prediction, build_for=None):
-    self.prediction = prediction
-    self.team = prediction.team
+  def __init__(self, prediction=None, build_for=None):
+    super(BuildServerDeploy, self).__init__(prediction)
     self.build_for = build_for
+    self.image = '{}/{}'.format(config.IMAGE_REPO_OWNER, image_names.BUILD_SERVER)
+    self.name = '{}-{}-build'.format(self.prediction.slug, self.build_for)
+    self.cluster = clusters.BUILD_SERVER
 
-  def perform(self):
-    envs = {
+    self.envs = {
       'DOCKER_USERNAME': os.environ.get('DOCKER_USERNAME'),
       'DOCKER_PASSWORD': os.environ.get('DOCKER_PASSWORD'),
       'CORE_URL': 'https://{}/api'.format(config.DOMAIN),
@@ -28,10 +31,14 @@ class BuildServerDeploy(AbstractDeploy):
       'FOR_CLUSTER': self.build_for
     }
 
-    build_image = '{}/{}'.format(config.IMAGE_REPO_OWNER, image_names.BUILD_SERVER)
-    deploy_name = '{}-{}-build'.format(self.prediction.slug, self.build_for)
+  def deploy(self):
+    # Make the deploy
+    super(BuildServerDeploy, self).deploy()
 
-    deployer.deploy(name=deploy_name,
-                    image=build_image,
-                    cluster=clusters.BUILD_SERVER,
-                    envs=envs)
+    # Update the status of the new prediction
+    print('Updating Prediction({}) of Team({}) to status: {}'.format(
+      self.prediction.slug, self.team.slug, self.prediction.status))
+
+    # TODO: Secure this better and move into Prediction model as a helper function
+    new_status = pstatus.next_status(self.prediction.status)
+    dbi.update(self.prediction, {'status': new_status})

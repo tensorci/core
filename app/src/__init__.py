@@ -5,12 +5,14 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from config import get_config
 from helpers.env import is_prod
+import logging
+
+logging.basicConfig()
 
 # Create and configure the Flask app
 app = Flask(__name__)
 app.config.from_object(get_config())
 
-# Set up logging
 if is_prod():
   app.logger.addHandler(StreamHandler(sys.stdout))
 else:
@@ -18,6 +20,10 @@ else:
 
 app.logger.setLevel(INFO)
 logger = app.logger
+
+# Create and start our delayed job scheduler
+from scheduler import delayed
+delayed.start()
 
 # Set up Postgres DB
 db = SQLAlchemy(app)
