@@ -1,8 +1,26 @@
-CREATED = 0
-BUILDING_FOR_TRAIN = 1
-DONE_BUILDING_FOR_TRAIN = 2
-TRAINING = 3
-DONE_TRAINING = 4
-BUILDING_FOR_API = 5
-DONE_BUILDING_FOR_API = 6
-PREDICTING = 7
+class PredictionStatus:
+  CREATED = 'created'
+  BUILDING_FOR_TRAIN = 'train_building'
+  DONE_BUILDING_FOR_TRAIN = 'train_building_done'
+  TRAINING = 'training'
+  DONE_TRAINING = 'training_done'
+  BUILDING_FOR_API = 'api_building'
+  DONE_BUILDING_FOR_API = 'api_building_done'
+  PREDICTING = 'predicting'
+
+  def __init__(self):
+    self.statuses = [
+      self.CREATED,
+      self.BUILDING_FOR_TRAIN,
+      self.DONE_BUILDING_FOR_TRAIN,
+      self.TRAINING,
+      self.DONE_TRAINING,
+      self.BUILDING_FOR_API,
+      self.DONE_BUILDING_FOR_API,
+      self.PREDICTING
+    ]
+
+  def proceeds(self, a, b):
+    return self.statuses.index(b) == self.statuses.index(a) + 1
+
+pstatus = PredictionStatus()

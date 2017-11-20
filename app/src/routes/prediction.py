@@ -8,6 +8,8 @@ from src.api_responses.success import *
 from slugify import slugify
 from src.utils import deployer, clusters, image_names
 from src.config import get_config
+from src.statuses.pred_statuses import pstatus
+from services.prediction_services import status_update_svcs
 
 config = get_config()
 
@@ -15,6 +17,11 @@ create_prediction_model = api.model('Prediction', {
   'team_uid': fields.String(required=True),
   'name': fields.String(required=True),
   'git_repo': fields.String(required=True)
+})
+
+update_prediction_status_model = api.model('Prediction', {
+  'status': fields.String(required=True),
+  'prediction_uid': fields.String(required=True)
 })
 
 
@@ -76,40 +83,44 @@ class RestfulPrediction(Resource):
     return PREDICTION_CREATION_SUCCESS
 
 
-@namespace.route('/prediction/trained')
+@namespace.route('/prediction/status')
 class PredictionIsTrained(Resource):
 
-  @namespace.doc('trained_model_is_api_ready')
-  def post(self):
-    # Validate the request (via external token? where's this request coming from?)
+  @namespace.doc('update_prediction_status')
+  @namespace.expect(update_prediction_status_model, validate=True)
+  def put(self):
+    prediction_uid = api.payload['prediction_uid']
+    desired_status = api.payload['status']
 
-    # Get prediction from token
+    prediction = dbi.find_one(Prediction, {'uid': prediction_uid})
 
-    # Get team through prediction
+    # Ensure prediction exists
+    if not prediction:
+      err = 'No Prediction found for uid: {}'.format(prediction_uid)
+      logger.error(err)
+      return err
 
-    # If team doesn't have API Cluster yet...
+    # Ensure desired_status is even a valid status
+    if desired_status not in pstatus.statuses:
+      err = 'Invalid desired_status: {}'.format(desired_status)
+      logger.error(err)
+      return err
 
-      # Create Cluster model name=<team_slug>-cluster.domain.ai
+    # Ensure desired_status immediately proceeds this prediction's current status
+    if not pstatus.proceeds(prediction.status, desired_status):
+      err = '{} does not immediately proceed: {}'.format(desired_status, prediction.status)
+      logger.error(err)
+      return err
 
-      # Create S3 Bucket for this cluster (name=cluster.name)
+    # Get status update service for the desired_status
+    update_svc = status_update_svcs.get(desired_status)
 
-      # Create Route 53 hosted zone (name=cluster.name), returning the list of nameserver addresses associated with that zone
+    if not update_svc:
+      err = 'Couldn\'t find status update service for status: {}'.format(desired_status)
+      logger.error(err)
+      return err
 
-      # Register NS records for each of the nameserver addresses returned by last command
-      #   domain: cluster.name
-      #   record: <address>
-
-      # Create cluster with kops name=cluster.name
-
-      # Validate the cluster...(this will take minutes, so schedule what follows as callback jobs)
-
-      # Take the prediction's github repo, give it the api docker file, build an image from that, upload that image,
-      # and then deploy the api image to the newly created cluster
-
-      # The API image will pull the trained model from S3 upon startup
-
-    # Else...
-
-      # Hit the team's API Cluster
+    # TODO: delay this
+    update_svc(prediction_uid)
 
     return '', 200

@@ -28,7 +28,7 @@ from src import db
 from helpers import auth_util, team_user_roles, user_verification_statuses, instance_types
 from uuid import uuid4
 from config import get_config
-from statuses import pred_statuses
+from statuses.pred_statuses import pstatus
 
 config = get_config()
 
@@ -158,7 +158,6 @@ class Cluster(db.Model):
 
 
 class Prediction(db.Model):
-  statuses = pred_statuses
   id = db.Column(db.Integer, primary_key=True)
   uid = db.Column(db.String, index=True, unique=True)
   team_id = db.Column(db.Integer, db.ForeignKey('team.id'), index=True, nullable=False)
@@ -175,7 +174,7 @@ class Prediction(db.Model):
   created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
   def __init__(self, team=None, team_id=None, name=None, elb=None, domain=None,
-               git_repo=None, image_repo_owner=None, image_version='0.0.1', status=pred_statuses.CREATED):
+               git_repo=None, image_repo_owner=None, image_version='0.0.1', status=pstatus.statuses[0]):
     self.uid = uuid4().hex
 
     if team_id:
