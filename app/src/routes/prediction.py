@@ -10,8 +10,8 @@ from src.utils import deployer, clusters
 from src.config import get_config
 from src.statuses.pred_statuses import pstatus
 from src.services.prediction_services import status_update_svcs
-from src.services.deploy_services.build_server_deploy import BuildServerDeploy
-from src.services.deploy_services import create_deploy
+from src.deploys import create_deploy
+from src.deploys.build_server_deploy import BuildServerDeploy
 from src.scheduler import delayed, delay_class_method
 
 config = get_config()
