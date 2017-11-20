@@ -2,6 +2,7 @@ from kubernetes import client, config
 import clusters
 
 
+#TODO: Get custom env vars to add to the deploy based on for_cluster
 def deploy(name, image=None, to_cluster=None, for_cluster=None, replicas=3):
   # Get config info for to_cluster
   config.load_kube_config()
