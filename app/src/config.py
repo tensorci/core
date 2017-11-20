@@ -9,7 +9,7 @@ class Config:
 
 class ProdConfig(Config):
   DEBUG = False
-  DOMAIN = 'glimpse.ai'
+  DOMAIN = 'app.glimpse.ai'
   IMAGE_REPO_OWNER = 'glimpseprod'
 
   def __init__(self):
@@ -17,7 +17,7 @@ class ProdConfig(Config):
 
 
 class StagingConfig(Config):
-  DOMAIN = 'staging.glimpse.ai'
+  DOMAIN = 'app.staging.glimpse.ai'
   IMAGE_REPO_OWNER = 'glimpsestaging'
 
   def __init__(self):
@@ -25,7 +25,7 @@ class StagingConfig(Config):
 
 
 class DevConfig(Config):
-  DOMAIN = 'dev.glimpse.ai'
+  DOMAIN = 'app.dev.glimpse.ai'
   IMAGE_REPO_OWNER = 'glimpsedev'
 
   def __init__(self):
@@ -33,7 +33,7 @@ class DevConfig(Config):
 
 
 class TestConfig(Config):
-  DOMAIN = 'test.glimpse.ai'
+  DOMAIN = 'app.test.glimpse.ai'
   IMAGE_REPO_OWNER = 'glimpsetest'
 
   def __init__(self):

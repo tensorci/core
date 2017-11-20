@@ -6,10 +6,11 @@ from src.helpers.user_helper import current_user
 from src.api_responses.errors import *
 from src.api_responses.success import *
 from slugify import slugify
-from src.utils import deployer, clusters, image_names
+from src.utils import deployer, clusters
 from src.config import get_config
 from src.statuses.pred_statuses import pstatus
 from services.prediction_services import status_update_svcs
+from services.deploy_services.build_server_deploy import BuildServerDeploy
 
 config = get_config()
 
@@ -67,14 +68,10 @@ class RestfulPrediction(Resource):
         'git_repo': api.payload['git_repo']
       })
 
-      image = '{}/{}'.format(config.IMAGE_REPO_OWNER, image_names.BUILD_SERVER)
-
       # Deploy to Build Server
-      deployer.deploy(prediction.name,
-                      image=image,
-                      to_cluster=clusters.BUILD_SERVER,
-                      for_cluster=clusters.TRAIN)
-
+      deploy = BuildServerDeploy(prediction, build_for=clusters.TRAIN)
+      # TODO: Figure out if you can delay this as a class method or if it needs to be a module instead
+      deploy.perform()
     except BaseException as e:
       logger.error('Error creating Prediction(name={}, team={}, git_repo={}): {}'.format(
         prediction_name, team, api.payload['git_repo'], e))

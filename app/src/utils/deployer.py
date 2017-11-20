@@ -2,12 +2,12 @@ from kubernetes import client, config
 import clusters
 
 
-#TODO: Get custom env vars to add to the deploy based on for_cluster
-def deploy(name, image=None, to_cluster=None, for_cluster=None, replicas=3):
-  # Get config info for to_cluster
+def deploy(name=None, image=None, cluster=None, envs=None, replicas=1):
+  # TODO: Figure out where to put envs
+
   config.load_kube_config()
 
-  container = config_container(name, image, for_cluster)
+  container = config_container(name, image, cluster)
 
   template = config_template_spec(name, container)
 
@@ -27,10 +27,10 @@ def api_instance():
   return client.ExtensionsV1beta1Api()
 
 
-def config_container(name, image, for_cluster):
+def config_container(name, image, cluster):
   ports = None
 
-  if for_cluster == clusters.API:
+  if cluster == clusters.API:
     ports = [client.V1ContainerPort(container_port=80)]
 
   return client.V1Container(
