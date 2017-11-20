@@ -1,7 +1,7 @@
 import os
 
-basedir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 
-source_dir = basedir + '/src'
+source_dir = base_dir + '/src'
 
 configs_dir = source_dir + '/configs'
