@@ -9,7 +9,7 @@ from slugify import slugify
 from src.utils import clusters
 from src.config import get_config
 from src.statuses.pred_statuses import pstatus
-from src.services.prediction_services import status_update_svcs
+from src.services.prediction_services import status_update_services
 from src.deploys import create_deploy
 from src.deploys.build_server_deploy import BuildServerDeploy
 from src.scheduler import delayed, delay_class_method
@@ -118,7 +118,7 @@ class PredictionIsTrained(Resource):
       return err
 
     # Get status update service for the desired_status
-    update_svc = status_update_svcs.get(desired_status)
+    update_svc = status_update_services.get(desired_status)
 
     if not update_svc:
       err = 'Couldn\'t find status update service for status: {}'.format(desired_status)
