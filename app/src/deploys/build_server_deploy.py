@@ -18,6 +18,7 @@ class BuildServerDeploy(AbstractDeploy):
     self.cluster = clusters.BUILD_SERVER
 
     self.envs = {
+      'DATASET_DB_URL': os.environ.get('DATASET_DB_URL'),
       'DOCKER_USERNAME': os.environ.get('DOCKER_USERNAME'),
       'DOCKER_PASSWORD': os.environ.get('DOCKER_PASSWORD'),
       'CORE_URL': 'https://{}/api'.format(config.DOMAIN),
