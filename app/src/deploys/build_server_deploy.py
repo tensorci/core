@@ -1,6 +1,6 @@
 import os
 from abstract_deploy import AbstractDeploy
-from src.utils import deployer, image_names, clusters
+from src.utils import image_names, clusters
 from src.config import get_config
 from src import dbi
 from src.statuses.pred_statuses import pstatus

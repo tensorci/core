@@ -6,7 +6,7 @@ from src.helpers.user_helper import current_user
 from src.api_responses.errors import *
 from src.api_responses.success import *
 from slugify import slugify
-from src.utils import deployer, clusters
+from src.utils import clusters
 from src.config import get_config
 from src.statuses.pred_statuses import pstatus
 from src.services.prediction_services import status_update_svcs
