@@ -4,6 +4,7 @@ from src.utils import clusters
 from src.config import get_config
 from src import dbi
 from src.statuses.pred_statuses import pstatus
+from src.services.prediction_services.publicize_prediction import PublicizePrediction
 
 config = get_config()
 
@@ -15,7 +16,7 @@ class ApiDeploy(AbstractDeploy):
 
     self.image = '{}/{}-{}'.format(config.IMAGE_REPO_OWNER, self.prediction.slug, clusters.API)
     self.name = '{}-{}'.format(self.prediction.slug, clusters.API)
-    self.cluster = clusters.API
+    self.cluster = self.team.cluster.name
 
     self.envs = {
       'DATASET_DB_URL': os.environ.get('DATASET_DB_URL'),
@@ -36,3 +37,7 @@ class ApiDeploy(AbstractDeploy):
     # TODO: Secure this better and move into Prediction model as a helper function
     new_status = pstatus.next_status(self.prediction.status)
     dbi.update(self.prediction, {'status': new_status})
+
+    # Set up ELB and CNAME record for deployment if not already done
+    if not self.prediction.elb:
+      PublicizePrediction(self.prediction).perform()

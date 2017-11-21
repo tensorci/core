@@ -20,7 +20,6 @@ def create_s3_bucket(name):
   return True
 
 
-# make name <team.slug>-cluster.<config.DOMAIN>
 def create_route53_hosted_zone(name):
   try:
     route53 = boto3.client('route53')
