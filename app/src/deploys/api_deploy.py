@@ -15,8 +15,9 @@ class ApiDeploy(AbstractDeploy):
     super(ApiDeploy, self).__init__(prediction_uid)
 
     self.image = '{}/{}-{}'.format(config.IMAGE_REPO_OWNER, self.prediction.slug, clusters.API)
-    self.name = '{}-{}'.format(self.prediction.slug, clusters.API)
+    self.deploy_name = '{}-{}'.format(self.prediction.slug, clusters.API)
     self.cluster = self.team.cluster.name
+    self.ports = [80]
 
     self.envs = {
       'DATASET_DB_URL': os.environ.get('DATASET_DB_URL'),
@@ -27,7 +28,7 @@ class ApiDeploy(AbstractDeploy):
     }
 
   def deploy(self):
-    # Make the deploy
+    # Perform deploy
     super(ApiDeploy, self).deploy()
 
     # Update the status of the new prediction

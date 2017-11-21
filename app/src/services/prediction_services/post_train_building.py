@@ -7,17 +7,19 @@ from src.utils.aws import create_s3_bucket
 
 class PostTrainBuilding(object):
 
-  def __int__(self, prediction=None):
+  def __init__(self, prediction=None):
     self.prediction = prediction
 
   def perform(self):
-    # Update prediction status
-    dbi.update(self.prediction, {'status': pstatus.DONE_BUILDING_FOR_TRAIN})
+    # Update prediction to desired status
+    self.prediction = dbi.update(self.prediction, {
+      'status': pstatus.DONE_BUILDING_FOR_TRAIN
+    })
 
     team = self.prediction.team
 
-    # If team doesn't have an s3 bucket yet, create that now.
-    # We know the S3 hasn't been created yet if the team still doesn't have a cluster
+    # If team doesn't have an S3 bucket yet, create that now.
+    # We'll know S3 hasn't been created yet if the team still doesn't have a cluster record
     if not team.cluster:
       bucket_name = 's3://{}'.format(team.slug)
       create_s3_bucket(bucket_name)

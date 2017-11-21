@@ -14,7 +14,7 @@ class TrainDeploy(AbstractDeploy):
     super(TrainDeploy, self).__init__(prediction_uid)
 
     self.image = '{}/{}-{}'.format(config.IMAGE_REPO_OWNER, self.prediction.slug, clusters.TRAIN)
-    self.name = '{}-{}'.format(self.prediction.slug, clusters.TRAIN)
+    self.deploy_name = '{}-{}'.format(self.prediction.slug, clusters.TRAIN)
     self.cluster = clusters.TRAIN
 
     self.envs = {
@@ -28,13 +28,14 @@ class TrainDeploy(AbstractDeploy):
     }
 
   def deploy(self):
-    # Make the deploy
+    # Perform deploy
     super(TrainDeploy, self).deploy()
 
     # Update the status of the new prediction
-    print('Updating Prediction({}) of Team({}) to status: {}'.format(
-      self.prediction.slug, self.team.slug, self.prediction.status))
-
     # TODO: Secure this better and move into Prediction model as a helper function
     new_status = pstatus.next_status(self.prediction.status)
+
+    print('Updating Prediction({}) of Team({}) to status: {}'.format(
+      self.prediction.slug, self.team.slug, new_status))
+
     dbi.update(self.prediction, {'status': new_status})

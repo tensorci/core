@@ -7,7 +7,7 @@ from src.deploys.build_server_deploy import BuildServerDeploy
 
 class PostTraining(object):
 
-  def __int__(self, prediction=None):
+  def __init__(self, prediction=None):
     self.prediction = prediction
 
   def perform(self):

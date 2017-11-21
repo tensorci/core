@@ -87,6 +87,7 @@ class RestfulPrediction(Resource):
 
 @namespace.route('/prediction/status')
 class PredictionIsTrained(Resource):
+  """Managing Prediction as a state machine"""
 
   @namespace.doc('update_prediction_status')
   @namespace.expect(update_prediction_status_model, validate=True)
@@ -102,29 +103,30 @@ class PredictionIsTrained(Resource):
     if not prediction:
       err = 'No Prediction found for uid: {}'.format(prediction_uid)
       logger.error(err)
-      return err
+      return err, 500
 
     # Ensure desired_status is even a valid status
     if desired_status not in pstatus.statuses:
       err = 'Invalid desired_status: {}'.format(desired_status)
       logger.error(err)
-      return err
+      return err, 500
 
     # Ensure desired_status immediately proceeds this prediction's current status
     if not pstatus.proceeds(prediction.status, desired_status):
       err = '{} does not immediately proceed: {}'.format(desired_status, prediction.status)
       logger.error(err)
-      return err
+      return err, 500
 
     # Get status update service for the desired_status
-    update_svc = status_update_services.get(desired_status)
+    update_service = status_update_services.get(desired_status)
 
-    if not update_svc:
+    if not update_service:
       err = 'Couldn\'t find status update service for status: {}'.format(desired_status)
       logger.error(err)
-      return err
+      return err, 500
 
     # Perform the update
-    update_svc(prediction=prediction).perform()
+    service = update_service(prediction=prediction)
+    service.perform()
 
     return '', 200

@@ -1,5 +1,4 @@
 from kubernetes import client, config
-from src.utils import clusters
 from src import dbi
 from src.models import Prediction
 
@@ -16,41 +15,55 @@ class AbstractDeploy(object):
 
     # Overwritten in child class
     self.image = None
-    self.name = None
+    self.deploy_name = None
+    self.cluster = None
+    self.ports = None
     self.replicas = 1
     self.namespace = 'default'
-    self.cluster = None
     self.envs = {}
 
   def deploy(self):
+    # Configure k8s to deploy to our desired cluster
     self.config.load_kube_config()
 
     # TODO: Figure out where to put self.envs
+    # Create a container spec
     container = self.config_container()
-    template = self.config_template_spec(container)
-    deploy_spec = self.config_deploy_spec(template)
+
+    # Add the container spec to a pod spec
+    pod_template = self.config_template_spec(container)
+
+    # Create a deployment spec
+    deploy_spec = self.config_deploy_spec(pod_template)
+
+    # Create a deployment object
     deployment = self.create_deployment(deploy_spec)
 
-    return self.api.create_namespaced_deployment(
+    # Perform deploy
+    deploy_resp = self.api.create_namespaced_deployment(
       namespace=self.namespace,
       body=deployment
     )
 
+    return deploy_resp
+
   def config_container(self):
     ports = None
 
-    if self.cluster == clusters.API:
-      ports = [self.client.V1ContainerPort(container_port=80)]
+    if self.ports:
+      ports = [self.client.V1ContainerPort(container_port=p) for p in self.ports]
+
+    container_name = self.deploy_name
 
     return self.client.V1Container(
-      name=self.name,
+      name=container_name,
       image=self.image,
-      ports=ports
+      ports=ports,
     )
 
   def config_template_spec(self, container):
     return self.client.V1PodTemplateSpec(
-      metadata=self.client.V1ObjectMeta(labels={'app': self.name}),
+      metadata=self.client.V1ObjectMeta(labels={'app': self.deploy_name}),
       spec=self.client.V1PodSpec(containers=[container])
     )
 
@@ -64,6 +77,6 @@ class AbstractDeploy(object):
     return self.client.ExtensionsV1beta1Deployment(
       api_version='extensions/v1beta1',
       kind='Deployment',
-      metadata=self.client.V1ObjectMeta(name=self.name),
+      metadata=self.client.V1ObjectMeta(name=self.deploy_name),
       spec=deploy_spec
     )

@@ -8,7 +8,7 @@ from src.services.cluster_services.create_cluster import CreateCluster
 
 class PostApiBuilding(object):
 
-  def __int__(self, prediction=None):
+  def __init__(self, prediction=None):
     self.prediction = prediction
 
   def perform(self):

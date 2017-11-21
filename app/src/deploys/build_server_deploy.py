@@ -12,9 +12,10 @@ class BuildServerDeploy(AbstractDeploy):
 
   def __init__(self, prediction_uid=None, build_for=None):
     super(BuildServerDeploy, self).__init__(prediction_uid)
+
     self.build_for = build_for
     self.image = '{}/{}'.format(config.IMAGE_REPO_OWNER, image_names.BUILD_SERVER)
-    self.name = '{}-{}-build'.format(self.prediction.slug, self.build_for)
+    self.deploy_name = '{}-{}-build'.format(self.prediction.slug, self.build_for)
     self.cluster = clusters.BUILD_SERVER
 
     self.envs = {
@@ -32,7 +33,7 @@ class BuildServerDeploy(AbstractDeploy):
     }
 
   def deploy(self):
-    # Make the deploy
+    # Perform deploy
     super(BuildServerDeploy, self).deploy()
 
     # Update the status of the new prediction
