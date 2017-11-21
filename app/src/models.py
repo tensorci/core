@@ -148,7 +148,6 @@ class Cluster(db.Model):
     self.master_type = master_type
     self.node_type = node_type
     self.image = image
-    self.bucket = 's3://{}'.format(self.team.slug)
 
   def __repr__(self):
     return '<Cluster id={}, uid={}, team_id={}, name={}, ns_addresses={}, hosted_zone_id={}, zones={}, master_type={}, ' \
