@@ -25,7 +25,7 @@ class CreateCluster(object):
       'ns_addresses': ns_addresses
     })
 
-    # Format the ns_addresses for this hosted_zone as NS DNS records
+    # Prep these addresses as NS record upserts
     records = []
     for address in ns_addresses:
       records.append({
@@ -44,5 +44,5 @@ class CreateCluster(object):
     # Do this
 
     if self.with_deploy:
-      deployer = ApiDeploy(self.prediction_uid)
+      deployer = ApiDeploy(prediction_uid=self.prediction_uid)
       deployer.deploy()

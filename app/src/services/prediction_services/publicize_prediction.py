@@ -18,14 +18,12 @@ class PublicizePrediction(object):
     self.prediction = dbi.update(self.prediction, {'elb': elb})
 
     # Create a CNAME record for your subdomain with the ELB's url
-    records = [
-      {
-        'domain': self.prediction.domain,
-        'type': 'CNAME',
-        'record': elb
-      }
-    ]
+    cname_record = {
+      'domain': self.prediction.domain,
+      'type': 'CNAME',
+      'record': elb
+    }
 
-    add_dns_records(self.prediction.hosted_zone_id, records)
+    add_dns_records(self.prediction.hosted_zone_id, [cname_record])
 
     # Validate that it works after a host sec with a simple request

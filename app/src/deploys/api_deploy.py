@@ -20,6 +20,9 @@ class ApiDeploy(AbstractDeploy):
     self.ports = [80]
 
     self.envs = {
+      'AWS_ACCESS_KEY_ID': os.environ.get('AWS_ACCESS_KEY_ID'),
+      'AWS_SECRET_ACCESS_KEY': os.environ.get('AWS_SECRET_ACCESS_KEY'),
+      'AWS_REGION_NAME': os.environ.get('AWS_REGION_NAME'),
       'DATASET_DB_URL': os.environ.get('DATASET_DB_URL'),
       'TEAM': self.team.slug,
       'TEAM_UID': self.team.uid,
@@ -31,15 +34,16 @@ class ApiDeploy(AbstractDeploy):
     # Perform deploy
     super(ApiDeploy, self).deploy()
 
-    # Update the status of the new prediction
+    # Update the status of the prediction
     # TODO: Secure this better and move into Prediction model as a helper function
     new_status = pstatus.next_status(self.prediction.status)
 
     print('Updating Prediction({}) of Team({}) to status: {}'.format(
       self.prediction.slug, self.team.slug, new_status))
 
-    dbi.update(self.prediction, {'status': new_status})
+    self.prediction = dbi.update(self.prediction, {'status': new_status})
 
-    # Set up ELB and CNAME record for deployment if not already done
+    # Set up ELB and CNAME record for deployment if not already there
     if not self.prediction.elb:
-      PublicizePrediction(self.prediction).perform()
+      publicize_service = PublicizePrediction(prediction=self.prediction)
+      publicize_service.perform()

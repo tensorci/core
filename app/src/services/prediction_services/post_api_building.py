@@ -17,15 +17,13 @@ class PostApiBuilding(object):
 
     team = self.prediction.team
 
+    # If team's cluster already exists, go ahead and deploy to it
     if team.cluster:
-      # Deploy to cluster if already exists
       create_deploy(ApiDeploy, {'prediction_uid': self.prediction.uid})
     else:
-      # Otherwise, create cluster and then deploy
-      delayed.add_job(
-        delay_class_method,
-        args=[CreateCluster, {
-          'team_uid': team.uid,
-          'prediction_uid': self.prediction.uid,
-          'with_deploy': True
-        }])
+      # Otherwise, create the cluster first, then deploy
+      delayed.add_job(delay_class_method, args=[CreateCluster, {
+        'team_uid': team.uid,
+        'prediction_uid': self.prediction.uid,
+        'with_deploy': True
+      }])

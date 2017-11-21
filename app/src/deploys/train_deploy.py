@@ -34,7 +34,7 @@ class TrainDeploy(AbstractDeploy):
     # Perform deploy
     super(TrainDeploy, self).deploy()
 
-    # Update the status of the new prediction
+    # Update the status of the prediction
     # TODO: Secure this better and move into Prediction model as a helper function
     new_status = pstatus.next_status(self.prediction.status)
 
