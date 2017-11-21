@@ -21,7 +21,7 @@ class PostTrainBuilding(object):
     # If team doesn't have an S3 bucket yet, create that now.
     # We'll know S3 hasn't been created yet if the team still doesn't have a cluster record
     if not team.cluster:
-      bucket_name = 's3://{}'.format(team.slug)
+      bucket_name = 's3://{}-{}'.format(team.slug, team.uid)
       create_s3_bucket(bucket_name)
 
     # Schedule a deploy to the training cluster
