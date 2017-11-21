@@ -12,7 +12,6 @@ from src.statuses.pred_statuses import pstatus
 from src.services.prediction_services import status_update_services
 from src.deploys import create_deploy
 from src.deploys.build_server_deploy import BuildServerDeploy
-from src.scheduler import delayed, delay_class_method
 
 config = get_config()
 
@@ -125,8 +124,7 @@ class PredictionIsTrained(Resource):
       logger.error(err)
       return err
 
-    # Schedule the service to be performed
-    delayed.add_job(delay_class_method,
-                    args=[update_svc, {'prediction_uid': prediction_uid}])
+    # Perform the update
+    update_svc(prediction=prediction).perform()
 
     return '', 200
