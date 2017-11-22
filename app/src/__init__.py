@@ -26,6 +26,12 @@ db = SQLAlchemy(app)
 from routes import api
 api.init_app(app)
 
+# Require SSL if on prod
 if is_prod() and os.environ.get('REQUIRE_SSL') == 'true':
   from flask_sslify import SSLify
   SSLify(app)
+
+# Execute any startup scripts here
+# Export all cluster's configs here (train cluster + all teams' clusters)
+# os.system('kops export kubecfg emirates.glimpse.ai --state s3://glimpse-ai')
+# os.system('cat $HOME/.kube/config')
