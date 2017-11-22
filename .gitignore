@@ -106,3 +106,5 @@ ENV/
 app.db
 
 .idea/
+
+bin/kops
