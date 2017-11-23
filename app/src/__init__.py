@@ -4,7 +4,7 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from config import get_config
 from helpers.env import is_prod
-import logging
+from initializers import export_clusters
 
 # Create and configure the Flask app
 app = Flask(__name__)
@@ -32,6 +32,4 @@ if is_prod() and os.environ.get('REQUIRE_SSL') == 'true':
   SSLify(app)
 
 # Execute any startup scripts here
-# Export all cluster's configs here (train cluster + all teams' clusters)
-# os.system('kops export kubecfg emirates.glimpse.ai --state s3://glimpse-ai')
-# os.system('cat $HOME/.kube/config')
+export_clusters.perform()
