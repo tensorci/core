@@ -24,7 +24,7 @@ class AbstractDeploy(object):
 
   def deploy(self):
     # Configure k8s to deploy to our desired cluster
-    self.config.load_kube_config()
+    self.config.load_kube_config(context=self.cluster)
 
     # TODO: Figure out where to put self.envs
     # Create a container spec

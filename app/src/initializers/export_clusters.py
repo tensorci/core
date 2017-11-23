@@ -12,6 +12,13 @@ def perform():
     if train_cluster_name and train_cluster_state:
       export_cluster(name=train_cluster_name, state=train_cluster_state)
 
+    # Export build server cluster
+    bs_cluster_name = os.environ.get('BS_CLUSTER_NAME')
+    bs_cluster_state = os.environ.get('BS_CLUSTER_STATE')
+
+    if bs_cluster_name and bs_cluster_state:
+      export_cluster(name=bs_cluster_name, state=bs_cluster_state)
+
     # Export API clusters
     clusters = [(c.name, c.state) for c in dbi.find_all(Cluster)]
 

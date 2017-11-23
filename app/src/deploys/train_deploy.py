@@ -15,7 +15,7 @@ class TrainDeploy(AbstractDeploy):
 
     self.image = '{}/{}-{}'.format(config.IMAGE_REPO_OWNER, self.prediction.slug, clusters.TRAIN)
     self.deploy_name = '{}-{}'.format(self.prediction.slug, clusters.TRAIN)
-    self.cluster = clusters.TRAIN
+    self.cluster = os.environ.get('TRAIN_CLUSTER_NAME')
 
     self.envs = {
       'AWS_ACCESS_KEY_ID': os.environ.get('AWS_ACCESS_KEY_ID'),

@@ -16,7 +16,7 @@ class BuildServerDeploy(AbstractDeploy):
     self.build_for = build_for
     self.image = '{}/{}'.format(config.IMAGE_REPO_OWNER, image_names.BUILD_SERVER)
     self.deploy_name = '{}-{}-build'.format(self.prediction.slug, self.build_for)
-    self.cluster = clusters.BUILD_SERVER
+    self.cluster = os.environ.get('BS_CLUSTER_NAME')
 
     self.envs = {
       'DOCKER_USERNAME': os.environ.get('DOCKER_USERNAME'),
