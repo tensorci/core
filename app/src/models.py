@@ -133,6 +133,7 @@ class Cluster(db.Model):
   master_type = db.Column(db.String(120))
   node_type = db.Column(db.String(120))
   image = db.Column(db.String(120))
+  state = db.Column(db.String(120))
   validated = db.Column(db.Boolean, server_default='f')
   is_destroyed = db.Column(db.Boolean, server_default='f')
   created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
@@ -148,12 +149,13 @@ class Cluster(db.Model):
     self.master_type = master_type
     self.node_type = node_type
     self.image = image
+    self.state = 's3://{}-{}'.format(team.slug, team.uid)
 
   def __repr__(self):
     return '<Cluster id={}, uid={}, team_id={}, name={}, ns_addresses={}, hosted_zone_id={}, zones={}, master_type={}, ' \
-           'node_type={}, image={}, validated={}, is_destroyed={}, created_at={}>'.format(
+           'node_type={}, image={}, state={}, validated={}, is_destroyed={}, created_at={}>'.format(
       self.id, self.uid, self.team_id, self.name, self.ns_addresses, self.hosted_zone_id, self.zones, self.master_type,
-      self.node_type, self.image, self.validated, self.is_destroyed, self.created_at)
+      self.node_type, self.image, self.state, self.validated, self.is_destroyed, self.created_at)
 
 
 class Prediction(db.Model):
