@@ -26,7 +26,6 @@ class AbstractDeploy(object):
     # Configure k8s to deploy to our desired cluster
     self.config.load_kube_config(context=self.cluster)
 
-    # TODO: Figure out where to put self.envs
     # Create a container spec
     container = self.config_container()
 
@@ -55,10 +54,15 @@ class AbstractDeploy(object):
 
     container_name = self.deploy_name
 
+    envs = []
+    for name, value in self.envs.iteritems():
+      envs.append(self.client.V1EnvVar(name=name, value=value))
+
     return self.client.V1Container(
       name=container_name,
       image=self.image,
       ports=ports,
+      env=envs
     )
 
   def config_template_spec(self, container):
