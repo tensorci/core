@@ -17,7 +17,7 @@ class CreateCluster(object):
     # Create Cluster model for team
     cluster = dbi.create(Cluster, {'team': self.team})
 
-    # Create Route53 hosted zone for cluster
+    # Create Route53 hosted zone for cluster (NS Records are also automatically added)
     hosted_zone_id, ns_addresses = create_route53_hosted_zone(cluster.name)
 
     # Update the cluster with the Route53 info
@@ -25,18 +25,6 @@ class CreateCluster(object):
       'hosted_zone_id': hosted_zone_id,
       'ns_addresses': ns_addresses
     })
-
-    # Prep these addresses as NS records
-    records = []
-    for address in ns_addresses:
-      records.append({
-        'domain': cluster.name,
-        'type': 'NS',
-        'record': address
-      })
-
-    # Register NS records for each of the ns_addresses
-    add_dns_records(hosted_zone_id, records)
 
     # Create cluster with kops name=cluster.name
     kops.create_cluster(

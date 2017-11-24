@@ -1,5 +1,6 @@
 import os
 import boto3
+import re
 from src import logger
 from uuid import uuid4
 
@@ -34,6 +35,13 @@ def create_route53_hosted_zone(name):
     )
 
     hosted_zone_id = resp.get('HostedZone', {}).get('Id')
+
+    if hosted_zone_id:
+      match = re.match('/hostedzone/([0-9A-Za-z]+)', hosted_zone_id)
+
+      if match:
+        hosted_zone_id = match.groups()[0]
+
     name_servers = resp.get('DelegationSet', {}).get('NameServers') or []
   except BaseException as e:
     logger.error('Error Creating Route 53 Hosted Zone (name={}) with error: {}'.format(name, e))
