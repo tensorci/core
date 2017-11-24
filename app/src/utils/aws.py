@@ -3,6 +3,10 @@ import boto3
 from src import logger
 from uuid import uuid4
 
+os_map = {
+  'ubuntu-16.04': '099720109477/ubuntu/images/hvm-ssd/ubuntu-xenial-16.04-amd64-server-20171026.1'
+}
+
 
 def create_s3_bucket(name):
   try:

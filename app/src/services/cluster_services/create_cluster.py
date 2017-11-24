@@ -38,6 +38,7 @@ class CreateCluster(object):
     add_dns_records(hosted_zone_id, records)
 
     # Create cluster with kops name=cluster.name
+
     # Do this
 
     # Validate the cluster...

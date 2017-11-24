@@ -1,6 +1,7 @@
 import os
 from src import dbi
 from src.models import Cluster
+from src.utils.kops import export_cluster
 
 
 def perform():
@@ -24,9 +25,3 @@ def perform():
 
     for name, state in clusters:
       export_cluster(name=name, state=state)
-
-
-def export_cluster(name=None, state=None):
-  assert not name.startswith('$(')
-  assert not state.startswith('$(')
-  os.system('kops export kubecfg {} --state {}'.format(name, state))
