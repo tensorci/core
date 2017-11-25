@@ -9,7 +9,6 @@ class AbstractDeploy(object):
     self.prediction_uid = prediction_uid
     self.prediction = dbi.find_one(Prediction, {'uid': prediction_uid})
     self.team = self.prediction.team
-    self.api = client.ExtensionsV1beta1Api()
     self.client = client
     self.config = config
 
@@ -26,6 +25,8 @@ class AbstractDeploy(object):
     # Configure k8s to deploy to our desired cluster
     self.config.load_kube_config(context=self.cluster)
 
+    api = self.client.ExtensionsV1beta1Api()
+
     # Create a container spec
     container = self.config_container()
 
@@ -39,7 +40,7 @@ class AbstractDeploy(object):
     deployment = self.create_deployment(deploy_spec)
 
     # Perform deploy
-    deploy_resp = self.api.create_namespaced_deployment(
+    deploy_resp = api.create_namespaced_deployment(
       namespace=self.namespace,
       body=deployment
     )

@@ -10,7 +10,7 @@ class Config:
 class ProdConfig(Config):
   DEBUG = False
   DOMAIN = 'tensorci.com'
-  IMAGE_REPO_OWNER = 'tensorci-prod'
+  IMAGE_REPO_OWNER = 'whittlbc'
 
   def __init__(self):
     self.SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')

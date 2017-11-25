@@ -170,7 +170,7 @@ class Prediction(db.Model):
   git_repo = db.Column(db.String(240))
   image_repo_owner = db.Column(db.String(120))
   image_version = db.Column(db.String(60))
-  status = db.Column(db.Integer)
+  status = db.Column(db.String(60))
   is_destroyed = db.Column(db.Boolean, server_default='f')
   created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
@@ -194,6 +194,6 @@ class Prediction(db.Model):
 
   def __repr__(self):
     return '<Prediction id={}, uid={}, team_id={}, name={}, slug={}, elb={}, domain={}, ' \
-           'git_repo={}, image_repo_owner={}, image_version={}, is_destroyed={}, created_at={}>'.format(
+           'git_repo={}, image_repo_owner={}, image_version={}, status={}, is_destroyed={}, created_at={}>'.format(
       self.id, self.uid, self.team_id, self.name, self.slug, self.elb, self.domain,
-      self.git_repo, self.image_repo_owner, self.image_version, self.is_destroyed, self.created_at)
+      self.git_repo, self.image_repo_owner, self.image_version, self.status, self.is_destroyed, self.created_at)
