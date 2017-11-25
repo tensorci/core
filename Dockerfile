@@ -13,3 +13,7 @@ COPY ./app /app
 # Make kops accessible
 COPY ./bin/kops /usr/local/bin/kops
 RUN chmod +x /usr/local/bin/kops
+
+# Make kubectl accessible
+COPY ./bin/kubectl /usr/local/bin/kubectl
+RUN chmod +x /usr/local/bin/kubectl

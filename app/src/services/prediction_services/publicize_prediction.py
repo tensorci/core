@@ -2,7 +2,7 @@ import os
 from src import dbi
 from src.utils import clusters
 from src.utils.aws import add_dns_records
-from kubernetes import client, config
+from subprocess import check_output
 
 
 class PublicizePrediction(object):
@@ -13,43 +13,38 @@ class PublicizePrediction(object):
     self.target_port = target_port
     self.team = self.prediction.team
     self.cluster = self.team.cluster.name
-    self.client = client
-    self.config = config
     self.deploy_name = '{}-{}'.format(self.prediction.slug, clusters.API)
     self.service_name = self.deploy_name
 
+  # HACK
+  # TODO: Figure out how to do all of this with the kubernetes python client we're
+  # already using for deploys. There's dog-shit documentation for exposing a deploy with a service
+  # and it seems it'll take having to do the ELB creation manually, which sucks.
   def perform(self):
-    self.config.load_kube_config(context=self.cluster)
+    # Switch to appropriate kubectl context
+    os.system('kubectl config use-context {}'.format(self.cluster))
 
+    # Expose deployment with a LoadBalancer service
+    os.system('kubectl expose deployment/{} --type=LoadBalancer --port={} --target-port={} --name={}'.format(
+      self.deploy_name, self.port, self.target_port, self.service_name))
 
+    # Get the load balancer url
+    desc = check_output('kubectl describe service {}'.format(self.service_name).split())
+    lines = desc.split('\n')
+    elb_line = [l for l in lines if l.startswith('LoadBalancer Ingress')]
 
-    # create the elb
+    if not elb_line:
+      print('No LoadBalancer Ingress info found when describing service {} with context {}'.format(
+        self.service_name, self.cluster))
+      return
 
-    api = self.client.CoreV1Api()
+    elb_url = elb_line[0].replace('LoadBalancer Ingress:', '').replace(' ', '')
 
-    service = self.client.V1Service(api_version='v1', kind='Service')
-
-    service.metadata = self.client.V1ObjectMeta(name=self.service_name)
-
-    service.spec = self.create_service_spec()
-
-    api.create_namespaced_service(namespace='default', body=service)
-
-    # Add elb to prediction
-    # self.prediction = dbi.update(self.prediction, {'elb': elb})
+    # Update the prediction record with the ELB's url
+    self.prediction = dbi.update(self.prediction, {'elb': elb_url})
 
     # Create a CNAME record for your subdomain with the ELB's url
-    # add_dns_records(os.environ.get('TL_HOSTED_ZONE_ID'), self.prediction.domain, [elb], 'CNAME')
-
-    # Validate that it works after a sec with a simple request
-
-  def create_service_spec(self):
-    spec = self.client.V1ServiceSpec()
-    spec.selector = {'app': self.service_name}
-
-    if self.port and self.target_port:
-      spec.ports = [self.client.V1ServicePort(protocol='TCP', port=self.port, target_port=self.target_port)]
-
-    # Create and add an ELB to the spec
-
-    return spec
+    add_dns_records(os.environ.get('TL_HOSTED_ZONE_ID'),
+                    self.prediction.domain,
+                    [elb_url],
+                    'CNAME')

@@ -9,7 +9,7 @@ class Config:
 
 class ProdConfig(Config):
   DEBUG = False
-  DOMAIN = 'app.tensorci.com'
+  DOMAIN = 'tensorci.com'
   IMAGE_REPO_OWNER = 'tensorci-prod'
 
   def __init__(self):
@@ -17,7 +17,7 @@ class ProdConfig(Config):
 
 
 class StagingConfig(Config):
-  DOMAIN = 'app.staging.tensorci.com'
+  DOMAIN = 'staging.tensorci.com'
   IMAGE_REPO_OWNER = 'tensorci-staging'
 
   def __init__(self):
@@ -25,7 +25,7 @@ class StagingConfig(Config):
 
 
 class DevConfig(Config):
-  DOMAIN = 'app.dev.tensorci.com'
+  DOMAIN = 'dev.tensorci.com'
   IMAGE_REPO_OWNER = 'tensorci-dev'
 
   def __init__(self):
@@ -33,7 +33,7 @@ class DevConfig(Config):
 
 
 class TestConfig(Config):
-  DOMAIN = 'app.test.tensorci.com'
+  DOMAIN = 'test.tensorci.com'
   IMAGE_REPO_OWNER = 'tensorci-test'
 
   def __init__(self):

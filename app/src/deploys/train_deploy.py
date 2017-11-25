@@ -22,7 +22,7 @@ class TrainDeploy(AbstractDeploy):
       'AWS_SECRET_ACCESS_KEY': os.environ.get('AWS_SECRET_ACCESS_KEY'),
       'AWS_REGION_NAME': os.environ.get('AWS_REGION_NAME'),
       'DATASET_DB_URL': os.environ.get('DATASET_DB_URL'),
-      'CORE_URL': 'https://{}/api'.format(config.DOMAIN),
+      'CORE_URL': 'https://app.{}/api'.format(config.DOMAIN),
       'CORE_API_TOKEN': os.environ.get('CORE_API_TOKEN'),
       'TEAM': self.team.slug,
       'TEAM_UID': self.team.uid,
