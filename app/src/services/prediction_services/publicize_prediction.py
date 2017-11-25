@@ -1,4 +1,6 @@
+import os
 from src import dbi
+from src.utils.aws import add_dns_records
 
 
 class PublicizePrediction(object):
@@ -17,12 +19,6 @@ class PublicizePrediction(object):
     self.prediction = dbi.update(self.prediction, {'elb': elb})
 
     # Create a CNAME record for your subdomain with the ELB's url
-    cname_record = {
-      'domain': self.prediction.domain,
-      'type': 'CNAME',
-      'record': elb
-    }
+    add_dns_records(os.environ.get('TL_HOSTED_ZONE_ID'), self.prediction.domain, [elb], 'CNAME')
 
-    # add_dns_records(self.prediction.hosted_zone_id, [cname_record])
-
-    # Validate that it works after a host sec with a simple request
+    # Validate that it works after a sec with a simple request

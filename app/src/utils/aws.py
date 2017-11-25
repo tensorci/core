@@ -50,12 +50,12 @@ def create_route53_hosted_zone(name):
   return hosted_zone_id, name_servers
 
 
-def add_ns_records(hosted_zone_id, domain, records):
+def add_dns_records(hosted_zone_id, domain, records, type):
   changes = [{
     'Action': 'UPSERT',
     'ResourceRecordSet': {
       'Name': domain,
-      'Type': 'NS',
+      'Type': type,
       'TTL': 60,
       'ResourceRecords': [{'Value': r} for r in records]
     }

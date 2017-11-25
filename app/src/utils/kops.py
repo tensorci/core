@@ -23,7 +23,7 @@ def create_cluster(name=None, zones=None, master_size=None, node_size=None,
 def validate_cluster(name=None, state=None):
   validate_params([name, state])
   output = check_output('kops validate cluster --name {} --state {}'.format(name, state).split())
-  return 'is ready' in output
+  return output and 'is ready' in output
 
 
 def validate_params(params):
