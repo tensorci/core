@@ -50,19 +50,16 @@ def create_route53_hosted_zone(name):
   return hosted_zone_id, name_servers
 
 
-def add_dns_records(hosted_zone_id, records):
-  changes = []
-
-  for zone in records:
-    changes.append({
-      'Action': 'UPSERT',
-      'ResourceRecordSet': {
-        'Name': zone.get('domain'),
-        'Type': zone.get('type'),
-        'TTL': 300,
-        'ResourceRecords': [{'Value': zone.get('record')}]
-      }
-    })
+def add_ns_records(hosted_zone_id, domain, records):
+  changes = [{
+    'Action': 'UPSERT',
+    'ResourceRecordSet': {
+      'Name': domain,
+      'Type': 'NS',
+      'TTL': 60,
+      'ResourceRecords': [{'Value': r} for r in records]
+    }
+  }]
 
   try:
     route53 = boto3.client('route53')
@@ -72,7 +69,7 @@ def add_dns_records(hosted_zone_id, records):
       ChangeBatch={'Changes': changes}
     )
   except BaseException as e:
-    logger.error('Error Adding DNS records to hosted_zone_id() with error: {}'.format(hosted_zone_id, e))
+    logger.error('Error Adding DNS records to hosted_zone_id({}) with error: {}'.format(hosted_zone_id, e))
     return False
 
   return True

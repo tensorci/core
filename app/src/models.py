@@ -145,7 +145,7 @@ class Cluster(db.Model):
     self.name = '{}-cluster.{}'.format(team.slug, config.DOMAIN)
     self.ns_addresses = ns_addresses or []
     self.hosted_zone_id = hosted_zone_id
-    self.zones = zones or ['us-west-2a']  # TODO: Ensure zones are all us-west-2
+    self.zones = zones or ['us-west-1a']  # TODO: Ensure zones are all us-west-1
     self.master_type = master_type
     self.node_type = node_type
     self.image = image

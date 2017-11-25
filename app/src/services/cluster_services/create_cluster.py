@@ -1,8 +1,10 @@
+import os
 from src import dbi
 from src.models import Team, Cluster
 from src.deploys.api_deploy import ApiDeploy
-from src.utils.aws import create_route53_hosted_zone, add_dns_records, os_map
+from src.utils.aws import create_route53_hosted_zone, add_ns_records, os_map
 from src.utils import kops
+from time import sleep
 
 
 class CreateCluster(object):
@@ -17,7 +19,7 @@ class CreateCluster(object):
     # Create Cluster model for team
     cluster = dbi.create(Cluster, {'team': self.team})
 
-    # Create Route53 hosted zone for cluster (NS Records are also automatically added)
+    # Create Route53 hosted zone for cluster
     hosted_zone_id, ns_addresses = create_route53_hosted_zone(cluster.name)
 
     # Update the cluster with the Route53 info
@@ -25,6 +27,20 @@ class CreateCluster(object):
       'hosted_zone_id': hosted_zone_id,
       'ns_addresses': ns_addresses
     })
+
+    # Prep these addresses as NS records
+    records = []
+    for address in ns_addresses:
+      records.append({
+        'domain': cluster.name,
+        'type': 'NS',
+        'record': address
+      })
+
+    # Register NS records for each of the ns_addresses
+    add_ns_records(os.environ.get('TL_HOSTED_ZONE_ID'), cluster.name, records)
+
+    sleep(60)
 
     # Create cluster with kops name=cluster.name
     kops.create_cluster(
@@ -41,7 +57,7 @@ class CreateCluster(object):
     # Probably use subprocess.check_output to get the output
     # Do this
 
-    # Make an API deploy post-cluster-validation if desired
+    # Make an API deploy postcluster-validation
     if self.with_deploy:
       deployer = ApiDeploy(prediction_uid=self.prediction_uid)
       deployer.deploy()

@@ -1,5 +1,4 @@
 from src import dbi
-from src.utils.aws import add_dns_records
 
 
 class PublicizePrediction(object):
@@ -24,6 +23,6 @@ class PublicizePrediction(object):
       'record': elb
     }
 
-    add_dns_records(self.prediction.hosted_zone_id, [cname_record])
+    # add_dns_records(self.prediction.hosted_zone_id, [cname_record])
 
     # Validate that it works after a host sec with a simple request

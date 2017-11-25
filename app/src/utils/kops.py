@@ -1,5 +1,6 @@
 import os
 import re
+from subprocess import check_output
 from aws import os_map
 
 
@@ -19,9 +20,10 @@ def create_cluster(name=None, zones=None, master_size=None, node_size=None,
     name, zones, master_size, node_size, node_count, state, image))
 
 
-def validate_cluster(name=None):
-  validate_cluster([name])
-  os.system('kops validate cluster --name {}'.format(name))
+def validate_cluster(name=None, state=None):
+  validate_params([name, state])
+  output = check_output('kops validate cluster --name {} --state {}'.format(name, state).split())
+  return 'is ready' in output
 
 
 def validate_params(params):
