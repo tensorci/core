@@ -54,6 +54,7 @@ class CreateCluster(object):
     )
 
     # Validate the cluster every 30s until it's validated
+    # TODO: maybe use kubernetes watch abilities and look for event instead
     while not kops.validate_cluster(name=cluster.name, state=cluster.state):
       print('Validating cluster {}...'.format(cluster.name))
       sleep(30)
