@@ -17,6 +17,20 @@ class BuildServerDeploy(AbstractDeploy):
     self.image = '{}/{}'.format(config.IMAGE_REPO_OWNER, image_names.BUILD_SERVER)
     self.deploy_name = '{}-{}-build'.format(self.prediction.slug, self.build_for)
     self.cluster = os.environ.get('BS_CLUSTER_NAME')
+    self.job = True
+    self.restart_policy = 'Never'
+
+    # Configure volumes/mounts to allow for /var/run/docker.sock (docker daemon) to be bound to
+    self.volumes = [{
+      'name': 'dockersock',
+      'type': 'host_path',
+      'path': '/var/run'
+    }]
+
+    self.volume_mounts = [{
+      'name': 'dockersock',
+      'mount_path': '/var/run'
+    }]
 
     self.envs = {
       'DOCKER_USERNAME': os.environ.get('DOCKER_USERNAME'),
