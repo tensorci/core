@@ -4,6 +4,7 @@ from src.utils import image_names, clusters
 from src.config import get_config
 from src import dbi
 from src.statuses.pred_statuses import pstatus
+from src.helpers import time_since_epoch
 
 config = get_config()
 
@@ -15,7 +16,7 @@ class BuildServerDeploy(AbstractDeploy):
 
     self.build_for = build_for
     self.image = '{}/{}'.format(config.IMAGE_REPO_OWNER, image_names.BUILD_SERVER)
-    self.deploy_name = '{}-{}-build'.format(self.prediction.slug, self.build_for)
+    self.deploy_name = '{}-{}-build-{}'.format(self.prediction.slug, self.build_for, time_since_epoch())
     self.cluster = os.environ.get('BS_CLUSTER_NAME')
     self.job = True
     self.restart_policy = 'Never'

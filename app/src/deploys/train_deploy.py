@@ -4,6 +4,7 @@ from src.utils import clusters
 from src.config import get_config
 from src import dbi
 from src.statuses.pred_statuses import pstatus
+from src.helpers import time_since_epoch
 
 config = get_config()
 
@@ -14,7 +15,7 @@ class TrainDeploy(AbstractDeploy):
     super(TrainDeploy, self).__init__(prediction_uid)
 
     self.image = '{}/{}-{}'.format(config.IMAGE_REPO_OWNER, self.prediction.slug, clusters.TRAIN)
-    self.deploy_name = '{}-{}'.format(self.prediction.slug, clusters.TRAIN)
+    self.deploy_name = '{}-{}-{}'.format(self.prediction.slug, clusters.TRAIN, time_since_epoch())
     self.cluster = os.environ.get('TRAIN_CLUSTER_NAME')
     self.job = True
     self.restart_policy = 'Never'

@@ -5,6 +5,7 @@ from src.config import get_config
 from src import dbi
 from src.statuses.pred_statuses import pstatus
 from src.services.prediction_services.publicize_prediction import PublicizePrediction
+from src.helpers import time_since_epoch
 
 config = get_config()
 
@@ -15,7 +16,7 @@ class ApiDeploy(AbstractDeploy):
     super(ApiDeploy, self).__init__(prediction_uid)
 
     self.image = '{}/{}-{}'.format(config.IMAGE_REPO_OWNER, self.prediction.slug, clusters.API)
-    self.deploy_name = '{}-{}'.format(self.prediction.slug, clusters.API)
+    self.deploy_name = '{}-{}-{}'.format(self.prediction.slug, clusters.API, time_since_epoch())
     self.cluster = self.team.cluster.name
     self.ports = [80]
     self.replicas = 3
