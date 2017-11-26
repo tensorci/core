@@ -19,60 +19,82 @@ class AbstractDeploy(object):
     self.ports = None
     self.replicas = 1
     self.namespace = 'default'
-    self.envs = {}
+    self.envs = None
     self.job = False
     self.restart_policy = 'Always'
     self.volume_mounts = None
     self.volumes = None
 
   def deploy(self):
-    # Configure k8s to deploy to our desired cluster
+    # Configure kubernetes to deploy to our desired cluster
     self.config.load_kube_config(context=self.cluster)
 
-    # Create a container spec
-    container = self.create_container()
+    # Configure volume mounts
+    volume_mounts = self.configure_volume_mounts()
 
-    # Add the container spec to a pod spec
-    pod_template = self.create_template_spec([container])
+    # Configure ports
+    ports = self.configure_ports()
 
-    # Create deployment object
-    deployment = self.create_deployment(pod_template)
+    # Configure environment variables
+    envs = self.configure_envs()
 
-    # Get ref to the proper deploy method on appropriate api
+    # Configure a container
+    container = self.configure_container(volume_mounts=volume_mounts,
+                                         ports=ports,
+                                         envs=envs)
+
+    # Configure volumes
+    volumes = self.configure_volumes()
+
+    # Build up: container --> pod spec --> pod template spec
+    pod_template_spec = self.configure_pod_template_spec(containers=[container],
+                                                         volumes=volumes)
+
+    # Configure deploy spec
+    deploy_spec = self.configure_deploy_spec(pod_template_spec)
+
+    # Configure deploy object
+    deploy_obj = self.configure_deploy_obj(deploy_spec)
+
+    # Get ref to the proper deploy method on the appropriate API
     deploy_method = self.get_deploy_method()
 
     # Execute deploy
-    deploy_resp = deploy_method(namespace=self.namespace, body=deployment)
+    return deploy_method(namespace=self.namespace, body=deploy_obj)
 
-    return deploy_resp
-
-  def create_container(self):
-    ports = None
-    volume_mounts = None
-
-    if self.ports:
-      ports = [self.client.V1ContainerPort(container_port=p) for p in self.ports]
-
+  def configure_volume_mounts(self):
     if self.volume_mounts:
-      volume_mounts = [self.client.V1VolumeMount(**m) for m in self.volume_mounts]
+      return [self.client.V1VolumeMount(**m) for m in self.volume_mounts]
 
-    container_name = self.deploy_name
+    return None
 
-    envs = [self.client.V1EnvVar(name=n, value=v) for n, v in self.envs.iteritems()]
+  def configure_ports(self):
+    if self.ports:
+      return [self.client.V1ContainerPort(container_port=p) for p in self.ports]
 
+    return None
+
+  def configure_envs(self):
+    if self.envs:
+      return [self.client.V1EnvVar(name=n, value=v) for n, v in self.envs.iteritems()]
+
+    return None
+
+  def configure_container(self, volume_mounts=None, ports=None, envs=None):
     return self.client.V1Container(
-      name=container_name,
+      name=self.deploy_name,
       image=self.image,
       ports=ports,
       env=envs,
       volume_mounts=volume_mounts
     )
 
-  def create_template_spec(self, containers):
+  def configure_volumes(self):
     volumes = None
 
     if self.volumes:
       volumes = []
+
       for v in self.volumes:
         vol = self.client.V1Volume(name=v.get('name'))
 
@@ -81,9 +103,12 @@ class AbstractDeploy(object):
 
         volumes.append(vol)
 
+    return volumes
+
+  def configure_pod_template_spec(self, containers=None, volumes=None):
     metadata = self.client.V1ObjectMeta(labels={'app': self.deploy_name})
 
-    spec = self.client.V1PodSpec(
+    pod_spec = self.client.V1PodSpec(
       containers=containers,
       volumes=volumes,
       restart_policy=self.restart_policy
@@ -91,33 +116,39 @@ class AbstractDeploy(object):
 
     return self.client.V1PodTemplateSpec(
       metadata=metadata,
-      spec=spec
+      spec=pod_spec
     )
 
-  def create_deployment(self, template):
-    metadata = self.client.V1ObjectMeta(name=self.deploy_name)
-
+  def configure_deploy_spec(self, pod_template_spec):
     if self.job:
-      deployment = self.client.V1Job(
-        api_version='batch/v1',
-        kind='Job',
-        metadata=metadata,
-        spec=template
-      )
+      deploy_spec = self.client.V1JobSpec(template=pod_template_spec)
     else:
       deploy_spec = self.client.ExtensionsV1beta1DeploymentSpec(
         replicas=self.replicas,
-        template=template
+        template=pod_template_spec
       )
 
-      deployment = self.client.ExtensionsV1beta1Deployment(
+    return deploy_spec
+
+  def configure_deploy_obj(self, deploy_spec):
+    metadata = self.client.V1ObjectMeta(name=self.deploy_name)
+
+    if self.job:
+      deploy_obj = self.client.V1Job(
+        api_version='batch/v1',
+        kind='Job',
+        metadata=metadata,
+        spec=deploy_spec
+      )
+    else:
+      deploy_obj = self.client.ExtensionsV1beta1Deployment(
         api_version='extensions/v1beta1',
         kind='Deployment',
         metadata=metadata,
         spec=deploy_spec
       )
 
-    return deployment
+    return deploy_obj
 
   def get_deploy_method(self):
     if self.job:

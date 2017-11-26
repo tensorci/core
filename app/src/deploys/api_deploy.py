@@ -18,6 +18,7 @@ class ApiDeploy(AbstractDeploy):
     self.deploy_name = '{}-{}'.format(self.prediction.slug, clusters.API)
     self.cluster = self.team.cluster.name
     self.ports = [80]
+    self.replicas = 3
 
     self.envs = {
       'AWS_ACCESS_KEY_ID': os.environ.get('AWS_ACCESS_KEY_ID'),
