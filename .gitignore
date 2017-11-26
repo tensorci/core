@@ -107,4 +107,4 @@ app.db
 
 .idea/
 
-bin/kops
+app/train-build-test.py
