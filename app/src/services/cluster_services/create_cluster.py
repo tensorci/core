@@ -43,7 +43,8 @@ class CreateCluster(object):
       node_size=self.cluster.node_type,
       node_count=3, # TODO: put this somewhere as a constant
       state=bucket_url,
-      image=os_map.get(self.cluster.image)
+      image=os_map.get(self.cluster.image),
+      labels='team={}'.format(self.team.slug)
     )
 
     # Validate the cluster every 30s until it's validated
