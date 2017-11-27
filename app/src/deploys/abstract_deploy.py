@@ -164,5 +164,11 @@ class AbstractDeploy(object):
 
     return method
 
+  def update_pred_status(self, status):
+    print('Updating Prediction(slug={}) of Team(slug={}) to status: {}.'.format(
+      self.prediction.slug, self.team.slug, status))
+
+    self.prediction = dbi.update(self.prediction, {'status': status})
+
   def on_deploy_success(self):
     pass

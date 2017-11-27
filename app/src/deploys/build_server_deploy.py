@@ -99,7 +99,7 @@ class BuildServerDeploy(AbstractDeploy):
     # We'll know S3 hasn't been created yet if the team still doesn't have a cluster.
     if not self.team.cluster:
       print('Team(slug={}) has no cluster yet...creating S3 bucket for it...'.format(self.team.slug))
-      bucket_name = 's3://{}-{}'.format(self.team.slug, self.team.uid)
+      bucket_name = '{}-{}'.format(self.team.slug, self.team.uid)
       create_s3_bucket(bucket_name)
 
     # Schedule a deploy to the training cluster
@@ -122,9 +122,3 @@ class BuildServerDeploy(AbstractDeploy):
         'prediction_uid': self.prediction_uid,
         'with_deploy': True
       }])
-
-  def update_pred_status(self, status):
-    print('Updating Prediction(slug={}) of Team(slug={}) to status: {}.'.format(
-      self.prediction.slug, self.team.slug, status))
-
-    dbi.update(self.prediction, {'status': status})

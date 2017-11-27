@@ -2,7 +2,6 @@ import os
 from abstract_deploy import AbstractDeploy
 from src.utils import clusters
 from src.config import get_config
-from src import dbi
 from src.statuses.pred_statuses import pstatus
 from src.services.prediction_services.publicize_prediction import PublicizePrediction
 from src.helpers import time_since_epoch
@@ -21,10 +20,16 @@ class ApiDeploy(AbstractDeploy):
     self.ports = [80]
     self.replicas = 3
 
+    if self.team.cluster:
+      s3_bucket_name = self.team.cluster.state.replace('s3://', '')
+    else:
+      s3_bucket_name = '{}-{}'.format(self.team.slug, self.team.uid)
+
     self.envs = {
       'AWS_ACCESS_KEY_ID': os.environ.get('AWS_ACCESS_KEY_ID'),
       'AWS_SECRET_ACCESS_KEY': os.environ.get('AWS_SECRET_ACCESS_KEY'),
       'AWS_REGION_NAME': os.environ.get('AWS_REGION_NAME'),
+      'S3_BUCKET_NAME': s3_bucket_name,
       'DATASET_DB_URL': os.environ.get('DATASET_DB_URL'),
       'TEAM': self.team.slug,
       'TEAM_UID': self.team.uid,
@@ -33,12 +38,7 @@ class ApiDeploy(AbstractDeploy):
     }
 
   def on_success(self):
-    new_status = pstatus.PREDICTING
-
-    print('Updating Prediction({}) of Team({}) to status: {}'.format(
-      self.prediction.slug, self.team.slug, new_status))
-
-    self.prediction = dbi.update(self.prediction, {'status': new_status})
+    self.update_pred_status(pstatus.PREDICTING)
 
     # Set up ELB and CNAME record for deployment if not already there
     if not self.prediction.elb:
