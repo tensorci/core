@@ -19,6 +19,7 @@ class BuildServerDeploy(AbstractDeploy):
     self.deploy_name = '{}-{}-build-{}'.format(self.prediction.slug, self.build_for, time_since_epoch())
     self.cluster = os.environ.get('BS_CLUSTER_NAME')
     self.job = True
+    self.watch_job = True
     self.restart_policy = 'Never'
 
     # Configure volumes/mounts to allow for /var/run/docker.sock (docker daemon) to be bound to
@@ -47,15 +48,13 @@ class BuildServerDeploy(AbstractDeploy):
       'FOR_CLUSTER': self.build_for
     }
 
-  def deploy(self):
-    # Perform deploy
-    super(BuildServerDeploy, self).deploy()
+  def on_success(self):
+    new_status = {
+      clusters.TRAIN: pstatus.BUILDING_FOR_TRAIN,
+      clusters.API: pstatus.BUILDING_FOR_API
+    }.get(self.build_for)
 
-    # Update the status of the prediction
-    # TODO: Secure this better and move into Prediction model as a helper function
-    new_status = pstatus.next_status(self.prediction.status)
-
-    print('Updating Prediction({}) of Team({}) to status: {}'.format(
+    print('Updating Prediction(slug={}) of Team(slug={}) to status: {}'.format(
       self.prediction.slug, self.team.slug, new_status))
 
     dbi.update(self.prediction, {'status': new_status})

@@ -1,4 +1,4 @@
-from kubernetes import client, config
+from kubernetes import client, config, watch
 from src import dbi
 from src.models import Prediction
 
@@ -24,6 +24,7 @@ class AbstractDeploy(object):
     self.restart_policy = 'Always'
     self.volume_mounts = None
     self.volumes = None
+    self.watch_job = False
 
   def deploy(self):
     # Configure kubernetes to deploy to our desired cluster
@@ -60,7 +61,13 @@ class AbstractDeploy(object):
     deploy_method = self.get_deploy_method()
 
     # Execute deploy
-    return deploy_method(namespace=self.namespace, body=deploy_obj)
+    deploy_method(namespace=self.namespace, body=deploy_obj)
+
+    if self.watch_job:
+      self.start_watching_job()
+    else:
+      self.on_success()
+
 
   def configure_volume_mounts(self):
     if self.volume_mounts:
@@ -158,4 +165,31 @@ class AbstractDeploy(object):
       api = self.client.ExtensionsV1beta1Api()
       method = api.create_namespaced_deployment
 
+    self.api = api
+
     return method
+
+  def start_watching_job(self):
+    watcher = watch.Watch()
+
+    label_selector = 'app={}'.format(self.deploy_name)
+
+    for e in watcher.stream(self.api.list_namespaced_job, namespace=self.namespace, label_selector=label_selector):
+      type = e.get('type')
+      raw_obj = e.get('raw_object', {})
+      status = raw_obj.get('status', {})
+
+      if type == 'ADDED':
+        print('Job {} started.'.format(self.deploy_name))
+
+      if status.get('failed') is not None:
+        print('Job {} failed for prediction with uuid: {}.'.format(self.deploy_name, self.prediction_uid))
+        watcher.stop()
+
+      if status.get('succeeded'):
+        print('Job {} succeeded.'.format(self.deploy_name))
+        self.on_success()
+        watcher.stop()
+
+  def on_success(self):
+    pass

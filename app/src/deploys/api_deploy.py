@@ -32,13 +32,8 @@ class ApiDeploy(AbstractDeploy):
       'PREDICTION_UID': self.prediction.uid
     }
 
-  def deploy(self):
-    # Perform deploy
-    super(ApiDeploy, self).deploy()
-
-    # Update the status of the prediction
-    # TODO: Secure this better and move into Prediction model as a helper function
-    new_status = pstatus.next_status(self.prediction.status)
+  def on_success(self):
+    new_status = pstatus.PREDICTING
 
     print('Updating Prediction({}) of Team({}) to status: {}'.format(
       self.prediction.slug, self.team.slug, new_status))

@@ -33,15 +33,10 @@ class TrainDeploy(AbstractDeploy):
       'PREDICTION_UID': self.prediction.uid
     }
 
-  def deploy(self):
-    # Perform deploy
-    super(TrainDeploy, self).deploy()
+  def on_success(self):
+    new_status = pstatus.TRAINING
 
-    # Update the status of the prediction
-    # TODO: Secure this better and move into Prediction model as a helper function
-    new_status = pstatus.next_status(self.prediction.status)
-
-    print('Updating Prediction({}) of Team({}) to status: {}'.format(
+    print('Updating Prediction(slug={}) of Team(slug={}) to status: {}'.format(
       self.prediction.slug, self.team.slug, new_status))
 
     dbi.update(self.prediction, {'status': new_status})
