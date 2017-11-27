@@ -64,12 +64,17 @@ class RestfulPrediction(Resource):
     if dbi.find_one(Prediction, {'team': team, 'slug': prediction_slug}):
       return PREDICTION_NAME_TAKEN
 
+    git_repo = api.payload['git_repo']
+    sha = api.payload.get('sha') or '8545012f4aa9bc3f3201fa643b5849e9e1dafc76'
+    # Hardcode SHA for now
+
     try:
       # Create new prediction
       prediction = dbi.create(Prediction, {
         'team': team,
         'name': prediction_name,
-        'git_repo': api.payload['git_repo']
+        'git_repo': api.payload['git_repo'],
+        'sha': sha
       })
 
       # Schedule a deploy to the build server
