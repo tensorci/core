@@ -18,6 +18,8 @@ Relationships:
   TeamUser --> belongs_to --> User
   Team --> has_one --> Cluster
   Cluster --> has_one --> Team
+  Cluster --> has_one --> Bucket
+  Bucket --> has_one --> Cluster
   Team --> has_many --> predictions
   Prediction --> belongs_to --> Team
 """
@@ -126,6 +128,7 @@ class Cluster(db.Model):
   uid = db.Column(db.String, index=True, unique=True)
   team_id = db.Column(db.Integer, db.ForeignKey('team.id'), index=True, nullable=False)
   team = db.relationship('Team', back_populates='cluster')
+  bucket = db.relationship('Bucket', uselist=False, back_populates='cluster')
   name = db.Column(db.String(360), nullable=False)
   ns_addresses = db.Column(JSON)
   hosted_zone_id = db.Column(db.String(120))
@@ -171,11 +174,15 @@ class Prediction(db.Model):
   image_repo_owner = db.Column(db.String(120))
   image_version = db.Column(db.String(60))
   status = db.Column(db.String(60))
+  sha = db.Column(db.String(360))
+  deploy_name = db.Column(db.String(360))
   is_destroyed = db.Column(db.Boolean, server_default='f')
   created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
   def __init__(self, team=None, team_id=None, name=None, elb=None, domain=None,
-               git_repo=None, image_repo_owner=None, image_version='0.0.1', status=pstatus.statuses[0]):
+               git_repo=None, image_repo_owner=None, image_version='0.0.1',
+               status=pstatus.statuses[0], sha=None, deploy_name=None):
+
     self.uid = uuid4().hex
 
     if team_id:
@@ -191,9 +198,37 @@ class Prediction(db.Model):
     self.image_repo_owner = image_repo_owner or config.IMAGE_REPO_OWNER
     self.image_version = image_version
     self.status = status
+    self.sha = sha
+    self.deploy_name = deploy_name
 
   def __repr__(self):
     return '<Prediction id={}, uid={}, team_id={}, name={}, slug={}, elb={}, domain={}, ' \
-           'git_repo={}, image_repo_owner={}, image_version={}, status={}, is_destroyed={}, created_at={}>'.format(
+           'git_repo={}, image_repo_owner={}, image_version={}, status={}, sha={}, deploy_name={}, is_destroyed={}, created_at={}>'.format(
       self.id, self.uid, self.team_id, self.name, self.slug, self.elb, self.domain,
-      self.git_repo, self.image_repo_owner, self.image_version, self.status, self.is_destroyed, self.created_at)
+      self.git_repo, self.image_repo_owner, self.image_version, self.status, self.sha, self.deploy_name, self.is_destroyed, self.created_at)
+
+
+class Bucket(db.Model):
+  id = db.Column(db.Integer, primary_key=True)
+  cluster_id = db.Column(db.Integer, db.ForeignKey('cluster.id'), index=True, nullable=False)
+  cluster = db.relationship('Cluster', back_populates='bucket')
+  name = db.Column(db.String(240), nullable=False)
+  is_destroyed = db.Column(db.Boolean, server_default='f')
+  created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+
+  def __init__(self, cluster=None, cluster_id=None, name=None):
+    if cluster_id:
+      self.cluster_id = cluster_id
+    else:
+      self.cluster = cluster
+
+    team = self.cluster.team
+
+    self.name = name or '{}-{}'.format(team.slug, team.uid)
+
+  def __repr__(self):
+    return '<Bucket id={}, cluster_id={}, name={}, is_destroyed={}, created_at={}>'.format(
+      self.id, self.cluster_id, self.name, self.is_destroyed, self.created_at)
+
+  def url(self):
+    return 's3://' + self.name
