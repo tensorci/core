@@ -37,8 +37,6 @@ class BuildServerDeploy(AbstractDeploy):
     self.envs = {
       'DOCKER_USERNAME': os.environ.get('DOCKER_USERNAME'),
       'DOCKER_PASSWORD': os.environ.get('DOCKER_PASSWORD'),
-      'CORE_URL': 'https://app.{}/api'.format(config.DOMAIN),
-      'CORE_API_TOKEN': os.environ.get('CORE_API_TOKEN'),
       'TEAM': self.team.slug,
       'TEAM_UID': self.team.uid,
       'PREDICTION': self.prediction.slug,
