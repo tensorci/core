@@ -1,11 +1,17 @@
 import os
 from abstract_deploy import AbstractDeploy
+from train_deploy import TrainDeploy
+from api_deploy import ApiDeploy
 from src.utils import image_names, clusters
 from src.config import get_config
 from src import dbi
 from src.statuses.pred_statuses import pstatus
 from src.helpers import time_since_epoch
 from kubernetes import watch
+from src.deploys import create_deploy
+from src.utils.aws import create_s3_bucket
+from src.scheduler import delayed, delay_class_method
+from src.services.cluster_services.create_cluster import CreateCluster
 
 config = get_config()
 
@@ -40,7 +46,7 @@ class BuildServerDeploy(AbstractDeploy):
       'TEAM': self.team.slug,
       'TEAM_UID': self.team.uid,
       'PREDICTION': self.prediction.slug,
-      'PREDICTION_UID': self.prediction.uid,
+      'PREDICTION_UID': self.prediction_uid,
       'GIT_REPO': self.prediction.git_repo,
       'IMAGE_OWNER': self.prediction.image_repo_owner,
       'FOR_CLUSTER': self.build_for
@@ -79,15 +85,46 @@ class BuildServerDeploy(AbstractDeploy):
         watcher.stop()
 
   def on_build_success(self):
-    done_building_status = {
-      clusters.TRAIN: pstatus.DONE_BUILDING_FOR_TRAIN,
-      clusters.API: pstatus.DONE_BUILDING_FOR_API
+    post_building_action = {
+      clusters.TRAIN: self.post_train_building,
+      clusters.API: self.post_api_building
     }.get(self.build_for)
 
-    self.update_pred_status(done_building_status)
+    post_building_action()
+
+  def post_train_building(self):
+    self.update_pred_status(pstatus.DONE_BUILDING_FOR_TRAIN)
+
+    # If team doesn't have an S3 bucket yet, create that now.
+    # We'll know S3 hasn't been created yet if the team still doesn't have a cluster.
+    if not self.team.cluster:
+      print('Team(slug={}) has no cluster yet...creating S3 bucket for it...'.format(self.team.slug))
+      bucket_name = 's3://{}-{}'.format(self.team.slug, self.team.uid)
+      create_s3_bucket(bucket_name)
+
+    # Schedule a deploy to the training cluster
+    print('Scheduling training deploy for prediction(slug={})...'.format(self.prediction.slug))
+    create_deploy(TrainDeploy, {'prediction_uid': self.prediction_uid})
+
+  def post_api_building(self):
+    self.update_pred_status(pstatus.DONE_BUILDING_FOR_API)
+
+    # If team's cluster already exists, go ahead and deploy to it.
+    if self.team.cluster:
+      print('Scheduling api deploy for prediction(slug={})...'.format(self.prediction.slug))
+      create_deploy(ApiDeploy, {'prediction_uid': self.prediction_uid})
+    else:
+      # Otherwise, create the cluster first, then deploy (all as delayed job).
+      print('Scheduling cluster creation for prediction(slug={})...'.format(self.prediction.slug))
+
+      delayed.add_job(delay_class_method, args=[CreateCluster, {
+        'team_uid': self.team.uid,
+        'prediction_uid': self.prediction_uid,
+        'with_deploy': True
+      }])
 
   def update_pred_status(self, status):
-    print('Updating Prediction(slug={}) of Team(slug={}) to status: {}'.format(
+    print('Updating Prediction(slug={}) of Team(slug={}) to status: {}.'.format(
       self.prediction.slug, self.team.slug, status))
 
     dbi.update(self.prediction, {'status': status})

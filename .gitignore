@@ -107,4 +107,4 @@ app.db
 
 .idea/
 
-app/train_build_test.py
+app/test.py
