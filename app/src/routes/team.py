@@ -4,8 +4,8 @@ from src.helpers.user_helper import current_user
 from src.api_responses.errors import *
 from src.api_responses.success import *
 from psycopg2 import IntegrityError
-from src.models import Team, TeamUser
 from src import logger, dbi
+from src.services.team_services.create_team import CreateTeam
 
 create_team_model = api.model('Team', {
   'name': fields.String(required=True)
@@ -25,16 +25,8 @@ class RestfulTeam(Resource):
       return UNAUTHORIZED
 
     try:
-      # TODO: Figure out how to do a transaction here
-      # Create new team
-      team = dbi.create(Team, {'name': api.payload['name']})
-
-      # Create a new TeamUser to be owner of this team
-      dbi.create(TeamUser, {
-        'team': team,
-        'user': user,
-        'role': TeamUser.roles.OWNER
-      })
+      create_team_svc = CreateTeam(name=api.payload['name'], owner=user)
+      create_team_svc.perform()
     except IntegrityError:
       logger.error('Team already exists for name: {}'.format(api.payload['name']))
       return TEAM_NAME_TAKEN

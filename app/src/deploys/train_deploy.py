@@ -19,16 +19,11 @@ class TrainDeploy(AbstractDeploy):
     self.job = True
     self.restart_policy = 'Never'
 
-    if self.team.cluster:
-      s3_bucket_name = self.team.cluster.state.replace('s3://', '')
-    else:
-      s3_bucket_name = '{}-{}'.format(self.team.slug, self.team.uid)
-
     self.envs = {
       'AWS_ACCESS_KEY_ID': os.environ.get('AWS_ACCESS_KEY_ID'),
       'AWS_SECRET_ACCESS_KEY': os.environ.get('AWS_SECRET_ACCESS_KEY'),
       'AWS_REGION_NAME': os.environ.get('AWS_REGION_NAME'),
-      'S3_BUCKET_NAME': s3_bucket_name,
+      'S3_BUCKET_NAME': self.team.cluster.bucket.name,
       'DATASET_DB_URL': os.environ.get('DATASET_DB_URL'),
       'CORE_URL': 'https://app.{}/api'.format(config.DOMAIN),
       'CORE_API_TOKEN': os.environ.get('CORE_API_TOKEN'),

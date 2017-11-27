@@ -7,13 +7,13 @@ from time import sleep
 
 class PublicizePrediction(object):
 
-  def __init__(self, prediction=None, deploy_name=None, port=80, target_port=80):
+  def __init__(self, prediction=None, port=80, target_port=80):
     self.prediction = prediction
     self.port = port
     self.target_port = target_port
     self.team = self.prediction.team
     self.cluster = self.team.cluster.name
-    self.deploy_name = deploy_name
+    self.deploy_name = self.prediction.deploy_name
     self.service_name = self.deploy_name
 
   # TODO: Figure out how to do all of this with the kubernetes python client we're already using

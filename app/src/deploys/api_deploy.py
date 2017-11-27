@@ -1,5 +1,6 @@
 import os
 from abstract_deploy import AbstractDeploy
+from src import dbi
 from src.utils import clusters
 from src.config import get_config
 from src.statuses.pred_statuses import pstatus
@@ -20,16 +21,11 @@ class ApiDeploy(AbstractDeploy):
     self.ports = [80]
     self.replicas = 3
 
-    if self.team.cluster:
-      s3_bucket_name = self.team.cluster.state.replace('s3://', '')
-    else:
-      s3_bucket_name = '{}-{}'.format(self.team.slug, self.team.uid)
-
     self.envs = {
       'AWS_ACCESS_KEY_ID': os.environ.get('AWS_ACCESS_KEY_ID'),
       'AWS_SECRET_ACCESS_KEY': os.environ.get('AWS_SECRET_ACCESS_KEY'),
       'AWS_REGION_NAME': os.environ.get('AWS_REGION_NAME'),
-      'S3_BUCKET_NAME': s3_bucket_name,
+      'S3_BUCKET_NAME': self.cluster.bucket.name,
       'DATASET_DB_URL': os.environ.get('DATASET_DB_URL'),
       'TEAM': self.team.slug,
       'TEAM_UID': self.team.uid,
@@ -38,9 +34,12 @@ class ApiDeploy(AbstractDeploy):
     }
 
   def on_deploy_success(self):
+    # Update the prediction's deploy name
+    self.prediction = dbi.update(self.prediction, {'deploy_name': self.deploy_name})
+
     self.update_pred_status(pstatus.PREDICTING)
 
     # Set up ELB and CNAME record for deployment if not already there
     if not self.prediction.elb:
-      publicize_service = PublicizePrediction(prediction=self.prediction, deploy_name=self.deploy_name)
+      publicize_service = PublicizePrediction(prediction=self.prediction)
       publicize_service.perform()

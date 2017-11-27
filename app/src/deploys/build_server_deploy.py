@@ -1,6 +1,7 @@
 import os
 from abstract_deploy import AbstractDeploy
 from train_deploy import TrainDeploy
+from src import dbi
 from api_deploy import ApiDeploy
 from src.utils import image_names, clusters
 from src.config import get_config
@@ -94,12 +95,19 @@ class BuildServerDeploy(AbstractDeploy):
   def post_train_building(self):
     self.update_pred_status(pstatus.DONE_BUILDING_FOR_TRAIN)
 
-    # If team doesn't have an S3 bucket yet, create that now.
-    # We'll know S3 hasn't been created yet if the team still doesn't have a cluster.
-    if not self.team.cluster:
-      print('Team(slug={}) has no cluster yet...creating S3 bucket for it...'.format(self.team.slug))
+    bucket = self.team.cluster.bucket
+
+    if not bucket.name:
+      print('Creating S3 bucket for Team(slug={})...'.format(self.team.slug))
+
       bucket_name = '{}-{}'.format(self.team.slug, self.team.uid)
-      create_s3_bucket(bucket_name)
+      bucket_creation_success = create_s3_bucket(bucket_name)
+
+      if not bucket_creation_success:
+        print('Bucket creation failed. Returning from post_train_building.')
+        return
+
+      dbi.update(bucket, {'name': bucket_name})
 
     # Schedule a deploy to the training cluster
     print('Scheduling training deploy for prediction(slug={})...'.format(self.prediction.slug))
