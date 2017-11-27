@@ -49,7 +49,8 @@ class BuildServerDeploy(AbstractDeploy):
       'PREDICTION_UID': self.prediction_uid,
       'GIT_REPO': self.prediction.git_repo,
       'IMAGE_OWNER': self.prediction.image_repo_owner,
-      'FOR_CLUSTER': self.build_for
+      'FOR_CLUSTER': self.build_for,
+      'SHA': self.prediction.sha
     }
 
   def on_deploy_success(self):
