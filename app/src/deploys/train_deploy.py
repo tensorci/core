@@ -33,7 +33,7 @@ class TrainDeploy(AbstractDeploy):
       'PREDICTION_UID': self.prediction.uid
     }
 
-  def on_success(self):
+  def on_deploy_success(self):
     new_status = pstatus.TRAINING
 
     print('Updating Prediction(slug={}) of Team(slug={}) to status: {}'.format(

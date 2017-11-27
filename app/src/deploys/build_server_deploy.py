@@ -5,6 +5,7 @@ from src.config import get_config
 from src import dbi
 from src.statuses.pred_statuses import pstatus
 from src.helpers import time_since_epoch
+from kubernetes import watch
 
 config = get_config()
 
@@ -19,7 +20,6 @@ class BuildServerDeploy(AbstractDeploy):
     self.deploy_name = '{}-{}-build-{}'.format(self.prediction.slug, self.build_for, time_since_epoch())
     self.cluster = os.environ.get('BS_CLUSTER_NAME')
     self.job = True
-    self.watch_job = True
     self.restart_policy = 'Never'
 
     # Configure volumes/mounts to allow for /var/run/docker.sock (docker daemon) to be bound to
@@ -46,13 +46,48 @@ class BuildServerDeploy(AbstractDeploy):
       'FOR_CLUSTER': self.build_for
     }
 
-  def on_success(self):
-    new_status = {
+  def on_deploy_success(self):
+    post_deploy_status = {
       clusters.TRAIN: pstatus.BUILDING_FOR_TRAIN,
       clusters.API: pstatus.BUILDING_FOR_API
     }.get(self.build_for)
 
-    print('Updating Prediction(slug={}) of Team(slug={}) to status: {}'.format(
-      self.prediction.slug, self.team.slug, new_status))
+    self.update_pred_status(post_deploy_status)
 
-    dbi.update(self.prediction, {'status': new_status})
+    self.watch_job()
+
+  def watch_job(self):
+    watcher = watch.Watch()
+
+    label_selector = 'app={}'.format(self.deploy_name)
+
+    for e in watcher.stream(self.api.list_namespaced_job, namespace=self.namespace, label_selector=label_selector):
+      type = e.get('type')
+      raw_obj = e.get('raw_object', {})
+      status = raw_obj.get('status', {})
+
+      if type == 'ADDED':
+        print('Job {} started.'.format(self.deploy_name))
+
+      if status.get('failed') is not None:
+        print('Job {} failed for prediction(uid={}).'.format(self.deploy_name, self.prediction_uid))
+        watcher.stop()
+
+      if status.get('succeeded'):
+        print('Job {} succeeded.'.format(self.deploy_name))
+        self.on_build_success()
+        watcher.stop()
+
+  def on_build_success(self):
+    done_building_status = {
+      clusters.TRAIN: pstatus.DONE_BUILDING_FOR_TRAIN,
+      clusters.API: pstatus.DONE_BUILDING_FOR_API
+    }.get(self.build_for)
+
+    self.update_pred_status(done_building_status)
+
+  def update_pred_status(self, status):
+    print('Updating Prediction(slug={}) of Team(slug={}) to status: {}'.format(
+      self.prediction.slug, self.team.slug, status))
+
+    dbi.update(self.prediction, {'status': status})
