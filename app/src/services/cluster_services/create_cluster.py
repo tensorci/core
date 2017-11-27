@@ -28,18 +28,10 @@ class CreateCluster(object):
       'ns_addresses': ns_addresses
     })
 
-    # Prep these addresses as NS records
-    records = []
-    for address in ns_addresses:
-      records.append({
-        'domain': cluster.name,
-        'type': 'NS',
-        'record': address
-      })
-
     # Register NS records for each of the ns_addresses with the TLD
-    add_dns_records(os.environ.get('TL_HOSTED_ZONE_ID'), cluster.name, records, 'NS')
+    add_dns_records(os.environ.get('TL_HOSTED_ZONE_ID'), cluster.name, ns_addresses, 'NS')
 
+    print('Waiting 60s for NS records to take effect...')
     sleep(60)
 
     # Create cluster with kops name=cluster.name
@@ -54,11 +46,12 @@ class CreateCluster(object):
     )
 
     # Validate the cluster every 30s until it's validated
-    # TODO: maybe use kubernetes watch abilities and look for event instead
+    # TODO: Instead - use equivalent of k get nodes -l key=val to watch for this cluster being ready
     while not kops.validate_cluster(name=cluster.name, state=cluster.state):
       print('Validating cluster {}...'.format(cluster.name))
       sleep(30)
 
     # Make an API deploy post-cluster-validation
     if self.with_deploy:
-      ApiDeploy(prediction_uid=self.prediction_uid).deploy()
+      api_deploy = ApiDeploy(prediction_uid=self.prediction_uid)
+      api_deploy.deploy()

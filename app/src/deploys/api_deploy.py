@@ -37,10 +37,10 @@ class ApiDeploy(AbstractDeploy):
       'PREDICTION_UID': self.prediction.uid
     }
 
-  def on_success(self):
+  def on_deploy_success(self):
     self.update_pred_status(pstatus.PREDICTING)
 
     # Set up ELB and CNAME record for deployment if not already there
     if not self.prediction.elb:
-      publicize_service = PublicizePrediction(prediction=self.prediction)
+      publicize_service = PublicizePrediction(prediction=self.prediction, deploy_name=self.deploy_name)
       publicize_service.perform()

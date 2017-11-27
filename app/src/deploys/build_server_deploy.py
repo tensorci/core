@@ -4,7 +4,6 @@ from train_deploy import TrainDeploy
 from api_deploy import ApiDeploy
 from src.utils import image_names, clusters
 from src.config import get_config
-from src import dbi
 from src.statuses.pred_statuses import pstatus
 from src.helpers import time_since_epoch
 from kubernetes import watch
