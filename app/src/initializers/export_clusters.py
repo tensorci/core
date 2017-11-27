@@ -21,7 +21,8 @@ def perform():
       export_cluster(name=bs_cluster_name, state=bs_cluster_state)
 
     # Export API clusters
-    clusters = [(c.name, c.state) for c in dbi.find_all(Cluster)]
+    for cluster in dbi.find_all(Cluster):
+      bucket = cluster.bucket
 
-    for name, state in clusters:
-      export_cluster(name=name, state=state)
+      if bucket and bucket.name:
+        export_cluster(name=cluster.name, state=bucket.url())

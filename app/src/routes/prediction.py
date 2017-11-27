@@ -73,7 +73,7 @@ class RestfulPrediction(Resource):
       prediction = dbi.create(Prediction, {
         'team': team,
         'name': prediction_name,
-        'git_repo': api.payload['git_repo'],
+        'git_repo': git_repo,
         'sha': sha
       })
 
@@ -84,7 +84,7 @@ class RestfulPrediction(Resource):
       })
     except BaseException as e:
       logger.error('Error creating Prediction(name={}, team={}, git_repo={}): {}'.format(
-        prediction_name, team, api.payload['git_repo'], e))
+        prediction_name, team, git_repo, e))
       return UNKNOWN_ERROR
 
     return PREDICTION_CREATION_SUCCESS

@@ -1,11 +1,14 @@
 from flask import request
 from auth_util import unserialize_token
 from src import dbi
-from src.models import Token
+from src.models import Token, User
 from src.helpers import decode_url_encoded_str
 
 
 def current_user():
+  # Hack for testing
+  return dbi.find_one(User, {'name': 'Example Whittle'})
+
   user_token = request.cookies.get('flyest-user')
 
   if not user_token:

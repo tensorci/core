@@ -4,7 +4,7 @@ from src.helpers.user_helper import current_user
 from src.api_responses.errors import *
 from src.api_responses.success import *
 from psycopg2 import IntegrityError
-from src import logger, dbi
+from src import logger
 from src.services.team_services.create_team import CreateTeam
 
 create_team_model = api.model('Team', {
