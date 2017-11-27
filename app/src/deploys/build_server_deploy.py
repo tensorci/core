@@ -70,7 +70,7 @@ class BuildServerDeploy(AbstractDeploy):
         print('Job {} started.'.format(self.deploy_name))
 
       if status.get('failed') is not None:
-        print('Job {} failed for prediction(uid={}).'.format(self.deploy_name, self.prediction_uid))
+        print('FAILED JOB, {}, for prediction(uid={}).'.format(self.deploy_name, self.prediction_uid))
         watcher.stop()
 
       if status.get('succeeded'):
