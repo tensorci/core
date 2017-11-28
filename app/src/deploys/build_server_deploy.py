@@ -100,13 +100,12 @@ class BuildServerDeploy(AbstractDeploy):
 
     bucket = self.team.cluster.bucket
 
+    # Create S3 Bucket for team if not there yet
     if not bucket.name:
-      aplogger.info('Creating S3 bucket for Team(slug={})...'.format(self.team.slug))
-
       bucket_name = '{}-{}'.format(self.team.slug, self.team.uid)
-      bucket_creation_success = create_s3_bucket(bucket_name)
+      bucket_success = create_s3_bucket(bucket_name)
 
-      if not bucket_creation_success:
+      if not bucket_success:
         aplogger.error('Bucket creation failed. Returning from post_train_building.')
         return
 
@@ -124,7 +123,7 @@ class BuildServerDeploy(AbstractDeploy):
       aplogger.info('Scheduling api deploy for prediction(slug={})...'.format(self.prediction.slug))
       create_deploy(ApiDeploy, {'prediction_uid': self.prediction_uid})
     else:
-      # Otherwise, create the cluster first, then deploy (all as delayed job).
+      # Otherwise, create the cluster first and then make deploy.
       aplogger.info('Scheduling cluster creation for prediction(slug={})...'.format(self.prediction.slug))
 
       delayed.add_job(delay_class_method, args=[CreateCluster, {

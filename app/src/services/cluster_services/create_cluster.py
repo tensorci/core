@@ -32,7 +32,15 @@ class CreateCluster(object):
     })
 
     # Register NS records for each of the ns_addresses with the TLD
-    add_dns_records(os.environ.get('TL_HOSTED_ZONE_ID'), self.cluster.name, ns_addresses, 'NS')
+    dns_success = add_dns_records(
+      os.environ.get('TL_HOSTED_ZONE_ID'),
+      self.cluster.name,
+      ns_addresses,
+      'NS'
+    )
+
+    if not dns_success:
+      return
 
     aplogger.info('Waiting 60s (TTL) for NS records to take effect...')
     sleep(60)
@@ -41,7 +49,7 @@ class CreateCluster(object):
     bucket_url = self.bucket.url()
 
     # Create cluster with kops name=cluster.name
-    kops.create_cluster(
+    creation_success = kops.create_cluster(
       name=self.cluster.name,
       zones=','.join(self.cluster.zones),
       master_size=self.cluster.master_type,
@@ -50,6 +58,9 @@ class CreateCluster(object):
       state=bucket_url,
       image=os_map.get(self.cluster.image)
     )
+
+    if not creation_success:
+      return
 
     aplogger.info('Validating cluster {}...'.format(self.cluster.name))
     while not kops.validate_cluster(name=self.cluster.name, state=bucket_url):
