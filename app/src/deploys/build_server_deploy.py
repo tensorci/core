@@ -10,7 +10,8 @@ from src.helpers import time_since_epoch
 from kubernetes import watch
 from src.deploys import create_deploy
 from src.utils.aws import create_s3_bucket
-from src.scheduler import delayed, delay_class_method
+from src import delayed
+from src.helpers.delay_helper import delay_class_method
 from src.services.cluster_services.create_cluster import CreateCluster
 
 config = get_config()

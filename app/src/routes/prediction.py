@@ -70,12 +70,16 @@ class RestfulPrediction(Resource):
 
     try:
       # Create new prediction
-      prediction = dbi.create(Prediction, {
-        'team': team,
-        'name': prediction_name,
-        'git_repo': git_repo,
-        'sha': sha
-      })
+      # prediction = dbi.create(Prediction, {
+      #   'team': team,
+      #   'name': prediction_name,
+      #   'git_repo': git_repo,
+      #   'sha': sha
+      # })
+
+      prediction = dbi.find_one(Prediction, {'uid': '1011f9fed0424c7cbd5ff2a91e4725b0'})
+
+      print('Scheduling build server deploy')
 
       # Schedule a deploy to the build server
       create_deploy(BuildServerDeploy, {
