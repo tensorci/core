@@ -1,7 +1,7 @@
 # switch back to uwsgi once you figure out/set up mules
 #FROM tiangolo/uwsgi-nginx-flask:python2.7
 
-FROM python:2.7-slim
+FROM python:2.7
 
 # copy over our requirements.txt file
 COPY requirements.txt /tmp/
