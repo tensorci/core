@@ -1,10 +1,11 @@
 import os
-from src import dbi
+from src import dbi, aplogger
 from src.models import Team, Cluster
 from src.deploys.api_deploy import ApiDeploy
 from src.utils.aws import create_route53_hosted_zone, add_dns_records, os_map
 from src.utils import kops
 from time import sleep
+from src.deploys import create_deploy
 
 
 class CreateCluster(object):
@@ -30,7 +31,7 @@ class CreateCluster(object):
     # Register NS records for each of the ns_addresses with the TLD
     add_dns_records(os.environ.get('TL_HOSTED_ZONE_ID'), self.cluster.name, ns_addresses, 'NS')
 
-    print('Waiting 60s for NS records to take effect...')
+    aplogger.info('Waiting 60s for NS records to take effect...')
     sleep(60)
 
     bucket_url = self.bucket.url()
@@ -50,13 +51,14 @@ class CreateCluster(object):
     # Validate the cluster every 30s until it's validated
     # TODO: Instead - use equivalent of k get nodes -l key=val to watch for this cluster being ready
     while not kops.validate_cluster(name=self.cluster.name, state=bucket_url):
-      print('Validating cluster {}...'.format(self.cluster.name))
+      aplogger.info('Validating cluster {}...'.format(self.cluster.name))
       sleep(30)
 
     # Register that the cluster is validated
+    aplogger.info('Validated cluster.')
     dbi.update(self.cluster, {'validated': True})
 
-    # Make an API deploy post-cluster-validation
+    # Make an API deploy once cluster is validated (if desired)
     if self.with_deploy:
-      api_deploy = ApiDeploy(prediction_uid=self.prediction_uid)
-      api_deploy.deploy()
+      aplogger.info('Scheduling API deploy...')
+      create_deploy(ApiDeploy, {'prediction_uid': self.prediction_uid})

@@ -13,6 +13,7 @@ from src.utils.aws import create_s3_bucket
 from src import delayed
 from src.helpers.delay_helper import delay_class_method
 from src.services.cluster_services.create_cluster import CreateCluster
+from src import aplogger
 
 config = get_config()
 
@@ -21,6 +22,7 @@ class BuildServerDeploy(AbstractDeploy):
 
   def __init__(self, prediction_uid=None, build_for=None):
     super(BuildServerDeploy, self).__init__(prediction_uid)
+
     self.build_for = build_for
     self.image = '{}/{}'.format(config.IMAGE_REPO_OWNER, image_names.BUILD_SERVER)
     self.deploy_name = '{}-{}-build-{}'.format(self.prediction.slug, self.build_for, time_since_epoch())
@@ -74,14 +76,14 @@ class BuildServerDeploy(AbstractDeploy):
       status = raw_obj.get('status', {})
 
       if type == 'ADDED':
-        print('Job {} started.'.format(self.deploy_name))
+        aplogger.info('Job {} started.'.format(self.deploy_name))
 
       if status.get('failed') is not None:
-        print('FAILED JOB, {}, for prediction(uid={}).'.format(self.deploy_name, self.prediction_uid))
+        aplogger.error('FAILED JOB, {}, for prediction(uid={}).'.format(self.deploy_name, self.prediction_uid))
         watcher.stop()
 
       if status.get('succeeded'):
-        print('Job {} succeeded.'.format(self.deploy_name))
+        aplogger.info('Job {} succeeded.'.format(self.deploy_name))
         self.on_build_success()
         watcher.stop()
 
@@ -99,19 +101,19 @@ class BuildServerDeploy(AbstractDeploy):
     bucket = self.team.cluster.bucket
 
     if not bucket.name:
-      print('Creating S3 bucket for Team(slug={})...'.format(self.team.slug))
+      aplogger.info('Creating S3 bucket for Team(slug={})...'.format(self.team.slug))
 
       bucket_name = '{}-{}'.format(self.team.slug, self.team.uid)
       bucket_creation_success = create_s3_bucket(bucket_name)
 
       if not bucket_creation_success:
-        print('Bucket creation failed. Returning from post_train_building.')
+        aplogger.error('Bucket creation failed. Returning from post_train_building.')
         return
 
       dbi.update(bucket, {'name': bucket_name})
 
     # Schedule a deploy to the training cluster
-    print('Scheduling training deploy for prediction(slug={})...'.format(self.prediction.slug))
+    aplogger.info('Scheduling training deploy for prediction(slug={})...'.format(self.prediction.slug))
     create_deploy(TrainDeploy, {'prediction_uid': self.prediction_uid})
 
   def post_api_building(self):
@@ -119,11 +121,11 @@ class BuildServerDeploy(AbstractDeploy):
 
     # If team's cluster already exists, go ahead and deploy to it.
     if self.team.cluster:
-      print('Scheduling api deploy for prediction(slug={})...'.format(self.prediction.slug))
+      aplogger.info('Scheduling api deploy for prediction(slug={})...'.format(self.prediction.slug))
       create_deploy(ApiDeploy, {'prediction_uid': self.prediction_uid})
     else:
       # Otherwise, create the cluster first, then deploy (all as delayed job).
-      print('Scheduling cluster creation for prediction(slug={})...'.format(self.prediction.slug))
+      aplogger.info('Scheduling cluster creation for prediction(slug={})...'.format(self.prediction.slug))
 
       delayed.add_job(delay_class_method, args=[CreateCluster, {
         'team_uid': self.team.uid,

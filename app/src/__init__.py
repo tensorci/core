@@ -1,4 +1,6 @@
 import logging
+from logging import StreamHandler, INFO
+import sys
 import os
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
@@ -9,9 +11,17 @@ from helpers.env import is_prod
 app = Flask(__name__)
 app.config.from_object(get_config())
 
-logging.basicConfig()
-app.logger.setLevel(logging.INFO)
+# Set up our loggers:
+
+# Use this logger for everything except code running inside a delayed job
+app.logger.addHandler(StreamHandler(sys.stdout))
+app.logger.setLevel(INFO)
 logger = app.logger
+
+# Use this for delayed jobs
+aplogger = logging.getLogger('apscheduler.executors.default')
+aplogger.setLevel(INFO)
+aplogger.addHandler(StreamHandler(sys.stdout))
 
 # Create and start our delayed job scheduler
 from scheduler import delayed

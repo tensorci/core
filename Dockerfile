@@ -20,3 +20,5 @@ RUN chmod +x /usr/local/bin/kops
 # Make kubectl accessible
 COPY ./bin/kubectl /usr/local/bin/kubectl
 RUN chmod +x /usr/local/bin/kubectl
+
+CMD ["python", "app/main.py"]

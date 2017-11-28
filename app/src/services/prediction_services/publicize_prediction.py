@@ -1,5 +1,5 @@
 import os
-from src import dbi
+from src import dbi, aplogger
 from src.utils.aws import add_dns_records
 from subprocess import check_output
 from time import sleep
@@ -34,7 +34,7 @@ class PublicizePrediction(object):
     elb_line = [l for l in lines if l.startswith('LoadBalancer Ingress')]
 
     if not elb_line:
-      print('No LoadBalancer Ingress info found when describing service {} with context {}'.format(
+      aplogger.error('No LoadBalancer Ingress info found when describing service {} with context {}'.format(
         self.service_name, self.cluster))
       return
 
