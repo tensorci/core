@@ -9,12 +9,8 @@ def perform():
   # Contexts map to hold which contexts already exist in our kube config
   existing_contexts = get_existing_contexts()
 
-  print existing_contexts
-
   # All contexts map
   all_contexts = get_all_contexts()
-
-  print all_contexts
 
   # Export missing contexts
   for name, state in all_contexts.iteritems():
