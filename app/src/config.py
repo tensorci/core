@@ -5,6 +5,7 @@ from helpers.env import env
 class Config:
   DEBUG = True
   SQLALCHEMY_TRACK_MODIFICATIONS = False
+  CLUSTER_NODE_COUNT = 3
 
 
 class ProdConfig(Config):

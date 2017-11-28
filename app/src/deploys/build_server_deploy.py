@@ -26,7 +26,7 @@ class BuildServerDeploy(AbstractDeploy):
     self.build_for = build_for
     self.image = '{}/{}'.format(config.IMAGE_REPO_OWNER, image_names.BUILD_SERVER)
     self.deploy_name = '{}-{}-build-{}'.format(self.prediction.slug, self.build_for, time_since_epoch())
-    self.cluster = os.environ.get('BS_CLUSTER_NAME')
+    self.cluster_name = os.environ.get('BS_CLUSTER_NAME')
     self.job = True
     self.restart_policy = 'Never'
 

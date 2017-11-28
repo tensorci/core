@@ -15,7 +15,8 @@ class TrainDeploy(AbstractDeploy):
 
     self.image = '{}/{}-{}'.format(config.IMAGE_REPO_OWNER, self.prediction.slug, clusters.TRAIN)
     self.deploy_name = '{}-{}-{}'.format(self.prediction.slug, clusters.TRAIN, time_since_epoch())
-    self.cluster = os.environ.get('TRAIN_CLUSTER_NAME')
+    self.cluster = self.team.cluster
+    self.cluster_name = os.environ.get('TRAIN_CLUSTER_NAME')
     self.job = True
     self.restart_policy = 'Never'
 
@@ -23,7 +24,7 @@ class TrainDeploy(AbstractDeploy):
       'AWS_ACCESS_KEY_ID': os.environ.get('AWS_ACCESS_KEY_ID'),
       'AWS_SECRET_ACCESS_KEY': os.environ.get('AWS_SECRET_ACCESS_KEY'),
       'AWS_REGION_NAME': os.environ.get('AWS_REGION_NAME'),
-      'S3_BUCKET_NAME': self.team.cluster.bucket.name,
+      'S3_BUCKET_NAME': self.cluster.bucket.name,
       'DATASET_DB_URL': os.environ.get('DATASET_DB_URL'),
       'CORE_URL': 'https://app.{}/api'.format(config.DOMAIN),
       'CORE_API_TOKEN': os.environ.get('CORE_API_TOKEN'),

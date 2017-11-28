@@ -6,6 +6,9 @@ from src.utils.aws import create_route53_hosted_zone, add_dns_records, os_map
 from src.utils import kops
 from time import sleep
 from src.deploys import create_deploy
+from src.config import get_config
+
+config = get_config()
 
 
 class CreateCluster(object):
@@ -31,9 +34,10 @@ class CreateCluster(object):
     # Register NS records for each of the ns_addresses with the TLD
     add_dns_records(os.environ.get('TL_HOSTED_ZONE_ID'), self.cluster.name, ns_addresses, 'NS')
 
-    aplogger.info('Waiting 60s for NS records to take effect...')
+    aplogger.info('Waiting 60s (TTL) for NS records to take effect...')
     sleep(60)
 
+    # Get S3 bucket url
     bucket_url = self.bucket.url()
 
     # Create cluster with kops name=cluster.name
@@ -42,16 +46,15 @@ class CreateCluster(object):
       zones=','.join(self.cluster.zones),
       master_size=self.cluster.master_type,
       node_size=self.cluster.node_type,
-      node_count=3, # TODO: put this somewhere as a constant
+      node_count=config.CLUSTER_NODE_COUNT,
       state=bucket_url,
       image=os_map.get(self.cluster.image)
     )
 
-    # Validate the cluster every 30s until it's validated
-    # TODO: Instead - use equivalent of k get nodes -l key=val to watch for this cluster being ready
+    aplogger.info('Validating cluster {}...'.format(self.cluster.name))
     while not kops.validate_cluster(name=self.cluster.name, state=bucket_url):
-      aplogger.info('Validating cluster {}...'.format(self.cluster.name))
-      sleep(60)
+      aplogger.info('Not valid yet...will try again in 2 minutes')
+      sleep(120)
 
     # Register that the cluster is validated
     aplogger.info('Validated cluster.')

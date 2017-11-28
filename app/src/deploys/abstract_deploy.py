@@ -15,7 +15,7 @@ class AbstractDeploy(object):
     # Overwritten in child class
     self.image = None
     self.deploy_name = None
-    self.cluster = None
+    self.cluster_name = None
     self.ports = None
     self.replicas = 1
     self.namespace = 'default'
@@ -27,7 +27,7 @@ class AbstractDeploy(object):
 
   def deploy(self):
     # Configure kubernetes to deploy to our desired cluster
-    self.config.load_kube_config(context=self.cluster)
+    self.config.load_kube_config(context=self.cluster_name)
 
     # Configure volume mounts
     volume_mounts = self.configure_volume_mounts()

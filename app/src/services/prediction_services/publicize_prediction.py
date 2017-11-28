@@ -1,5 +1,6 @@
 import os
 from src import dbi, aplogger
+from src.models import Prediction
 from src.utils.aws import add_dns_records
 from time import sleep
 from kubernetes import client, config
@@ -7,29 +8,29 @@ from kubernetes import client, config
 
 class PublicizePrediction(object):
 
-  def __init__(self, prediction=None, port=80, target_port=80):
-    self.prediction = prediction
+  def __init__(self, prediction_uid=None, port=80, target_port=80):
+    self.prediction_uid = prediction_uid
+    self.prediction = dbi.find_one(Prediction, {'uid': prediction_uid})
     self.port = port
     self.target_port = target_port
     self.team = self.prediction.team
-    self.cluster = self.team.cluster.name
+    self.cluster_name = self.team.cluster.name
     self.deploy_name = self.prediction.deploy_name
     self.service_name = self.deploy_name
     self.config = config
     self.client = client
+    self.api = None
 
   def perform(self):
-    # Switch to appropriate kubectl context
-    os.system('kubectl config use-context {}'.format(self.cluster))
+    # Switch to appropriate context
+    self.config.load_kube_config(context=self.cluster_name)
 
     # Expose deployment with a LoadBalancer service
     # TODO: Figure out how to do all of this with the kubernetes python client we're already using
     os.system('kubectl expose deployment/{} --type=LoadBalancer --port={} --target-port={} --name={}'.format(
       self.deploy_name, self.port, self.target_port, self.service_name))
 
-    # Probs don't need to do this again if already doing it above but doing again
-    # just to be sure in case CLI and py version differ
-    self.config.load_kube_config(context=self.cluster)
+    self.api = self.client.CoreV1Api()
 
     # Get ELB for service
     elb_url = self.wait_for_elb()
@@ -51,10 +52,12 @@ class PublicizePrediction(object):
 
     return elb
 
-  def get_elb(self, api):
+  def get_elb(self):
     try:
-      service_list = api.list_namespaced_service(namespace='default',
-                                                 label_selector='app={}'.format(self.deploy_name))
+      service_list = self.api.list_namespaced_service(
+        namespace='default',
+        label_selector='app={}'.format(self.deploy_name)
+      )
 
       items = service_list.items or []
     except:
