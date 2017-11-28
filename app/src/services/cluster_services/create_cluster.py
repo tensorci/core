@@ -53,6 +53,9 @@ class CreateCluster(object):
       print('Validating cluster {}...'.format(self.cluster.name))
       sleep(30)
 
+    # Register that the cluster is validated
+    dbi.update(self.cluster, {'validated': True})
+
     # Make an API deploy post-cluster-validation
     if self.with_deploy:
       api_deploy = ApiDeploy(prediction_uid=self.prediction_uid)

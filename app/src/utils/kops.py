@@ -22,7 +22,11 @@ def create_cluster(name=None, zones=None, master_size=None, node_size=None,
 
 def validate_cluster(name=None, state=None):
   validate_params([name, state])
-  output = check_output('kops validate cluster --name {} --state {}'.format(name, state).split())
+  try:
+    output = check_output('kops validate cluster --name {} --state {}'.format(name, state).split())
+  except BaseException as e:
+    return False
+
   return output and 'is ready' in output
 
 
