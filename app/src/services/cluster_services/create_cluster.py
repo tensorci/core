@@ -7,7 +7,7 @@ from src.utils import kops
 from time import sleep
 from src.deploys import create_deploy
 from src.config import get_config
-from kubernetes import client, config, watch
+from kubernetes import client, config
 
 config = get_config()
 
@@ -53,7 +53,7 @@ class CreateCluster(object):
       return
 
     # Wait until our cluster is up and running
-    self.validate_cluster()
+    self.validate_cluster(bucket_url)
 
     # Make an API deploy once cluster is validated (if desired)
     if self.with_deploy:
@@ -71,29 +71,10 @@ class CreateCluster(object):
       image=os_map.get(self.cluster.image)
     )
 
-  def validate_cluster(self):
-    # Switch to the new cluster's context
-    self.config.load_kube_config(context=self.cluster.name)
-
-    # Set up watcher for cluster validation
-    watcher = watch.Watch()
-    api = self.client.CoreV1Api()
-
-    num_cluster_instances = len(self.cluster.zones) + config.CLUSTER_NODE_COUNT
-    num_ready_instances = 0
-
-    aplogger.info('Validating cluster {}...'.format(self.cluster.name))
-    # TODO: Make sure this doesn't error out when cluster's not available yet
-    for e in watcher.stream(api.list_node):
-      type = e.get('type')
-
-      if type == 'ADDED':
-        num_ready_instances += 1
-
-      aplogger.info('{}/{} cluster instances ready.'.format(num_ready_instances, num_cluster_instances))
-
-      if num_ready_instances == num_cluster_instances:
-        watcher.stop()
+  def validate_cluster(self, state):
+    while not kops.validate_cluster(name=self.cluster.name, state=state):
+      print('Validating cluster...')
+      sleep(120)
 
     # Register that the cluster is validated
     aplogger.info('Validated cluster.')
