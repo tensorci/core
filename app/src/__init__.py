@@ -40,5 +40,5 @@ if is_prod() and os.environ.get('REQUIRE_SSL') == 'true':
   SSLify(app)
 
 # Execute any startup scripts here
-from initializers import export_clusters
-export_clusters.perform()
+# from initializers import export_clusters
+# export_clusters.perform()

@@ -97,7 +97,7 @@ class Token(db.Model):
 class TeamUser(db.Model):
   roles = team_user_roles
   id = db.Column(db.Integer, primary_key=True)
-  team_id = db.Column(db.Integer, db.ForeignKey('team.id'), index=True)
+  team_id = db.Column(db.Integer, db.ForeignKey('team.id'), index=True, nullable=False)
   team = db.relationship('Team', backref='team_users')
   user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True, nullable=False)
   user = db.relationship('User', backref='team_users')
