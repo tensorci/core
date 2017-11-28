@@ -15,14 +15,17 @@ class ProdConfig(Config):
 
   def __init__(self):
     self.SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
+    self.CORE_URL = os.environ.get('CORE_URL') or 'https://app.{}/api'.format(self.DOMAIN)
 
 
 class StagingConfig(Config):
+  DEBUG = False
   DOMAIN = 'staging.tensorci.com'
   IMAGE_REPO_OWNER = 'tensorci-staging'
 
   def __init__(self):
     self.SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
+    self.CORE_URL = os.environ.get('CORE_URL') or 'https://app.{}/api'.format(self.DOMAIN)
 
 
 class DevConfig(Config):
@@ -31,14 +34,16 @@ class DevConfig(Config):
 
   def __init__(self):
     self.SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
+    self.CORE_URL = os.environ.get('CORE_URL') or 'https://app.{}/api'.format(self.DOMAIN)
 
 
 class TestConfig(Config):
-  DOMAIN = 'test.tensorci.com'
+  DOMAIN = 'localhost'
   IMAGE_REPO_OWNER = 'tensorci-test'
 
   def __init__(self):
     self.SQLALCHEMY_DATABASE_URI = os.environ.get('TEST_DB_URL')
+    self.CORE_URL = os.environ.get('CORE_URL') or 'http://localhost/api'
 
 
 def get_config():
