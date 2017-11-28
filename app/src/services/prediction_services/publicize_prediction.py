@@ -31,6 +31,7 @@ class PublicizePrediction(object):
     if not service_success:
       return
 
+    # We need the CoreV1Api to list_namespaced_service
     self.api = self.client.CoreV1Api()
 
     # Get ELB for service

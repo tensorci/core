@@ -118,16 +118,22 @@ class BuildServerDeploy(AbstractDeploy):
   def post_api_building(self):
     self.update_pred_status(pstatus.DONE_BUILDING_FOR_API)
 
-    # If team's cluster already exists, go ahead and deploy to it.
     if self.team.cluster.validated:
-      aplogger.info('Scheduling api deploy for prediction(slug={})...'.format(self.prediction.slug))
-      create_deploy(ApiDeploy, {'prediction_uid': self.prediction_uid})
+      # Go ahead and deploy if cluster already created/validated
+      self.create_api_deploy()
     else:
-      # Otherwise, create the cluster first and then make deploy.
-      aplogger.info('Scheduling cluster creation for prediction(slug={})...'.format(self.prediction.slug))
+      # Create cluster before API deploy if it doesn't exist yet
+      self.create_cluster_and_deploy()
 
-      delayed.add_job(delay_class_method, args=[CreateCluster, {
-        'team_uid': self.team.uid,
-        'prediction_uid': self.prediction_uid,
-        'with_deploy': True
-      }])
+  def create_api_deploy(self):
+    aplogger.info('Scheduling api deploy for prediction(slug={})...'.format(self.prediction.slug))
+    create_deploy(ApiDeploy, {'prediction_uid': self.prediction_uid})
+
+  def create_cluster_and_deploy(self):
+    aplogger.info('Scheduling cluster creation for prediction(slug={})...'.format(self.prediction.slug))
+
+    delayed.add_job(delay_class_method, args=[CreateCluster, {
+      'team_uid': self.team.uid,
+      'prediction_uid': self.prediction_uid,
+      'with_deploy': True
+    }])

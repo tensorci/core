@@ -35,12 +35,7 @@ class CreateCluster(object):
     })
 
     # Register NS records for each of the ns_addresses with the TLD
-    dns_success = add_dns_records(
-      os.environ.get('TL_HOSTED_ZONE_ID'),
-      self.cluster.name,
-      ns_addresses,
-      'NS'
-    )
+    dns_success = add_dns_records(os.environ.get('TL_HOSTED_ZONE_ID'), self.cluster.name, ns_addresses, 'NS')
 
     if not dns_success:
       return
@@ -52,19 +47,31 @@ class CreateCluster(object):
     bucket_url = self.bucket.url()
 
     # Create cluster with kops name=cluster.name
-    creation_success = kops.create_cluster(
+    cluster_created = self.kops_create_cluster(state=bucket_url)
+
+    if not cluster_created:
+      return
+
+    # Wait until our cluster is up and running
+    self.validate_cluster()
+
+    # Make an API deploy once cluster is validated (if desired)
+    if self.with_deploy:
+      aplogger.info('Scheduling API deploy...')
+      create_deploy(ApiDeploy, {'prediction_uid': self.prediction_uid})
+
+  def kops_create_cluster(self, state):
+    return kops.create_cluster(
       name=self.cluster.name,
       zones=','.join(self.cluster.zones),
       master_size=self.cluster.master_type,
       node_size=self.cluster.node_type,
       node_count=config.CLUSTER_NODE_COUNT,
-      state=bucket_url,
+      state=state,
       image=os_map.get(self.cluster.image)
     )
 
-    if not creation_success:
-      return
-
+  def validate_cluster(self):
     # Switch to the new cluster's context
     self.config.load_kube_config(context=self.cluster.name)
 
@@ -76,6 +83,7 @@ class CreateCluster(object):
     num_ready_instances = 0
 
     aplogger.info('Validating cluster {}...'.format(self.cluster.name))
+    # TODO: Make sure this doesn't error out when cluster's not available yet
     for e in watcher.stream(api.list_node):
       type = e.get('type')
 
@@ -89,9 +97,5 @@ class CreateCluster(object):
 
     # Register that the cluster is validated
     aplogger.info('Validated cluster.')
-    dbi.update(self.cluster, {'validated': True})
 
-    # Make an API deploy once cluster is validated (if desired)
-    if self.with_deploy:
-      aplogger.info('Scheduling API deploy...')
-      create_deploy(ApiDeploy, {'prediction_uid': self.prediction_uid})
+    dbi.update(self.cluster, {'validated': True})
