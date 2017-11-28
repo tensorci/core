@@ -97,6 +97,8 @@ class PredictionIsTrained(Resource):
   @namespace.doc('update_prediction_status')
   @namespace.expect(update_prediction_status_model, validate=True)
   def put(self):
+    # TODO: validate that 'Core-Api-Token' header == os.environ.get('CORE_API_TOKEN')
+
     # Get required params
     prediction_uid = api.payload['prediction_uid']
     desired_status = api.payload['status']

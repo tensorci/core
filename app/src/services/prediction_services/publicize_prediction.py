@@ -45,3 +45,5 @@ class PublicizePrediction(object):
 
     # Create a CNAME record for your subdomain with the ELB's url
     add_dns_records(os.environ.get('TL_HOSTED_ZONE_ID'), self.prediction.domain, [elb_url], 'CNAME')
+
+    aplogger.info('Prediction live at {}'.format(self.prediction.domain))

@@ -120,7 +120,7 @@ class BuildServerDeploy(AbstractDeploy):
     self.update_pred_status(pstatus.DONE_BUILDING_FOR_API)
 
     # If team's cluster already exists, go ahead and deploy to it.
-    if self.team.cluster:
+    if self.team.cluster.validated:
       aplogger.info('Scheduling api deploy for prediction(slug={})...'.format(self.prediction.slug))
       create_deploy(ApiDeploy, {'prediction_uid': self.prediction_uid})
     else:

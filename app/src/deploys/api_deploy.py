@@ -41,5 +41,6 @@ class ApiDeploy(AbstractDeploy):
 
     # Set up ELB and CNAME record for deployment if not already there
     if not self.prediction.elb:
+      # TODO: make this separate delayed job too
       publicize_service = PublicizePrediction(prediction=self.prediction)
       publicize_service.perform()

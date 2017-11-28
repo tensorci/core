@@ -52,7 +52,7 @@ class CreateCluster(object):
     # TODO: Instead - use equivalent of k get nodes -l key=val to watch for this cluster being ready
     while not kops.validate_cluster(name=self.cluster.name, state=bucket_url):
       aplogger.info('Validating cluster {}...'.format(self.cluster.name))
-      sleep(30)
+      sleep(60)
 
     # Register that the cluster is validated
     aplogger.info('Validated cluster.')
