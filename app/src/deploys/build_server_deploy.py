@@ -1,11 +1,11 @@
 import os
 from abstract_deploy import AbstractDeploy
 from train_deploy import TrainDeploy
-from src import dbi
 from api_deploy import ApiDeploy
 from src.utils import image_names, clusters
 from src.config import get_config
 from src.statuses.pred_statuses import pstatus
+from src import dbi
 from src.helpers import time_since_epoch
 from kubernetes import watch
 from src.deploys import create_deploy
@@ -21,7 +21,6 @@ class BuildServerDeploy(AbstractDeploy):
 
   def __init__(self, prediction_uid=None, build_for=None):
     super(BuildServerDeploy, self).__init__(prediction_uid)
-
     self.build_for = build_for
     self.image = '{}/{}'.format(config.IMAGE_REPO_OWNER, image_names.BUILD_SERVER)
     self.deploy_name = '{}-{}-build-{}'.format(self.prediction.slug, self.build_for, time_since_epoch())
