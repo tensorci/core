@@ -26,6 +26,7 @@ class TrainDeploy(AbstractDeploy):
       'AWS_REGION_NAME': os.environ.get('AWS_REGION_NAME'),
       'S3_BUCKET_NAME': self.cluster.bucket.name,
       'DATASET_DB_URL': os.environ.get('DATASET_DB_URL'),
+      'DATASET_TABLE_NAME': self.prediction.dataset_table(),
       'CORE_URL': config.CORE_URL,
       'CORE_API_TOKEN': os.environ.get('CORE_API_TOKEN'),
       'TEAM': self.team.slug,

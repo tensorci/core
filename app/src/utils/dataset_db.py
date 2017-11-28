@@ -15,5 +15,9 @@ def get_conn():
 
 def create_table(name):
   conn = get_conn()
-  # TODO: Make this valid SQL
-  conn.execute('CREATE TABLE records (data: json)')
+  # Create a table named <name> with a json column named 'data'
+
+
+def populate_records(records, table=None):
+  # Do a batch insert to <table> with data=record for each record in records
+  pass

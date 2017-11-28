@@ -205,6 +205,9 @@ class Prediction(db.Model):
       self.id, self.uid, self.team_id, self.name, self.slug, self.elb, self.domain,
       self.git_repo, self.image_repo_owner, self.image_version, self.status, self.sha, self.deploy_name, self.is_destroyed, self.created_at)
 
+  def dataset_table(self):
+    return '{}-{}'.format(self.slug, self.uid)
+
 
 class Bucket(db.Model):
   id = db.Column(db.Integer, primary_key=True)
