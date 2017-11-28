@@ -12,12 +12,12 @@ def export_cluster(name=None, state=None):
 
 
 def create_cluster(name=None, zones=None, master_size=None, node_size=None,
-                   node_count=None, state=None, image=None, labels=None):
+                   node_count=None, state=None, image=None):
   validate_params([name, zones, master_size, node_size, node_count, state, image])
   assert image in os_map.values()
 
-  os.system('kops create cluster --name {} --zones {} --master-size {} --node-size {} --node-count {} --state {} --image {} --cloud-labels {} --yes'.format(
-    name, zones, master_size, node_size, node_count, state, image, labels))
+  os.system('kops create cluster --name {} --zones {} --master-size {} --node-size {} --node-count {} --state {} --image {} --yes'.format(
+    name, zones, master_size, node_size, node_count, state, image))
 
 
 def validate_cluster(name=None, state=None):

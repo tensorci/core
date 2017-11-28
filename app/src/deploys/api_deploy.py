@@ -17,6 +17,8 @@ class ApiDeploy(AbstractDeploy):
 
     self.image = '{}/{}-{}'.format(config.IMAGE_REPO_OWNER, self.prediction.slug, clusters.API)
     self.deploy_name = '{}-{}-{}'.format(self.prediction.slug, clusters.API, time_since_epoch())
+
+    # TODO: Rename self.cluster to self.cluster_name on all deploy classes
     self.cluster = self.team.cluster.name
     self.ports = [80]
     self.replicas = 3
@@ -25,7 +27,7 @@ class ApiDeploy(AbstractDeploy):
       'AWS_ACCESS_KEY_ID': os.environ.get('AWS_ACCESS_KEY_ID'),
       'AWS_SECRET_ACCESS_KEY': os.environ.get('AWS_SECRET_ACCESS_KEY'),
       'AWS_REGION_NAME': os.environ.get('AWS_REGION_NAME'),
-      'S3_BUCKET_NAME': self.cluster.bucket.name,
+      'S3_BUCKET_NAME': self.team.cluster.bucket.name,
       'DATASET_DB_URL': os.environ.get('DATASET_DB_URL'),
       'TEAM': self.team.slug,
       'TEAM_UID': self.team.uid,
