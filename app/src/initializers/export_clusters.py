@@ -2,27 +2,49 @@ import os
 from src import dbi
 from src.models import Cluster
 from src.utils.kops import export_cluster
+from kubernetes import config
 
 
 def perform():
-  if os.environ.get('FORCE_CLUSTER_REFRESH') or not os.path.exists(os.environ.get('KUBECONFIG')):
-    # Export train cluster
-    train_cluster_name = os.environ.get('TRAIN_CLUSTER_NAME')
-    train_cluster_state = os.environ.get('TRAIN_CLUSTER_STATE')
+  # Contexts map to hold which contexts already exist in our kube config
+  existing_contexts = get_existing_contexts()
 
-    if train_cluster_name and train_cluster_state:
-      export_cluster(name=train_cluster_name, state=train_cluster_state)
+  print existing_contexts
 
-    # Export build server cluster
-    bs_cluster_name = os.environ.get('BS_CLUSTER_NAME')
-    bs_cluster_state = os.environ.get('BS_CLUSTER_STATE')
+  # All contexts map
+  all_contexts = get_all_contexts()
 
-    if bs_cluster_name and bs_cluster_state:
-      export_cluster(name=bs_cluster_name, state=bs_cluster_state)
+  print all_contexts
 
-    # Export API clusters
-    for cluster in dbi.find_all(Cluster, {'validated': True}):
-      bucket = cluster.bucket
+  # Export missing contexts
+  for name, state in all_contexts.iteritems():
+    if name not in existing_contexts:
+      export_cluster(name=name, state=state)
 
-      if bucket and bucket.name:
-        export_cluster(name=cluster.name, state=bucket.url())
+
+def get_existing_contexts():
+  contexts = {}
+
+  # Make sure our config file exists first before trying to access it
+  if os.path.exists(os.environ.get('KUBECONFIG')):
+    kube_contexts = config.list_kube_config_contexts()
+
+    if kube_contexts and not os.environ.get('FORCE_CLUSTER_REFRESH'):
+      contexts = {ctx.get('name'): True for ctx in kube_contexts[0]}
+
+  return contexts
+
+
+def get_all_contexts():
+  contexts = {
+    os.environ.get('TRAIN_CLUSTER_NAME'): os.environ.get('TRAIN_CLUSTER_STATE'),
+    os.environ.get('BS_CLUSTER_NAME'): os.environ.get('BS_CLUSTER_STATE')
+  }
+
+  for c in dbi.find_all(Cluster, {'validated': True}):
+    bucket = c.bucket
+
+    if bucket and bucket.name:
+      contexts[c.name] = bucket.url()
+
+  return contexts
