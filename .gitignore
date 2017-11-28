@@ -108,3 +108,5 @@ app.db
 .idea/
 
 app/test.py
+
+bin/id_rsa.pub
