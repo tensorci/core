@@ -26,9 +26,10 @@ class PublicizePrediction(object):
     self.config.load_kube_config(context=self.cluster_name)
 
     # Expose deployment with a LoadBalancer service
-    # TODO: Figure out how to do all of this with the kubernetes python client we're already using
-    os.system('kubectl expose deployment/{} --type=LoadBalancer --port={} --target-port={} --name={}'.format(
-      self.deploy_name, self.port, self.target_port, self.service_name))
+    service_success = self.create_service()
+
+    if not service_success:
+      return
 
     self.api = self.client.CoreV1Api()
 
@@ -41,7 +42,20 @@ class PublicizePrediction(object):
     # Create a CNAME record for your subdomain with the ELB's url
     add_dns_records(os.environ.get('TL_HOSTED_ZONE_ID'), self.prediction.domain, [elb_url], 'CNAME')
 
+    aplogger.info('Waiting for TTL (60s)...')
+    sleep(60)
+
     aplogger.info('Prediction live at {}/api/predict'.format(self.prediction.domain))
+
+  def create_service(self):
+    try:
+      os.system('kubectl expose deployment/{} --type=LoadBalancer --port={} --target-port={} --name={}'.format(
+        self.deploy_name, self.port, self.target_port, self.service_name))
+    except BaseException as e:
+      aplogger.error('Error creating service {} with error: {}'.format(self.service_name, e))
+      return False
+
+    return True
 
   def wait_for_elb(self):
     elb = self.get_elb()
@@ -67,10 +81,19 @@ class PublicizePrediction(object):
       return None
 
     service = items[0]
+    service_status = service.status
 
-    try: # me being lazy
-      elb = service.status.load_balancer.ingress[0].hostname
-    except:
+    if not service.status:
       return None
 
-    return elb
+    lb = service_status.load_balancer
+
+    if not lb:
+      return None
+
+    ingress_list = lb.ingress
+
+    if not ingress_list:
+      return None
+
+    return ingress_list[0].hostname
