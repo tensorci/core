@@ -7,6 +7,7 @@ from src.utils import kops
 from time import sleep
 from src.deploys import create_deploy
 from src.config import get_config
+from kubernetes import client, config, watch
 
 config = get_config()
 
@@ -20,6 +21,8 @@ class CreateCluster(object):
     self.bucket = self.cluster.bucket
     self.prediction_uid = prediction_uid
     self.with_deploy = with_deploy
+    self.config = config
+    self.client = client
 
   def perform(self):
     # Create Route53 hosted zone for cluster
@@ -62,10 +65,27 @@ class CreateCluster(object):
     if not creation_success:
       return
 
+    # Switch to the new cluster's context
+    self.config.load_kube_config(context=self.cluster.name)
+
+    # Set up watcher for cluster validation
+    watcher = watch.Watch()
+    api = self.client.CoreV1Api()
+
+    num_cluster_instances = len(self.cluster.zones) + config.CLUSTER_NODE_COUNT
+    num_ready_instances = 0
+
     aplogger.info('Validating cluster {}...'.format(self.cluster.name))
-    while not kops.validate_cluster(name=self.cluster.name, state=bucket_url):
-      aplogger.info('Not valid yet...will try again in 2 minutes')
-      sleep(120)
+    for e in watcher.stream(api.list_node):
+      type = e.get('type')
+
+      if type == 'ADDED':
+        num_ready_instances += 1
+
+      aplogger.info('{}/{} cluster instances ready.'.format(num_ready_instances, num_cluster_instances))
+
+      if num_ready_instances == num_cluster_instances:
+        watcher.stop()
 
     # Register that the cluster is validated
     aplogger.info('Validated cluster.')
