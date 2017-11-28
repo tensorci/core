@@ -1,4 +1,6 @@
+import os
 from flask_restplus import Resource, fields
+from flask import request
 from src.routes import namespace, api
 from src.models import TeamUser, Team, Prediction
 from src import logger, dbi
@@ -97,7 +99,9 @@ class PredictionIsTrained(Resource):
   @namespace.doc('update_prediction_status')
   @namespace.expect(update_prediction_status_model, validate=True)
   def put(self):
-    # TODO: validate that 'Core-Api-Token' header == os.environ.get('CORE_API_TOKEN')
+    # Ensure valid request header
+    if request.headers.get('Core-Api-Token') != os.environ.get('CORE_API_TOKEN'):
+      return '', 401
 
     # Get required params
     prediction_uid = api.payload['prediction_uid']
