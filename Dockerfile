@@ -13,6 +13,9 @@ RUN pip install -r /tmp/requirements.txt
 # Copy the current directory contents into theh container at /app
 COPY ./app /app
 
+# Copy migrations dir over
+COPY ./migrations /app/migrations
+
 # Make kops accessible
 COPY ./bin/kops /usr/local/bin/kops
 RUN chmod +x /usr/local/bin/kops
