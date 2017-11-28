@@ -97,7 +97,7 @@ class Token(db.Model):
 class TeamUser(db.Model):
   roles = team_user_roles
   id = db.Column(db.Integer, primary_key=True)
-  team_id = db.Column(db.Integer, db.ForeignKey('team.id'), index=True, nullable=False)
+  team_id = db.Column(db.Integer, db.ForeignKey('team.id'), index=True)
   team = db.relationship('Team', backref='team_users')
   user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True, nullable=False)
   user = db.relationship('User', backref='team_users')
@@ -126,7 +126,7 @@ class TeamUser(db.Model):
 class Cluster(db.Model):
   id = db.Column(db.Integer, primary_key=True)
   uid = db.Column(db.String, index=True, unique=True)
-  team_id = db.Column(db.Integer, db.ForeignKey('team.id'), index=True, nullable=False)
+  team_id = db.Column(db.Integer, db.ForeignKey('team.id'), index=True)
   team = db.relationship('Team', back_populates='cluster')
   bucket = db.relationship('Bucket', uselist=False, back_populates='cluster')
   name = db.Column(db.String(360), nullable=False)
@@ -211,7 +211,7 @@ class Prediction(db.Model):
 
 class Bucket(db.Model):
   id = db.Column(db.Integer, primary_key=True)
-  cluster_id = db.Column(db.Integer, db.ForeignKey('cluster.id'), index=True, nullable=False)
+  cluster_id = db.Column(db.Integer, db.ForeignKey('cluster.id'), index=True)
   cluster = db.relationship('Cluster', back_populates='bucket')
   name = db.Column(db.String(240))
   is_destroyed = db.Column(db.Boolean, server_default='f')
