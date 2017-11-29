@@ -58,6 +58,7 @@ class CreateCluster(object):
     # Make an API deploy once cluster is validated (if desired)
     if self.with_deploy:
       aplogger.info('Scheduling API deploy...')
+      sleep(5)
       create_deploy(ApiDeploy, {'prediction_uid': self.prediction_uid})
 
   def kops_create_cluster(self, state):
@@ -73,7 +74,7 @@ class CreateCluster(object):
 
   def validate_cluster(self, state):
     while not kops.validate_cluster(name=self.cluster.name, state=state):
-      print('Validating cluster...')
+      aplogger.info('Validating cluster...')
       sleep(120)
 
     # Register that the cluster is validated

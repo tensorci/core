@@ -1,4 +1,5 @@
 import os
+from time import sleep
 from abstract_deploy import AbstractDeploy
 from src import dbi
 from src.utils import clusters
@@ -45,6 +46,8 @@ class ApiDeploy(AbstractDeploy):
 
     # Set up ELB and CNAME record for deployment if not already there
     if not self.prediction.elb:
+      sleep(5)
+
       delayed.add_job(delay_class_method, args=[PublicizePrediction, {
         'prediction_uid': self.prediction.uid
       }])
