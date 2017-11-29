@@ -7,9 +7,9 @@ from src.helpers import decode_url_encoded_str
 
 def current_user():
   # Hack for testing
-  return dbi.find_one(User, {'name': 'Example Whittle'})
+  return dbi.find_one(User, {'email': 'benwhittle31@gmail.com'})
 
-  user_token = request.cookies.get('flyest-user')
+  user_token = request.cookies.get('tensorci-user')
 
   if not user_token:
     return None
