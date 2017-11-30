@@ -26,7 +26,7 @@ Relationships:
 import datetime
 from slugify import slugify
 from sqlalchemy.dialects.postgresql import JSON
-from src import db
+from src import db, dbi
 from helpers import auth_util, team_user_roles, user_verification_statuses, instance_types
 from uuid import uuid4
 from config import get_config
@@ -78,6 +78,15 @@ class User(db.Model):
   def __repr__(self):
     return '<User id={}, uid={}, email={}, name={}, verification_status={}, is_destroyed={}, created_at={}>'.format(
       self.id, self.uid, self.email, self.name, self.verification_status, self.is_destroyed, self.created_at)
+
+  # return teams through team_user
+  def teams(self):
+    team_ids = [tu.team_id for tu in self.team_users]
+
+    if not team_ids:
+      return []
+
+    return dbi.find_all(Team, {'id': team_ids})
 
 
 class Token(db.Model):

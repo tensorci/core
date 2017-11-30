@@ -36,3 +36,23 @@ class RestfulTeam(Resource):
       return UNKNOWN_ERROR
 
     return TEAM_CREATION_SUCCESS
+
+
+@namespace.route('/teams')
+class AllTeamsForUSer(Resource):
+  """Endpoints related to all teams for a user"""
+
+  @namespace.doc('get_all_teams_for_user')
+  def get(self):
+    user = current_user()
+
+    if not user:
+      return UNAUTHORIZED
+
+    formatted_teams = [{
+      'name': t.name,
+      'slug': t.slug,
+      'uid': t.uid
+    } for t in user.teams()]
+
+    return {'teams': formatted_teams}
