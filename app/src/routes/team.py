@@ -55,4 +55,4 @@ class AllTeamsForUSer(Resource):
       'uid': t.uid
     } for t in user.teams()]
 
-    return {'teams': formatted_teams}
+    return {'ok': True, 'data': formatted_teams}, 200
