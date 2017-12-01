@@ -116,6 +116,8 @@ class RestfulPrediction(Resource):
     if not team:
       return TEAM_NOT_FOUND
 
+    team = team[0]
+
     # Upsert prediction
     prediction = dbi.find_one(Prediction, {'team': team, 'slug': prediction_slug})
 
