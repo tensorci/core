@@ -6,3 +6,4 @@ namespace = api.namespace('api')
 # Add all route handlers here:
 from team import *
 from prediction import *
+from user import *
