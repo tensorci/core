@@ -13,6 +13,7 @@ class AbstractDeploy(object):
     self.config = config
 
     # Overwritten in child class
+    self.container_name = None
     self.image = None
     self.deploy_name = None
     self.cluster_name = None
@@ -84,7 +85,7 @@ class AbstractDeploy(object):
 
   def configure_container(self, volume_mounts=None, ports=None, envs=None):
     return self.client.V1Container(
-      name=self.deploy_name,
+      name=self.container_name,
       image=self.image,
       ports=ports,
       env=envs,

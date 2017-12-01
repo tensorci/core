@@ -18,8 +18,9 @@ class ApiDeploy(AbstractDeploy):
   def __init__(self, prediction_uid=None):
     super(ApiDeploy, self).__init__(prediction_uid)
 
-    self.image = '{}/{}-{}'.format(config.IMAGE_REPO_OWNER, self.prediction.slug, clusters.API)
-    self.deploy_name = '{}-{}-{}'.format(self.prediction.slug, clusters.API, time_since_epoch())
+    self.container_name = '{}-{}'.format(self.prediction.slug, clusters.API)
+    self.image = '{}/{}'.format(config.IMAGE_REPO_OWNER, self.container_name)
+    self.deploy_name = '{}-{}'.format(self.container_name, time_since_epoch())
     self.cluster = self.team.cluster
     self.cluster_name = self.cluster.name
     self.ports = [80]
@@ -37,6 +38,37 @@ class ApiDeploy(AbstractDeploy):
       'PREDICTION': self.prediction.slug,
       'PREDICTION_UID': self.prediction.uid
     }
+
+    # If prediction has already been deployed, just update
+    # the deploy with the latest image instead
+    if self.prediction.deploy_name:
+      self.deploy = self.update_deploy
+
+  def update_deploy(self):
+    self.config.load_kube_config(context=self.cluster_name)
+
+    body = {
+      'spec': {
+        'template': {
+          'spec': {
+            'containers': [
+              {
+                'name': self.container_name,
+                'image': '{}:latest'.format(self.image)
+              }
+            ]
+          }
+        }
+      }
+    }
+
+    api = self.client.ExtensionsV1beta1Api()
+
+    api.patch_namespaced_deployment(self.prediction.deploy_name,
+                                    namespace=self.namespace,
+                                    body=body)
+
+    self.on_deploy_success()
 
   def on_deploy_success(self):
     # Update the prediction's deploy name

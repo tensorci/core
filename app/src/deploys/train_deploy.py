@@ -13,8 +13,9 @@ class TrainDeploy(AbstractDeploy):
   def __init__(self, prediction_uid=None):
     super(TrainDeploy, self).__init__(prediction_uid)
 
-    self.image = '{}/{}-{}'.format(config.IMAGE_REPO_OWNER, self.prediction.slug, clusters.TRAIN)
-    self.deploy_name = '{}-{}-{}'.format(self.prediction.slug, clusters.TRAIN, time_since_epoch())
+    self.container_name = '{}-{}'.format(self.prediction.slug, clusters.TRAIN)
+    self.image = '{}/{}'.format(config.IMAGE_REPO_OWNER, self.container_name)
+    self.deploy_name = '{}-{}'.format(self.container_name, time_since_epoch())
     self.cluster = self.team.cluster
     self.cluster_name = os.environ.get('TRAIN_CLUSTER_NAME')
     self.job = True

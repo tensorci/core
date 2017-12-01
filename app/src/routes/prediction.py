@@ -9,6 +9,7 @@ from src.api_responses.errors import *
 from src.api_responses.success import *
 from slugify import slugify
 from src.utils import clusters
+from src.utils.gh import fetch_git_repo
 from src.config import get_config
 from src.statuses.pred_statuses import pstatus
 from src.services.prediction_services import status_update_services
@@ -20,6 +21,12 @@ config = get_config()
 create_prediction_model = api.model('Prediction', {
   'team_uid': fields.String(required=True),
   'name': fields.String(required=True),
+  'git_repo': fields.String(required=True)
+})
+
+update_prediction_model = api.model('Prediction', {
+  'team_slug': fields.String(required=True),
+  'prediction_slug': fields.String(required=True),
   'git_repo': fields.String(required=True)
 })
 
@@ -88,6 +95,67 @@ class RestfulPrediction(Resource):
       logger.error('Error creating Prediction(name={}, team={}, git_repo={}): {}'.format(
         prediction_name, team, git_repo, e))
       return UNKNOWN_ERROR
+
+    return PREDICTION_CREATION_SUCCESS
+
+  @namespace.doc('update_prediction_with_new_deploy')
+  @namespace.expect(update_prediction_model, validate=True)
+  def put(self):
+    # Get current user
+    user = current_user()
+
+    if not user:
+      return UNAUTHORIZED
+
+    team_slug = api.payload['team_slug']
+    prediction_slug = api.payload['prediction_slug']
+    git_repo = api.payload['git_repo']
+
+    team = [t for t in user.teams() if t.slug == team_slug]
+
+    if not team:
+      return TEAM_NOT_FOUND
+
+    # Upsert prediction
+    prediction = dbi.find_one(Prediction, {'team': team, 'slug': prediction_slug})
+
+    # Create prediction if not there
+    if not prediction:
+      try:
+        prediction = dbi.create(Prediction, {
+          'team': team,
+          'name': prediction_slug,
+          'git_repo': git_repo
+        })
+      except BaseException as e:
+        logger.error('Error creating Prediction(name={}, team={}, git_repo={}): {}'.format(
+          prediction_slug, team, git_repo, e))
+        return UNKNOWN_ERROR
+
+    # Get latest SHA for the repo and compare it to what's already stored in the Prediction model
+
+    # Fetch remote repository object via the Github API
+    repo = fetch_git_repo(prediction.git_repo)
+
+    # Get the first page of commits for the repo
+    commits = repo.get_commits()
+
+    # We only care about the sha of the first commit
+    latest_commit = commits[0]
+    latest_sha = latest_commit.sha
+
+    # If no changes have been made to master since last deploy, respond saying everything's up-to-date.
+    if prediction.sha == latest_sha:
+      return {'ok': True, 'up_to_date': True}
+
+    # Update prediction model with latest sha and schedule a deploy to the build server
+    prediction = dbi.update(prediction, {'sha': latest_sha})
+
+    # Schedule a deploy to the build server
+    create_deploy(BuildServerDeploy, {
+      'prediction_uid': prediction.uid,
+      'build_for': clusters.TRAIN
+    })
 
     return PREDICTION_CREATION_SUCCESS
 
