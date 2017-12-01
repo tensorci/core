@@ -147,8 +147,8 @@ class RestfulPrediction(Resource):
     latest_sha = latest_commit.sha
 
     # If no changes have been made to master since last deploy, respond saying everything's up-to-date.
-    if prediction.sha == latest_sha:
-      return {'ok': True, 'up_to_date': True}
+    # if prediction.sha == latest_sha:
+    #   return {'ok': True, 'up_to_date': True}
 
     # Update prediction model with latest sha and schedule a deploy to the build server
     prediction = dbi.update(prediction, {'sha': latest_sha})
