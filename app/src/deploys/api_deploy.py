@@ -38,22 +38,22 @@ class ApiDeploy(AbstractDeploy):
       'PREDICTION': self.prediction.slug,
       'PREDICTION_UID': self.prediction.uid
     }
-
-  def deploy(self):
-    if self.prediction.deploy_name:
-      self.update_deploy()
-    else:
-      super(ApiDeploy, self).deploy()
-
-  def update_deploy(self):
-    # Switch context
-    os.system('kubectl config use-context {}'.format(self.cluster_name))
-
-    # Update image
-    os.system('kubectl set image deployment/{} {}={}'.format(
-      self.prediction.deploy_name, self.container_name, self.image))
-
-    self.update_pred_status(pstatus.PREDICTING)
+  #
+  # def deploy(self):
+  #   if self.prediction.deploy_name:
+  #     self.update_deploy()
+  #   else:
+  #     super(ApiDeploy, self).deploy()
+  #
+  # def update_deploy(self):
+  #   # Switch context
+  #   os.system('kubectl config use-context {}'.format(self.cluster_name))
+  #
+  #   # Update image
+  #   os.system('kubectl set image deployment/{} {}={}'.format(
+  #     self.prediction.deploy_name, self.container_name, self.image))
+  #
+  #   self.update_pred_status(pstatus.PREDICTING)
 
   def on_deploy_success(self):
     # Update the prediction's deploy name
