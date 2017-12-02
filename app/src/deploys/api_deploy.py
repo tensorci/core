@@ -39,36 +39,21 @@ class ApiDeploy(AbstractDeploy):
       'PREDICTION_UID': self.prediction.uid
     }
 
-    # If prediction has already been deployed, just update
-    # the deploy with the latest image instead
+  def deploy(self):
     if self.prediction.deploy_name:
-      self.deploy = self.update_deploy
+      self.update_deploy()
+    else:
+      super(ApiDeploy, self).deploy()
 
   def update_deploy(self):
-    self.config.load_kube_config(context=self.cluster_name)
+    # Switch context
+    os.system('kubectl config use-context {}'.format(self.cluster_name))
 
-    body = {
-      'spec': {
-        'template': {
-          'spec': {
-            'containers': [
-              {
-                'name': self.container_name,
-                'image': '{}:latest'.format(self.image)
-              }
-            ]
-          }
-        }
-      }
-    }
+    # Update image
+    os.system('kubectl set image deployment/{} {}={}'.format(
+      self.prediction.deploy_name, self.container_name, self.image))
 
-    api = self.client.ExtensionsV1beta1Api()
-
-    api.patch_namespaced_deployment(self.prediction.deploy_name,
-                                    namespace=self.namespace,
-                                    body=body)
-
-    self.on_deploy_success()
+    self.update_pred_status(pstatus.PREDICTING)
 
   def on_deploy_success(self):
     # Update the prediction's deploy name
