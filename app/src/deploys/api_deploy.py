@@ -38,26 +38,23 @@ class ApiDeploy(AbstractDeploy):
       'PREDICTION': self.prediction.slug,
       'PREDICTION_UID': self.prediction.uid
     }
-  #
+
   # def deploy(self):
   #   if self.prediction.deploy_name:
-  #     self.update_deploy()
+  #     os.system('kubectl set image deployment/{} {}={} --context={} --cluster={}'.format(
+  #       self.prediction.deploy_name, self.container_name, self.image, self.cluster_name, self.cluster_name))
   #   else:
-  #     super(ApiDeploy, self).deploy()
-  #
-  # def update_deploy(self):
-  #   # Switch context
-  #   os.system('kubectl config use-context {}'.format(self.cluster_name))
-  #
-  #   # Update image
-  #   os.system('kubectl set image deployment/{} {}={}'.format(
-  #     self.prediction.deploy_name, self.container_name, self.image))
+  #     # envs = []
+  #     # for k, v in self.envs.items():
+  #     #   envs.append('--env="{}={}"'.format(k, v))
+  #     #
+  #     # os.system('kubectl run {} --image={} --port={} {}'.format(self.deploy_name, self.image, 80, ' '.join(envs)))
   #
   #   self.update_pred_status(pstatus.PREDICTING)
 
   def on_deploy_success(self):
-    # Update the prediction's deploy name
-    self.prediction = dbi.update(self.prediction, {'deploy_name': self.deploy_name})
+    if not self.prediction.deploy_name:
+      self.prediction = dbi.update(self.prediction, {'deploy_name': self.deploy_name})
 
     self.update_pred_status(pstatus.PREDICTING)
 
