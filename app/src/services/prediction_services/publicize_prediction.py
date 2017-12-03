@@ -17,14 +17,8 @@ class PublicizePrediction(object):
     self.cluster_name = self.team.cluster.name
     self.deploy_name = self.prediction.deploy_name
     self.service_name = self.deploy_name
-    self.config = config
-    self.client = client
-    self.api = None
 
   def perform(self):
-    # Switch to appropriate context
-    self.config.load_kube_config(context=self.cluster_name)
-
     # Expose deployment with a LoadBalancer service
     service_success = self.create_service()
 
@@ -32,7 +26,9 @@ class PublicizePrediction(object):
       return
 
     # We need the CoreV1Api to list_namespaced_service
-    self.api = self.client.CoreV1Api()
+    api_client = config.new_client_from_config(context=self.cluster_name)
+
+    self.api = client.CoreV1Api(api_client=api_client)
 
     # Get ELB for service
     elb_url = self.wait_for_elb()
@@ -50,8 +46,8 @@ class PublicizePrediction(object):
 
   def create_service(self):
     try:
-      os.system('kubectl expose deployment/{} --type=LoadBalancer --port={} --target-port={} --name={}'.format(
-        self.deploy_name, self.port, self.target_port, self.service_name))
+      os.system('kubectl expose deployment/{} --type=LoadBalancer --port={} --target-port={} --name={} --context={} --cluster={}'.format(
+        self.deploy_name, self.port, self.target_port, self.service_name, self.cluster_name, self.cluster_name))
     except BaseException as e:
       aplogger.error('Error creating service {} with error: {}'.format(self.service_name, e))
       return False

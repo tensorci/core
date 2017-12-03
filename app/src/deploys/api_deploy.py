@@ -9,8 +9,9 @@ from src.services.prediction_services.publicize_prediction import PublicizePredi
 from src.helpers import time_since_epoch
 from src import delayed
 from src.helpers.delay_helper import delay_class_method
+from kubernetes import client, config
 
-config = get_config()
+app_config = get_config()
 
 
 class ApiDeploy(AbstractDeploy):
@@ -19,7 +20,7 @@ class ApiDeploy(AbstractDeploy):
     super(ApiDeploy, self).__init__(prediction_uid)
 
     self.container_name = '{}-{}'.format(self.prediction.slug, clusters.API)
-    self.image = '{}/{}'.format(config.IMAGE_REPO_OWNER, self.container_name)
+    self.image = '{}/{}'.format(app_config.IMAGE_REPO_OWNER, self.container_name)
     self.deploy_name = '{}-{}'.format(self.container_name, time_since_epoch())
     self.cluster = self.team.cluster
     self.cluster_name = self.cluster.name
@@ -39,18 +40,35 @@ class ApiDeploy(AbstractDeploy):
       'PREDICTION_UID': self.prediction.uid
     }
 
-  # def deploy(self):
-  #   if self.prediction.deploy_name:
-  #     os.system('kubectl set image deployment/{} {}={} --context={} --cluster={}'.format(
-  #       self.prediction.deploy_name, self.container_name, self.image, self.cluster_name, self.cluster_name))
-  #   else:
-  #     # envs = []
-  #     # for k, v in self.envs.items():
-  #     #   envs.append('--env="{}={}"'.format(k, v))
-  #     #
-  #     # os.system('kubectl run {} --image={} --port={} {}'.format(self.deploy_name, self.image, 80, ' '.join(envs)))
-  #
-  #   self.update_pred_status(pstatus.PREDICTING)
+    if self.prediction.deploy_name:
+      self.deploy = self.update_deploy
+
+  def update_deploy(self):
+    body = {
+      'spec': {
+        'template': {
+          'spec': {
+            'containers': [
+              {
+                'name': self.container_name,
+                'image': '{}:latest'.format(self.image)
+              }
+            ]
+          }
+        }
+      }
+    }
+
+    api_client = config.new_client_from_config(context=self.cluster_name)
+
+    api = client.ExtensionsV1beta1Api(api_client=api_client)
+
+    api.patch_namespaced_deployment(self.prediction.deploy_name,
+                                    namespace=self.namespace,
+                                    body=body)
+
+    self.on_deploy_success()
+
 
   def on_deploy_success(self):
     if not self.prediction.deploy_name:
