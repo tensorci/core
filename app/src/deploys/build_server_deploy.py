@@ -72,11 +72,11 @@ class BuildServerDeploy(AbstractDeploy):
     label_selector = 'app={}'.format(self.deploy_name)
 
     for e in watcher.stream(self.api.list_namespaced_job, namespace=self.namespace, label_selector=label_selector):
-      type = e.get('type')
+      etype = e.get('type')
       raw_obj = e.get('raw_object', {})
       status = raw_obj.get('status', {})
 
-      if type == 'ADDED':
+      if etype == 'ADDED':
         aplogger.info('Job {} started.'.format(self.deploy_name))
 
       if status.get('failed') is not None:
