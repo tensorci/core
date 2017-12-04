@@ -58,7 +58,7 @@ class PublicizePrediction(object):
         sleep(3)
 
         # Annotate service with SSL Cert
-        os.system('k annotate service {} service.beta.kubernetes.io/aws-load-balancer-ssl-cert={} service.beta.kubernetes.io/aws-load-balancer-ssl-ports={} --context={} --cluster={}'.format(
+        os.system('kubectl annotate service {} service.beta.kubernetes.io/aws-load-balancer-ssl-cert={} service.beta.kubernetes.io/aws-load-balancer-ssl-ports={} --context={} --cluster={}'.format(
           self.service_name, os.environ.get('WILDCARD_SSL_CERT_ARN'), self.port, self.cluster_name, self.cluster_name))
     except BaseException as e:
       aplogger.error('Error creating service {} with error: {}'.format(self.service_name, e))
@@ -118,7 +118,7 @@ class PublicizePrediction(object):
 
   def attempt_connection(self):
     url = 'https://{}'.format(self.prediction.domain)
-    aplogger.log('Pinging url {}...'.format(url))
+    aplogger.info('Pinging url {}...'.format(url))
 
     try:
       requests.get(url)

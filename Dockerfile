@@ -24,4 +24,9 @@ RUN chmod +x /usr/local/bin/kubectl
 # Figure out a non-hacky way to do this
 COPY ./bin/id_rsa.pub /root/.ssh/id_rsa.pub
 
+RUN python app/drop_av.py
+RUN python app/manage.py db init
+RUN python app/manage.py db migrate
+RUN python app/manage.py db upgrade
+
 CMD ["python", "app/main.py"]
