@@ -35,7 +35,7 @@ from routes import api
 api.init_app(app)
 
 # Require SSL if on prod
-if is_prod() and os.environ.get('REQUIRE_SSL') == 'true':
+if os.environ.get('REQUIRE_SSL') == 'true':
   from flask_sslify import SSLify
   SSLify(app)
 
