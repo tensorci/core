@@ -69,7 +69,6 @@ class ApiDeploy(AbstractDeploy):
 
     self.on_deploy_success()
 
-
   def on_deploy_success(self):
     if not self.prediction.deploy_name:
       self.prediction = dbi.update(self.prediction, {'deploy_name': self.deploy_name})
@@ -81,5 +80,6 @@ class ApiDeploy(AbstractDeploy):
       sleep(5)
 
       delayed.add_job(delay_class_method, args=[PublicizePrediction, {
-        'prediction_uid': self.prediction.uid
+        'prediction_uid': self.prediction.uid,
+        'port': 443  # Forcing SSL for now
       }])

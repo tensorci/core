@@ -3,6 +3,7 @@ from src import dbi, aplogger
 from src.models import Prediction
 from src.utils.aws import add_dns_records
 from time import sleep
+import requests
 from kubernetes import client, config
 
 
@@ -42,12 +43,23 @@ class PublicizePrediction(object):
     aplogger.info('Waiting for TTL (60s)...')
     sleep(60)
 
-    aplogger.info('Prediction live at {}/api/predict'.format(self.prediction.domain))
+    # Ping the url until the hostname is resolved
+    self.poll_url()
+
+    aplogger.info('Prediction live at https://{}/api/predict'.format(self.prediction.domain))
 
   def create_service(self):
     try:
+      # Create the service
       os.system('kubectl expose deployment/{} --type=LoadBalancer --port={} --target-port={} --name={} --context={} --cluster={}'.format(
         self.deploy_name, self.port, self.target_port, self.service_name, self.cluster_name, self.cluster_name))
+
+      if self.port == 443:
+        sleep(3)
+
+        # Annotate service with SSL Cert
+        os.system('k annotate service {} service.beta.kubernetes.io/aws-load-balancer-ssl-cert={} service.beta.kubernetes.io/aws-load-balancer-ssl-ports={} --context={} --cluster={}'.format(
+          self.service_name, os.environ.get('WILDCARD_SSL_CERT_ARN'), self.port, self.cluster_name, self.cluster_name))
     except BaseException as e:
       aplogger.error('Error creating service {} with error: {}'.format(self.service_name, e))
       return False
@@ -94,3 +106,23 @@ class PublicizePrediction(object):
       return None
 
     return ingress_list[0].hostname
+
+  def poll_url(self):
+    connection_success = self.attempt_connection()
+
+    if not connection_success:
+      sleep(20)
+      return self.poll_url()
+
+    return None
+
+  def attempt_connection(self):
+    url = 'https://{}'.format(self.prediction.domain)
+    aplogger.log('Pinging url {}...'.format(url))
+
+    try:
+      requests.get(url)
+    except requests.exceptions.ConnectionError:
+      return False
+
+    return True
