@@ -34,11 +34,6 @@ db = SQLAlchemy(app)
 from routes import api
 api.init_app(app)
 
-# Require SSL if on prod
-if os.environ.get('REQUIRE_SSL') == 'true':
-  from flask_sslify import SSLify
-  SSLify(app)
-
 # Execute any startup scripts here
 if os.environ.get('AUTO_EXPORT_CLUSTERS') == 'true':
   from initializers import export_clusters
