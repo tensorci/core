@@ -40,63 +40,63 @@ update_prediction_status_model = api.model('Prediction', {
 class RestfulPrediction(Resource):
   """Restful Prediction Interface"""
 
-  @namespace.doc('create_new_prediction_for_team')
-  @namespace.expect(create_prediction_model, validate=True)
-  def post(self):
-    # Get current user
-    user = current_user()
-
-    if not user:
-      return UNAUTHORIZED
-
-    # Get requested team
-    team = dbi.find_one(Team, {'uid': api.payload['team_uid']})
-
-    if not team:
-      return TEAM_NOT_FOUND
-
-    # Make sure the current user is the owner of this Team (and therefore can create a Prediction)
-    owner = dbi.find_one(TeamUser, {
-      'team': team,
-      'user': user,
-      'role': TeamUser.roles.OWNER
-    })
-
-    # Only owners can create predictions
-    if not owner:
-      return FORBIDDEN
-
-    prediction_name = api.payload['name']
-    prediction_slug = slugify(prediction_name, separator='-', to_lower=True)
-
-    # Ensure there's no Prediction with the same name for this Team
-    if dbi.find_one(Prediction, {'team': team, 'slug': prediction_slug}):
-      return PREDICTION_NAME_TAKEN
-
-    git_repo = api.payload['git_repo']
-    sha = api.payload.get('sha') or '8545012f4aa9bc3f3201fa643b5849e9e1dafc76'
-    # Hardcode SHA for now
-
-    try:
-      # Create new prediction
-      prediction = dbi.create(Prediction, {
-        'team': team,
-        'name': prediction_name,
-        'git_repo': git_repo,
-        'sha': sha
-      })
-
-      # Schedule a deploy to the build server
-      create_deploy(BuildServerDeploy, {
-        'prediction_uid': prediction.uid,
-        'build_for': clusters.TRAIN
-      })
-    except BaseException as e:
-      logger.error('Error creating Prediction(name={}, team={}, git_repo={}): {}'.format(
-        prediction_name, team, git_repo, e))
-      return UNKNOWN_ERROR
-
-    return PREDICTION_CREATION_SUCCESS
+  # @namespace.doc('create_new_prediction_for_team')
+  # @namespace.expect(create_prediction_model, validate=True)
+  # def post(self):
+  #   # Get current user
+  #   user = current_user()
+  #
+  #   if not user:
+  #     return UNAUTHORIZED
+  #
+  #   # Get requested team
+  #   team = dbi.find_one(Team, {'uid': api.payload['team_uid']})
+  #
+  #   if not team:
+  #     return TEAM_NOT_FOUND
+  #
+  #   # Make sure the current user is the owner of this Team (and therefore can create a Prediction)
+  #   owner = dbi.find_one(TeamUser, {
+  #     'team': team,
+  #     'user': user,
+  #     'role': TeamUser.roles.OWNER
+  #   })
+  #
+  #   # Only owners can create predictions
+  #   if not owner:
+  #     return FORBIDDEN
+  #
+  #   prediction_name = api.payload['name']
+  #   prediction_slug = slugify(prediction_name, separator='-', to_lower=True)
+  #
+  #   # Ensure there's no Prediction with the same name for this Team
+  #   if dbi.find_one(Prediction, {'team': team, 'slug': prediction_slug}):
+  #     return PREDICTION_NAME_TAKEN
+  #
+  #   git_repo = api.payload['git_repo']
+  #   sha = api.payload.get('sha') or '8545012f4aa9bc3f3201fa643b5849e9e1dafc76'
+  #   # Hardcode SHA for now
+  #
+  #   try:
+  #     # Create new prediction
+  #     prediction = dbi.create(Prediction, {
+  #       'team': team,
+  #       'name': prediction_name,
+  #       'git_repo': git_repo,
+  #       'sha': sha
+  #     })
+  #
+  #     # Schedule a deploy to the build server
+  #     create_deploy(BuildServerDeploy, {
+  #       'prediction_uid': prediction.uid,
+  #       'build_for': clusters.TRAIN
+  #     })
+  #   except BaseException as e:
+  #     logger.error('Error creating Prediction(name={}, team={}, git_repo={}): {}'.format(
+  #       prediction_name, team, git_repo, e))
+  #     return UNKNOWN_ERROR
+  #
+  #   return PREDICTION_CREATION_SUCCESS
 
   @namespace.doc('update_prediction_with_new_deploy')
   @namespace.expect(update_prediction_model, validate=True)
@@ -118,26 +118,29 @@ class RestfulPrediction(Resource):
 
     team = team[0]
 
-    # Upsert prediction
-    prediction = dbi.find_one(Prediction, {'team': team, 'slug': prediction_slug})
+    # Find prediction
+    prediction = dbi.find_one(Prediction, {'slug': prediction_slug})
 
-    # Create prediction if not there
+    # If prediction already belongs to another team, say name is not available
+    if prediction and prediction.team != team:
+      return PREDICTION_NAME_TAKEN
+
+    # Create new prediction for team if it didn't exist
     if not prediction:
       try:
         prediction = dbi.create(Prediction, {
           'team': team,
-          'name': prediction_slug,
-          'git_repo': git_repo
+          'name': prediction_slug
         })
       except BaseException as e:
-        logger.error('Error creating Prediction(name={}, team={}, git_repo={}): {}'.format(
-          prediction_slug, team, git_repo, e))
+        logger.error('Error creating Prediction(name={}, team={}): {}'.format(prediction_slug, team, e))
         return UNKNOWN_ERROR
 
-    # Get latest SHA for the repo and compare it to what's already stored in the Prediction model
+    # Update the prediction's repo in case it changed
+    prediction = dbi.update(prediction, {'git_repo': git_repo})
 
     # Fetch remote repository object via the Github API
-    repo = fetch_git_repo(prediction.git_repo)
+    repo = fetch_git_repo(git_repo)
 
     # Get the first page of commits for the repo
     commits = repo.get_commits()

@@ -174,7 +174,7 @@ class Prediction(db.Model):
   team_id = db.Column(db.Integer, db.ForeignKey('team.id'), index=True, nullable=False)
   team = db.relationship('Team', backref='predictions')
   name = db.Column(db.String(240), nullable=False)
-  slug = db.Column(db.String(240), index=True)
+  slug = db.Column(db.String(240), index=True, unique=True)
   elb = db.Column(db.String(240))
   domain = db.Column(db.String(360))
   git_repo = db.Column(db.String(240))
@@ -200,7 +200,7 @@ class Prediction(db.Model):
     self.name = name
     self.slug = slugify(name, separator='-', to_lower=True)
     self.elb = elb
-    self.domain = domain or '.'.join([self.slug, self.team.slug, config.DOMAIN])
+    self.domain = domain or '{}.{}'.format(self.slug, config.DOMAIN)
     self.git_repo = git_repo
     self.image_repo_owner = image_repo_owner or config.IMAGE_REPO_OWNER
     self.image_version = image_version
