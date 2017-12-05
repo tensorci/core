@@ -12,7 +12,6 @@ from src.utils.aws import create_s3_bucket
 from src import delayed
 from src.helpers.delay_helper import delay_class_method
 from src.services.cluster_services.create_cluster import CreateCluster
-from src import aplogger
 
 config = get_config()
 
@@ -76,15 +75,15 @@ class BuildServerDeploy(AbstractDeploy):
       status = raw_obj.get('status', {})
 
       if etype == 'ADDED':
-        aplogger.info('Job {} started.'.format(self.deploy_name))
+        self.log('Job {} started.'.format(self.deploy_name))
 
       if status.get('failed') is not None:
-        aplogger.error('FAILED JOB, {}, for deployment(sha={}) of prediction(slug={}).'.format(
+        self.log('FAILED JOB, {}, for deployment(sha={}) of prediction(slug={}).'.format(
           self.deploy_name, self.deployment.sha, self.prediction.slug))
         watcher.stop()
 
       if status.get('succeeded'):
-        aplogger.info('Job {} succeeded.'.format(self.deploy_name))
+        self.log('Job {} succeeded.'.format(self.deploy_name))
         self.on_build_success()
         watcher.stop()
 
@@ -107,13 +106,13 @@ class BuildServerDeploy(AbstractDeploy):
       bucket_success = create_s3_bucket(bucket_name)
 
       if not bucket_success:
-        aplogger.error('Bucket creation failed. Returning from post_train_building.')
+        self.log('Bucket creation failed. Returning from post_train_building.')
         return
 
       dbi.update(bucket, {'name': bucket_name})
 
     # Schedule a deploy to the training cluster
-    aplogger.info('Scheduling training deploy for prediction(slug={})...'.format(self.prediction.slug))
+    self.log('Scheduling training deploy for prediction(slug={})...'.format(self.prediction.slug))
     create_deploy(TrainDeploy, {'deployment_uid': self.deployment_uid})
 
   def post_api_building(self):
@@ -127,11 +126,11 @@ class BuildServerDeploy(AbstractDeploy):
       self.create_cluster_and_deploy()
 
   def create_api_deploy(self):
-    aplogger.info('Scheduling api deploy for prediction(slug={})...'.format(self.prediction.slug))
+    self.log('Scheduling api deploy for prediction(slug={})...'.format(self.prediction.slug))
     create_deploy(ApiDeploy, {'deployment_uid': self.deployment_uid})
 
   def create_cluster_and_deploy(self):
-    aplogger.info('Scheduling cluster creation for team(slug={})...'.format(self.team.slug))
+    self.log('Scheduling cluster creation for team(slug={})...'.format(self.team.slug))
 
     delayed.add_job(delay_class_method, args=[CreateCluster, {
       'team_uid': self.team.uid,

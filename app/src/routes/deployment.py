@@ -1,6 +1,7 @@
 import os
+import json
 from flask_restplus import Resource, fields
-from flask import request
+from flask import request, Response
 from src.routes import namespace, api
 from src.models import Prediction, Deployment
 from src import logger, dbi
@@ -13,6 +14,8 @@ from src.deploys import create_deploy
 from src.helpers.definitions import core_header_name
 from src.deploys.build_server_deploy import BuildServerDeploy
 from src.services.deployment_services import deployment_status_update_svcs
+from src.utils.deployment_logger import DeploymentLogger
+from src.utils.pyredis import redis
 
 create_deployment_model = api.model('Deployment', {
   'team_slug': fields.String(required=True),
@@ -30,6 +33,7 @@ update_deployment_status_model = api.model('Deployment', {
 class RestfulDeployment(Resource):
   """Restful Deployment Interface"""
 
+  # TODO: break the shit out of this function
   @namespace.doc('create_deployment')
   @namespace.expect(create_deployment_model, validate=True)
   def post(self):
@@ -59,7 +63,9 @@ class RestfulDeployment(Resource):
     if prediction and prediction.team != team:
       return PREDICTION_NAME_TAKEN
 
-    # Create new prediction for team if it didn't exist
+    new_prediction_created = bool(prediction)
+    git_repo_updated = not new_prediction_created and prediction.git_repo != git_repo
+
     if not prediction:
       try:
         prediction = dbi.create(Prediction, {
@@ -102,13 +108,43 @@ class RestfulDeployment(Resource):
       'sha': latest_sha
     })
 
+    # Create a deployment logger instance
+    dlogger = DeploymentLogger(deployment)
+
+    # Log the above activity to the user
+    if new_prediction_created:
+      dlogger.info('Created new prediction: {}'.format(prediction.slug))
+
+    if git_repo_updated:
+      dlogger.info('Updated prediction\'s git repo to {}'.format(git_repo))
+
+    dlogger.info('Detected new commit: {}'.format(latest_sha))
+
     # Schedule a deploy to the build server
     create_deploy(BuildServerDeploy, {
       'deployment_uid': deployment.uid,
       'build_for': clusters.TRAIN
     })
 
-    return DEPLOYMENT_CREATION_SUCCESS
+    def stream_logs():
+      complete = False
+
+      while not complete:
+        item = redis.blpop(deployment.uid)
+
+        if not item:
+          continue
+
+        try:
+          item = json.loads(item[1])
+        except BaseException:
+          continue
+
+        complete = item.get('complete') == True
+
+        yield item.get('text') + '\n'
+
+    return Response(stream_logs())
 
   @namespace.doc('update_deployment_status')
   @namespace.expect(update_deployment_status_model, validate=True)
