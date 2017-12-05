@@ -1,13 +1,14 @@
 from kubernetes import client, config
 from src import dbi, aplogger
-from src.models import Prediction
+from src.models import Deployment
 
 
 class AbstractDeploy(object):
 
-  def __init__(self, prediction_uid=None):
-    self.prediction_uid = prediction_uid
-    self.prediction = dbi.find_one(Prediction, {'uid': prediction_uid})
+  def __init__(self, deployment_uid=None):
+    self.deployment_uid = deployment_uid
+    self.deployment = dbi.find_one(Deployment, {'uid': deployment_uid})
+    self.prediction = self.deployment.prediction
     self.team = self.prediction.team
     self.api_client = None
     self.api = None
@@ -157,11 +158,11 @@ class AbstractDeploy(object):
 
     return deploy_obj
 
-  def update_pred_status(self, status):
-    aplogger.info('Updating Prediction(slug={}) of Team(slug={}) to status: {}.'.format(
-      self.prediction.slug, self.team.slug, status))
+  def update_deployment_status(self, status):
+    aplogger.info('Updating Deployment(sha={}) of Prediction(slug={}) to status: {}.'.format(
+      self.deployment.sha, self.prediction.slug, status))
 
-    self.prediction = dbi.update(self.prediction, {'status': status})
+    self.deployment = dbi.update(self.deployment, {'status': status})
 
   def on_deploy_success(self):
     pass

@@ -28,9 +28,10 @@ from slugify import slugify
 from sqlalchemy.dialects.postgresql import JSON
 from src import db, dbi
 from helpers import auth_util, team_user_roles, user_verification_statuses, instance_types
+from helpers.deployment_statuses import deployment_statuses
 from uuid import uuid4
+from operator import attrgetter
 from config import get_config
-from statuses.pred_statuses import pstatus
 
 config = get_config()
 
@@ -179,16 +180,11 @@ class Prediction(db.Model):
   domain = db.Column(db.String(360))
   git_repo = db.Column(db.String(240))
   image_repo_owner = db.Column(db.String(120))
-  image_version = db.Column(db.String(60))
-  status = db.Column(db.String(60))
-  sha = db.Column(db.String(360))
-  deploy_name = db.Column(db.String(360))
   is_destroyed = db.Column(db.Boolean, server_default='f')
   created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
-  def __init__(self, team=None, team_id=None, name=None, elb=None, domain=None,
-               git_repo=None, image_repo_owner=None, image_version='0.0.1',
-               status=pstatus.statuses[0], sha=None, deploy_name=None):
+  def __init__(self, team=None, team_id=None, name=None, elb=None,
+               domain=None, git_repo=None, image_repo_owner=None):
 
     self.uid = uuid4().hex
 
@@ -217,6 +213,9 @@ class Prediction(db.Model):
   def dataset_table(self):
     return '{}-{}'.format(self.slug, self.uid)
 
+  def ordered_deployments(self):
+    return sorted(self.deployments, key=attrgetter('created_at'), reverse=True)
+
 
 class Bucket(db.Model):
   id = db.Column(db.Integer, primary_key=True)
@@ -243,3 +242,35 @@ class Bucket(db.Model):
       return 's3://' + self.name
 
     return None
+
+
+class Deployment(db.Model):
+  id = db.Column(db.Integer, primary_key=True)
+  uid = db.Column(db.String, index=True, unique=True)
+  prediction_id = db.Column(db.Integer, db.ForeignKey('prediction.id'), index=True, nullable=False)
+  prediction = db.relationship('Prediction', backref='deployments')
+  sha = db.Column(db.String(360))
+  status = db.Column(db.String(60))
+  name = db.Column(db.String(360))
+  created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+  statuses = deployment_statuses
+
+  def __init__(self, prediction=None, prediction_id=None, sha=None, status=deployment_statuses.CREATED, name=None):
+    self.uid = uuid4().hex
+
+    if prediction_id:
+      self.prediction_id = prediction_id
+    else:
+      self.prediction = prediction
+
+    self.sha = sha
+    self.status = status
+    self.name = name
+
+  def __repr__(self):
+    return '<Deployment id={}, prediction_id={}, sha={}, status={}, name={}, created_at={}>'.format(
+      self.id, self.prediction_id, self.sha, self.status, self.name, self.created_at)
+
+  def status_directly_proceeds(self, status):
+    ordered_statuses = self.statuses.ordered_statuses
+    return ordered_statuses.index(status) == ordered_statuses.index(self.status) + 1

@@ -4,7 +4,6 @@ from train_deploy import TrainDeploy
 from api_deploy import ApiDeploy
 from src.utils import image_names, clusters
 from src.config import get_config
-from src.statuses.pred_statuses import pstatus
 from src import dbi
 from src.helpers import time_since_epoch
 from kubernetes import watch
@@ -20,8 +19,8 @@ config = get_config()
 
 class BuildServerDeploy(AbstractDeploy):
 
-  def __init__(self, prediction_uid=None, build_for=None):
-    super(BuildServerDeploy, self).__init__(prediction_uid)
+  def __init__(self, deployment_uid=None, build_for=None):
+    super(BuildServerDeploy, self).__init__(deployment_uid)
 
     self.build_for = build_for
     self.container_name = '{}-{}-build'.format(self.prediction.slug, self.build_for)
@@ -49,17 +48,17 @@ class BuildServerDeploy(AbstractDeploy):
       'TEAM': self.team.slug,
       'TEAM_UID': self.team.uid,
       'PREDICTION': self.prediction.slug,
-      'PREDICTION_UID': self.prediction_uid,
+      'PREDICTION_UID': self.prediction.uid,
       'GIT_REPO': self.prediction.git_repo,
       'IMAGE_OWNER': self.prediction.image_repo_owner,
       'FOR_CLUSTER': self.build_for,
-      'SHA': self.prediction.sha
+      'SHA': self.deployment.sha
     }
 
   def on_deploy_success(self):
     post_deploy_status = {
-      clusters.TRAIN: pstatus.BUILDING_FOR_TRAIN,
-      clusters.API: pstatus.BUILDING_FOR_API
+      clusters.TRAIN: self.deployment.statuses.BUILDING_FOR_TRAIN,
+      clusters.API: self.deployment.statuses.BUILDING_FOR_API
     }.get(self.build_for)
 
     self.update_pred_status(post_deploy_status)

@@ -3,7 +3,6 @@ from src.routes import namespace, api
 from src.helpers.user_helper import current_user
 from src.api_responses.errors import *
 from src.api_responses.success import *
-from psycopg2 import IntegrityError
 from slugify import slugify
 from src import logger, dbi
 from src.models import Team

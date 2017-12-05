@@ -10,6 +10,8 @@ TEAM_NOT_FOUND = {'ok': False, 'code': 1101, 'error': 'team_not_found'}, 404
 # Prediction Errors
 PREDICTION_NAME_TAKEN = {'ok': False, 'code': 1200, 'error': 'prediction_name_taken'}, 500
 PREDICTION_NOT_FOUND = {'ok': False, 'code': 1201, 'error': 'prediction_not_found'}, 404
+PREDICTION_CREATION_FAILED = {'ok': False, 'code': 1202, 'error': 'prediction_creation_failed'}, 500
+EMPTY_REPO = {'ok': False, 'code': 1203, 'error': 'repo_is_empty'}, 500
 
 # User Errors
 AUTHENTICATION_FAILED = {'ok': False, 'code': 1300, 'error': 'authentication_failed'}, 401

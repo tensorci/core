@@ -1,5 +1,5 @@
-# TODO: move this shit into the Prediction model
-class PredictionStatus:
+
+class DeploymentStatuses:
   CREATED = 'created'
   BUILDING_FOR_TRAIN = 'train_building'
   DONE_BUILDING_FOR_TRAIN = 'train_building_done'
@@ -10,7 +10,7 @@ class PredictionStatus:
   PREDICTING = 'predicting'
 
   def __init__(self):
-    self.statuses = [
+    self.ordered_statuses = [
       self.CREATED,
       self.BUILDING_FOR_TRAIN,
       self.DONE_BUILDING_FOR_TRAIN,
@@ -21,13 +21,4 @@ class PredictionStatus:
       self.PREDICTING
     ]
 
-  def proceeds(self, a, b):
-    return self.statuses.index(b) == self.statuses.index(a) + 1
-
-  def next_status(self, a):
-    if a == self.statuses[-1]:
-      return self.statuses[-1]
-
-    return self.statuses[self.statuses.index(a) + 1]
-
-pstatus = PredictionStatus()
+deployment_statuses = DeploymentStatuses()
