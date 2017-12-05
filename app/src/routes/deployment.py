@@ -73,18 +73,20 @@ class RestfulDeployment(Resource):
     # Update the prediction's repo regardless of if it's a new prediction
     prediction = dbi.update(prediction, {'git_repo': git_repo})
 
-    # Fetch remote repository object via the GitHub API
-    repo = fetch_git_repo(git_repo)
+    try:
+      repo = fetch_git_repo(git_repo)  # fetch git repo
+      commits = repo.get_commits()  # get first page of commits for repo
+    except BaseException as e:
+      logger.error('Error fetching commits for repo: {} for prediction(slug={}): {}'.format(git_repo, prediction_slug, e))
+      return ERROR_FETCHING_REPO
 
-    # Get the first page of commits for the repo
-    commits = repo.get_commits()
-
-    # Make sure the repo's not empty
-    if len(commits) == 0:
-      return EMPTY_REPO
-
-    # Get the sha of the latest commit
-    latest_sha = commits[0].sha
+    try:
+      latest_sha = commits[0].sha  # get sha of latest commit
+    except IndexError:
+      return NO_COMMITS_IN_REPO
+    except BaseException as e:
+      logger.error('Error parsing commits for repo: {} for prediction(slug={}): {}'.format(git_repo, prediction_slug, e))
+      return ERROR_PARSING_COMMITS_FOR_REPO
 
     # Get all deployments for this prediction, ordered by most recently created
     deployments = prediction.ordered_deployments()
