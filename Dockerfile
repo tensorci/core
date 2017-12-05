@@ -21,7 +21,7 @@ RUN chmod +x /usr/local/bin/kops
 COPY ./bin/kubectl /usr/local/bin/kubectl
 RUN chmod +x /usr/local/bin/kubectl
 
-# Figure out a non-hacky way to do this
-COPY ./bin/id_rsa.pub /root/.ssh/id_rsa.pub
+# Generate id_rsa ssh key for kops to use
+RUN ssh-keygen -f /root/.ssh/id_rsa -t rsa -N ''
 
 CMD ["python", "app/main.py"]

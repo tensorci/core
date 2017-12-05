@@ -113,11 +113,11 @@ class RestfulDeployment(Resource):
     dlogger = DeploymentLogger(deployment)
 
     # Log the above activity to the user
-    # if is_new_prediction:
-    dlogger.info('Created new prediction: {}'.format(prediction.slug))
+    if is_new_prediction:
+      dlogger.info('Created new prediction: {}'.format(prediction.slug))
 
-    # if updated_git_repo:
-    dlogger.info('Updated prediction\'s git repo to {}'.format(git_repo))
+    if updated_git_repo:
+      dlogger.info('Updated prediction\'s git repo to {}'.format(git_repo))
 
     dlogger.info('Detected new commit: {}'.format(latest_sha))
 
