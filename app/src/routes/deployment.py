@@ -1,7 +1,7 @@
 import os
 import json
 from flask_restplus import Resource, fields
-from flask import request, Response
+from flask import request, Response, stream_with_context
 from src.routes import namespace, api
 from src.models import Prediction, Deployment
 from src import logger, dbi
@@ -16,6 +16,7 @@ from src.deploys.build_server_deploy import BuildServerDeploy
 from src.services.deployment_services import deployment_status_update_svcs
 from src.utils.deployment_logger import DeploymentLogger
 from src.utils.pyredis import redis
+from time import sleep
 
 create_deployment_model = api.model('Deployment', {
   'team_slug': fields.String(required=True),
@@ -63,8 +64,8 @@ class RestfulDeployment(Resource):
     if prediction and prediction.team != team:
       return PREDICTION_NAME_TAKEN
 
-    new_prediction_created = bool(prediction)
-    git_repo_updated = not new_prediction_created and prediction.git_repo != git_repo
+    is_new_prediction = not bool(prediction)
+    updated_git_repo = not is_new_prediction and prediction.git_repo != git_repo
 
     if not prediction:
       try:
@@ -99,8 +100,8 @@ class RestfulDeployment(Resource):
 
     # Tell user everything is up-to-date if latest deploy has same sha
     # as latest commit and hasn't failed.
-    if deployments and deployments[0].sha == latest_sha and not deployments[0].failed:
-      return {'ok': True, 'up_to_date': True}
+    # if deployments and deployments[0].sha == latest_sha and not deployments[0].failed:
+    #   return {'ok': True, 'up_to_date': True}
 
     # Create new deployment for prediction
     deployment = dbi.create(Deployment, {
@@ -112,11 +113,11 @@ class RestfulDeployment(Resource):
     dlogger = DeploymentLogger(deployment)
 
     # Log the above activity to the user
-    if new_prediction_created:
-      dlogger.info('Created new prediction: {}'.format(prediction.slug))
+    # if is_new_prediction:
+    dlogger.info('Created new prediction: {}'.format(prediction.slug))
 
-    if git_repo_updated:
-      dlogger.info('Updated prediction\'s git repo to {}'.format(git_repo))
+    # if updated_git_repo:
+    dlogger.info('Updated prediction\'s git repo to {}'.format(git_repo))
 
     dlogger.info('Detected new commit: {}'.format(latest_sha))
 
@@ -126,6 +127,7 @@ class RestfulDeployment(Resource):
       'build_for': clusters.TRAIN
     })
 
+    @stream_with_context
     def stream_logs():
       complete = False
 
