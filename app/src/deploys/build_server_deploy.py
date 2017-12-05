@@ -61,7 +61,7 @@ class BuildServerDeploy(AbstractDeploy):
       clusters.API: self.deployment.statuses.BUILDING_FOR_API
     }.get(self.build_for)
 
-    self.update_pred_status(post_deploy_status)
+    self.update_deployment_status(post_deploy_status)
 
     self.watch_job()
 
@@ -79,7 +79,8 @@ class BuildServerDeploy(AbstractDeploy):
         aplogger.info('Job {} started.'.format(self.deploy_name))
 
       if status.get('failed') is not None:
-        aplogger.error('FAILED JOB, {}, for prediction(uid={}).'.format(self.deploy_name, self.prediction_uid))
+        aplogger.error('FAILED JOB, {}, for deployment(sha={}) of prediction(slug={}).'.format(
+          self.deploy_name, self.deployment.sha, self.prediction.slug))
         watcher.stop()
 
       if status.get('succeeded'):
@@ -96,7 +97,7 @@ class BuildServerDeploy(AbstractDeploy):
     post_building_action()
 
   def post_train_building(self):
-    self.update_pred_status(pstatus.DONE_BUILDING_FOR_TRAIN)
+    self.update_deployment_status(self.deployment.statuses.DONE_BUILDING_FOR_TRAIN)
 
     bucket = self.team.cluster.bucket
 
@@ -113,10 +114,10 @@ class BuildServerDeploy(AbstractDeploy):
 
     # Schedule a deploy to the training cluster
     aplogger.info('Scheduling training deploy for prediction(slug={})...'.format(self.prediction.slug))
-    create_deploy(TrainDeploy, {'prediction_uid': self.prediction_uid})
+    create_deploy(TrainDeploy, {'deployment_uid': self.deployment_uid})
 
   def post_api_building(self):
-    self.update_pred_status(pstatus.DONE_BUILDING_FOR_API)
+    self.update_deployment_status(self.deployment.statuses.DONE_BUILDING_FOR_API)
 
     if self.team.cluster.validated:
       # Go ahead and deploy if cluster already created/validated
@@ -127,13 +128,13 @@ class BuildServerDeploy(AbstractDeploy):
 
   def create_api_deploy(self):
     aplogger.info('Scheduling api deploy for prediction(slug={})...'.format(self.prediction.slug))
-    create_deploy(ApiDeploy, {'prediction_uid': self.prediction_uid})
+    create_deploy(ApiDeploy, {'deployment_uid': self.deployment_uid})
 
   def create_cluster_and_deploy(self):
-    aplogger.info('Scheduling cluster creation for prediction(slug={})...'.format(self.prediction.slug))
+    aplogger.info('Scheduling cluster creation for team(slug={})...'.format(self.team.slug))
 
     delayed.add_job(delay_class_method, args=[CreateCluster, {
       'team_uid': self.team.uid,
-      'prediction_uid': self.prediction_uid,
+      'deployment_uid': self.deployment_uid,
       'with_deploy': True
     }])

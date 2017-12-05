@@ -2,7 +2,6 @@ import os
 from abstract_deploy import AbstractDeploy
 from src.utils import clusters
 from src.config import get_config
-from src.statuses.pred_statuses import pstatus
 from src.helpers import time_since_epoch
 
 config = get_config()
@@ -10,8 +9,8 @@ config = get_config()
 
 class TrainDeploy(AbstractDeploy):
 
-  def __init__(self, prediction_uid=None):
-    super(TrainDeploy, self).__init__(prediction_uid)
+  def __init__(self, deployment_uid=None):
+    super(TrainDeploy, self).__init__(deployment_uid)
 
     self.container_name = '{}-{}'.format(self.prediction.slug, clusters.TRAIN)
     self.image = '{}/{}'.format(config.IMAGE_REPO_OWNER, self.container_name)
@@ -33,8 +32,9 @@ class TrainDeploy(AbstractDeploy):
       'TEAM': self.team.slug,
       'TEAM_UID': self.team.uid,
       'PREDICTION': self.prediction.slug,
-      'PREDICTION_UID': self.prediction.uid
+      'PREDICTION_UID': self.prediction.uid,
+      'DEPLOYMENT_UID': self.deployment_uid
     }
 
   def on_deploy_success(self):
-    self.update_pred_status(pstatus.TRAINING)
+    self.update_deployment_status(self.deployment.statuses.TRAINING)

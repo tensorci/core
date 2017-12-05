@@ -4,7 +4,6 @@ from abstract_deploy import AbstractDeploy
 from src import dbi
 from src.utils import clusters
 from src.config import get_config
-from src.statuses.pred_statuses import pstatus
 from src.services.prediction_services.publicize_prediction import PublicizePrediction
 from src.helpers import time_since_epoch
 from src import delayed
@@ -16,8 +15,8 @@ app_config = get_config()
 
 class ApiDeploy(AbstractDeploy):
 
-  def __init__(self, prediction_uid=None):
-    super(ApiDeploy, self).__init__(prediction_uid)
+  def __init__(self, deployment_uid=None):
+    super(ApiDeploy, self).__init__(deployment_uid)
 
     self.container_name = '{}-{}'.format(self.prediction.slug, clusters.API)
     self.image = '{}/{}'.format(app_config.IMAGE_REPO_OWNER, self.container_name)
@@ -73,13 +72,13 @@ class ApiDeploy(AbstractDeploy):
     if not self.prediction.deploy_name:
       self.prediction = dbi.update(self.prediction, {'deploy_name': self.deploy_name})
 
-    self.update_pred_status(pstatus.PREDICTING)
+    if self.prediction.elb:
+      self.update_deployment_status(self.deployment.statuses.PREDICTING)
+    else:
+      sleep(3)  # wait a hot sec for deployment to be absolutely registered
 
-    # Set up ELB and CNAME record for deployment if not already there
-    if not self.prediction.elb:
-      sleep(5)
-
+      # Set up ELB and CNAME record for deployment if not already there
       delayed.add_job(delay_class_method, args=[PublicizePrediction, {
-        'prediction_uid': self.prediction.uid,
+        'deployment_uid': self.deployment_uid,
         'port': 443  # Forcing SSL for now
       }])

@@ -1,6 +1,6 @@
 import os
 from src import dbi, aplogger
-from src.models import Prediction
+from src.models import Deployment
 from src.utils.aws import add_dns_records
 from time import sleep
 import requests
@@ -9,15 +9,16 @@ from kubernetes import client, config
 
 class PublicizePrediction(object):
 
-  def __init__(self, prediction_uid=None, port=80, target_port=80):
-    self.prediction_uid = prediction_uid
-    self.prediction = dbi.find_one(Prediction, {'uid': prediction_uid})
-    self.port = port
-    self.target_port = target_port
+  def __init__(self, deployment_uid=None, port=80, target_port=80):
+    self.deployment_uid = deployment_uid
+    self.deployment = dbi.find_one(Deployment, {'uid': deployment_uid})
+    self.prediction = self.deployment.prediction
     self.team = self.prediction.team
     self.cluster_name = self.team.cluster.name
     self.deploy_name = self.prediction.deploy_name
     self.service_name = self.deploy_name
+    self.port = port
+    self.target_port = target_port
 
   def perform(self):
     # Expose deployment with a LoadBalancer service
@@ -47,6 +48,8 @@ class PublicizePrediction(object):
     self.poll_url()
 
     aplogger.info('Prediction live at https://{}/api/predict'.format(self.prediction.domain))
+
+    dbi.update(self.deployment, {'status': self.deployment.statuses.PREDICTING})
 
   def create_service(self):
     try:

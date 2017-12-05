@@ -180,11 +180,12 @@ class Prediction(db.Model):
   domain = db.Column(db.String(360))
   git_repo = db.Column(db.String(240))
   image_repo_owner = db.Column(db.String(120))
+  deploy_name = db.Column(db.String(360))
   is_destroyed = db.Column(db.Boolean, server_default='f')
   created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
   def __init__(self, team=None, team_id=None, name=None, elb=None,
-               domain=None, git_repo=None, image_repo_owner=None):
+               domain=None, git_repo=None, image_repo_owner=None, deploy_name=None):
 
     self.uid = uuid4().hex
 
@@ -199,16 +200,13 @@ class Prediction(db.Model):
     self.domain = domain or '{}.{}'.format(self.slug, config.DOMAIN)
     self.git_repo = git_repo
     self.image_repo_owner = image_repo_owner or config.IMAGE_REPO_OWNER
-    self.image_version = image_version
-    self.status = status
-    self.sha = sha
     self.deploy_name = deploy_name
 
   def __repr__(self):
     return '<Prediction id={}, uid={}, team_id={}, name={}, slug={}, elb={}, domain={}, ' \
-           'git_repo={}, image_repo_owner={}, image_version={}, status={}, sha={}, deploy_name={}, is_destroyed={}, created_at={}>'.format(
+           'git_repo={}, image_repo_owner={}, deploy_name={}, is_destroyed={}, created_at={}>'.format(
       self.id, self.uid, self.team_id, self.name, self.slug, self.elb, self.domain,
-      self.git_repo, self.image_repo_owner, self.image_version, self.status, self.sha, self.deploy_name, self.is_destroyed, self.created_at)
+      self.git_repo, self.image_repo_owner, self.deploy_name, self.is_destroyed, self.created_at)
 
   def dataset_table(self):
     return '{}-{}'.format(self.slug, self.uid)
@@ -251,11 +249,10 @@ class Deployment(db.Model):
   prediction = db.relationship('Prediction', backref='deployments')
   sha = db.Column(db.String(360))
   status = db.Column(db.String(60))
-  name = db.Column(db.String(360))
   created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
   statuses = deployment_statuses
 
-  def __init__(self, prediction=None, prediction_id=None, sha=None, status=deployment_statuses.CREATED, name=None):
+  def __init__(self, prediction=None, prediction_id=None, sha=None, status=deployment_statuses.CREATED):
     self.uid = uuid4().hex
 
     if prediction_id:
@@ -265,11 +262,10 @@ class Deployment(db.Model):
 
     self.sha = sha
     self.status = status
-    self.name = name
 
   def __repr__(self):
-    return '<Deployment id={}, prediction_id={}, sha={}, status={}, name={}, created_at={}>'.format(
-      self.id, self.prediction_id, self.sha, self.status, self.name, self.created_at)
+    return '<Deployment id={}, prediction_id={}, sha={}, status={}, created_at={}>'.format(
+      self.id, self.prediction_id, self.sha, self.status, self.created_at)
 
   def status_directly_proceeds(self, status):
     ordered_statuses = self.statuses.ordered_statuses
