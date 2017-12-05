@@ -32,7 +32,7 @@ class RestfulDeployment(Resource):
 
   @namespace.doc('create_deployment')
   @namespace.expect(create_deployment_model, validate=True)
-  def put(self):
+  def post(self):
     # Get current user
     user = current_user()
 
