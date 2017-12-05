@@ -91,9 +91,9 @@ class RestfulDeployment(Resource):
     # Get all deployments for this prediction, ordered by most recently created
     deployments = prediction.ordered_deployments()
 
-    # TODO: allow this to block to get passed if the sha's match but the deploy errored out
-    # Tell user everything is up-to-date if latest deploy has same sha as latest commit
-    if deployments and deployments[0].sha == latest_sha:
+    # Tell user everything is up-to-date if latest deploy has same sha
+    # as latest commit and hasn't failed.
+    if deployments and deployments[0].sha == latest_sha and not deployments[0].failed:
       return {'ok': True, 'up_to_date': True}
 
     # Create new deployment for prediction

@@ -251,6 +251,7 @@ class Deployment(db.Model):
   status = db.Column(db.String(60))
   created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
   statuses = deployment_statuses
+  failed = db.Column(db.Boolean, server_default='f')
 
   def __init__(self, prediction=None, prediction_id=None, sha=None, status=deployment_statuses.CREATED):
     self.uid = uuid4().hex
@@ -264,8 +265,8 @@ class Deployment(db.Model):
     self.status = status
 
   def __repr__(self):
-    return '<Deployment id={}, uid={}, prediction_id={}, sha={}, status={}, created_at={}>'.format(
-      self.id, self.uid, self.prediction_id, self.sha, self.status, self.created_at)
+    return '<Deployment id={}, uid={}, prediction_id={}, sha={}, status={}, created_at={}, failed={}>'.format(
+      self.id, self.uid, self.prediction_id, self.sha, self.status, self.created_at, self.failed)
 
   def status_directly_proceeds(self, status):
     ordered_statuses = self.statuses.ordered_statuses
