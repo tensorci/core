@@ -264,8 +264,8 @@ class Deployment(db.Model):
     self.status = status
 
   def __repr__(self):
-    return '<Deployment id={}, prediction_id={}, sha={}, status={}, created_at={}>'.format(
-      self.id, self.prediction_id, self.sha, self.status, self.created_at)
+    return '<Deployment id={}, uid={}, prediction_id={}, sha={}, status={}, created_at={}>'.format(
+      self.id, self.uid, self.prediction_id, self.sha, self.status, self.created_at)
 
   def status_directly_proceeds(self, status):
     ordered_statuses = self.statuses.ordered_statuses
