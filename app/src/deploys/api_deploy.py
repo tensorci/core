@@ -70,7 +70,7 @@ class ApiDeploy(AbstractDeploy):
       self.prediction = dbi.update(self.prediction, {'deploy_name': self.deploy_name})
 
     if self.prediction.elb:
-      self.log('Successfully deployed {}.'.format(self.deployment.sha))
+      self.log('Successfully deployed {}.'.format(self.deployment.sha), complete=True)
       self.update_deployment_status(self.deployment.statuses.PREDICTING)
     else:
       sleep(3)  # wait a hot sec for deployment to be absolutely registered
