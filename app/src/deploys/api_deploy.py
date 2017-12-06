@@ -3,14 +3,11 @@ from time import sleep
 from abstract_deploy import AbstractDeploy
 from src import dbi
 from src.utils import clusters
-from src.config import get_config
 from src.services.prediction_services.publicize_prediction import PublicizePrediction
 from src.helpers import time_since_epoch
 from src import delayed
 from src.helpers.delay_helper import delay_class_method
 from kubernetes import client, config
-
-app_config = get_config()
 
 
 class ApiDeploy(AbstractDeploy):
@@ -19,7 +16,7 @@ class ApiDeploy(AbstractDeploy):
     super(ApiDeploy, self).__init__(deployment_uid)
 
     self.container_name = '{}-{}'.format(self.prediction.slug, clusters.API)
-    self.image = '{}/{}'.format(app_config.IMAGE_REPO_OWNER, self.container_name)
+    self.image = '{}/{}'.format(self.prediction.image_repo_owner, self.container_name)
     self.deploy_name = '{}-{}'.format(self.container_name, time_since_epoch())
     self.cluster = self.team.cluster
     self.cluster_name = self.cluster.name
