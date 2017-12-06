@@ -100,8 +100,8 @@ class RestfulDeployment(Resource):
 
     # Tell user everything is up-to-date if latest deploy has same sha
     # as latest commit and hasn't failed.
-    # if deployments and deployments[0].sha == latest_sha and not deployments[0].failed:
-    #   return {'ok': True, 'up_to_date': True}
+    if deployments and deployments[0].sha == latest_sha and not deployments[0].failed:
+      return {'ok': True, 'up_to_date': True}
 
     # Create new deployment for prediction
     deployment = dbi.create(Deployment, {
