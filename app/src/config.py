@@ -11,7 +11,7 @@ class Config:
 class ProdConfig(Config):
   DEBUG = False
   DOMAIN = 'tensorci.com'
-  IMAGE_REPO_OWNER = 'whittlbc'
+  IMAGE_REPO_OWNER = 'tensorci'
 
   def __init__(self):
     self.SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
@@ -21,7 +21,7 @@ class ProdConfig(Config):
 class StagingConfig(Config):
   DEBUG = False
   DOMAIN = 'staging.tensorci.com'
-  IMAGE_REPO_OWNER = 'tensorci-staging'
+  IMAGE_REPO_OWNER = 'tensorcistaging'
 
   def __init__(self):
     self.SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
@@ -30,7 +30,7 @@ class StagingConfig(Config):
 
 class DevConfig(Config):
   DOMAIN = 'dev.tensorci.com'
-  IMAGE_REPO_OWNER = 'tensorci-dev'
+  IMAGE_REPO_OWNER = 'tensorcidev'
 
   def __init__(self):
     self.SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
@@ -39,7 +39,7 @@ class DevConfig(Config):
 
 class TestConfig(Config):
   DOMAIN = 'localhost'
-  IMAGE_REPO_OWNER = 'tensorci-test'
+  IMAGE_REPO_OWNER = 'tensorcitest'
 
   def __init__(self):
     self.SQLALCHEMY_DATABASE_URI = os.environ.get('TEST_DB_URL')
