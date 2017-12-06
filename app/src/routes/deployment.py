@@ -119,7 +119,7 @@ class RestfulDeployment(Resource):
     if updated_git_repo:
       dlogger.info('Updated prediction\'s git repo to {}'.format(git_repo))
 
-    dlogger.info('Detected new commit: {}'.format(latest_sha))
+    dlogger.info('New SHA detected: {}'.format(latest_sha))
 
     # Schedule a deploy to the build server
     create_deploy(BuildServerDeploy, {
