@@ -1,25 +1,23 @@
-# switch back to uwsgi once you figure out/set up mules
 FROM tiangolo/uwsgi-nginx-flask:python2.7
 
-# copy over our requirements.txt file
+# Copy over our requirements.txt file
 COPY requirements.txt /tmp/
 
-# upgrade pip and install required python packages
+# pgrade pip and install required python packages
 RUN pip install -U pip
 RUN pip install -r /tmp/requirements.txt
 
 # Copy the current directory contents into theh container at /app
 COPY ./app /app
 
-# Make kops accessible
+# Make kops command accessible
 COPY ./bin/kops /usr/local/bin/kops
 RUN chmod +x /usr/local/bin/kops
 
-# Make kubectl accessible
+# Make kubectl command accessible
 COPY ./bin/kubectl /usr/local/bin/kubectl
 RUN chmod +x /usr/local/bin/kubectl
 
 # Generate id_rsa ssh key for kops to use
+# It will check for /root/.ssh/id_rsa.pub
 RUN ssh-keygen -f /root/.ssh/id_rsa -t rsa -N ''
-
-CMD ["python", "app/main.py"]
