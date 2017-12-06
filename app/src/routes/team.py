@@ -7,6 +7,7 @@ from slugify import slugify
 from src import logger, dbi
 from src.models import Team
 from src.services.team_services.create_team import CreateTeam
+from src.utils.spool_test import queued_task
 
 create_team_model = api.model('Team', {
   'name': fields.String(required=True)
@@ -37,6 +38,10 @@ class RestfulTeam(Resource):
       return UNKNOWN_ERROR
 
     return TEAM_CREATION_SUCCESS
+
+  def get(self):
+    queued_task.spool(what='FUCK')
+    return ''
 
 
 @namespace.route('/teams')
