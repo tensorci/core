@@ -88,5 +88,5 @@ def unserialize_token(token):
   2
   """
   # TODO do something graceful when unserializing fails.
-  [token_id, secret] = token.split('%')
+  token_id, secret = token.split('%')
   return dict(token_id=int(token_id), secret=secret)
