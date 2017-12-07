@@ -4,8 +4,8 @@ from src.models import Team, Cluster
 from src.deploys.api_deploy import ApiDeploy
 from src.utils.aws import create_route53_hosted_zone, add_dns_records, os_map
 from src.utils import kops
+from src.utils.queue import job_queue
 from time import sleep
-from src.deploys import create_deploy
 from src.config import get_config
 from kubernetes import client, config
 
@@ -14,12 +14,12 @@ config = get_config()
 
 class CreateCluster(object):
 
-  def __init__(self, team_uid=None, prediction_uid=None, with_deploy=False):
+  def __init__(self, team_uid=None, deployment_uid=None, with_deploy=False):
     self.team_uid = team_uid
     self.team = dbi.find_one(Team, {'uid': team_uid})
     self.cluster = self.team.cluster
     self.bucket = self.cluster.bucket
-    self.prediction_uid = prediction_uid
+    self.deployment_uid = self.deployment_uid
     self.with_deploy = with_deploy
     self.config = config
     self.client = client
@@ -59,7 +59,9 @@ class CreateCluster(object):
     if self.with_deploy:
       logger.info('Scheduling API deploy...')
       sleep(5)
-      create_deploy(ApiDeploy, {'prediction_uid': self.prediction_uid})
+
+      api_deployer = ApiDeploy(deployment_uid=self.deployment_uid)
+      job_queue.enqueue(api_deployer.deploy)
 
   def kops_create_cluster(self, state):
     return kops.create_cluster(

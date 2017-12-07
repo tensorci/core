@@ -6,7 +6,6 @@ from src.utils import image_names, clusters
 from src.config import get_config
 from src.helpers import time_since_epoch
 from kubernetes import watch
-from src.deploys import create_deploy
 from src.utils.aws import create_s3_bucket
 from src import dbi
 from src.utils.queue import job_queue

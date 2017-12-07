@@ -10,14 +10,12 @@ from src.api_responses.errors import *
 from src.api_responses.success import *
 from src.utils import clusters
 from src.utils.gh import fetch_git_repo
-from src.deploys import create_deploy
 from src.helpers.definitions import core_header_name
 from src.deploys.build_server_deploy import BuildServerDeploy
 from src.services.deployment_services import deployment_status_update_svcs
 from src.utils.deployment_logger import DeploymentLogger
 from src.utils.pyredis import redis
 from src.utils.queue import job_queue
-from time import sleep
 
 create_deployment_model = api.model('Deployment', {
   'team_slug': fields.String(required=True),
@@ -101,8 +99,8 @@ class RestfulDeployment(Resource):
 
     # Tell user everything is up-to-date if latest deploy has same sha
     # as latest commit and hasn't failed.
-    # if deployments and deployments[0].sha == latest_sha and not deployments[0].failed:
-    #   return {'ok': True, 'up_to_date': True}
+    if deployments and deployments[0].sha == latest_sha and not deployments[0].failed:
+      return {'ok': True, 'up_to_date': True}
 
     # Create new deployment for prediction
     deployment = dbi.create(Deployment, {
@@ -126,12 +124,6 @@ class RestfulDeployment(Resource):
 
     job_queue.enqueue(deployer.deploy)
 
-    # Schedule a deploy to the build server
-    # create_deploy(BuildServerDeploy, {
-    #   'deployment_uid': deployment.uid,
-    #   'build_for': clusters.TRAIN
-    # })
-
     @stream_with_context
     def stream_logs():
       complete = False
@@ -151,7 +143,7 @@ class RestfulDeployment(Resource):
 
         yield item.get('text') + '\n'
 
-    return Response(stream_logs())
+    return Response(stream_logs(), headers={'X-Accel-Buffering': 'no'})
 
   @namespace.doc('update_deployment_status')
   @namespace.expect(update_deployment_status_model, validate=True)

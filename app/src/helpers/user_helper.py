@@ -7,8 +7,6 @@ from src.helpers import decode_url_encoded_str
 
 
 def current_user():
-  return dbi.find_one(User, {'email': 'benwhittle31@gmail.com'})
-
   user_token = request.cookies.get('tensorci-user') or request.headers.get(auth_header_name)
 
   if not user_token:
