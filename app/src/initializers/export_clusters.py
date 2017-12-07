@@ -44,3 +44,7 @@ def get_all_contexts():
       contexts[c.name] = bucket.url()
 
   return contexts
+
+
+if __name__ == '__main__':
+  perform()
