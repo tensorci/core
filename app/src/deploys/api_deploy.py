@@ -14,6 +14,7 @@ class ApiDeploy(AbstractDeploy):
   def __init__(self, deployment_uid=None):
     super(ApiDeploy, self).__init__(deployment_uid)
 
+  def deploy(self):
     self.container_name = '{}-{}'.format(self.prediction.slug, clusters.API)
     self.image = '{}/{}'.format(self.prediction.image_repo_owner, self.container_name)
     self.deploy_name = '{}-{}'.format(self.container_name, time_since_epoch())
@@ -36,7 +37,9 @@ class ApiDeploy(AbstractDeploy):
     }
 
     if self.prediction.deploy_name:
-      self.deploy = self.update_deploy
+      self.update_deploy()
+    else:
+      super(ApiDeploy, self).deploy()
 
   def update_deploy(self):
     body = {

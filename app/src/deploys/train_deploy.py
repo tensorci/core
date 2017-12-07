@@ -12,6 +12,8 @@ class TrainDeploy(AbstractDeploy):
   def __init__(self, deployment_uid=None):
     super(TrainDeploy, self).__init__(deployment_uid)
 
+  def deploy(self):
+    self.set_db_reliant_attrs()
     self.container_name = '{}-{}'.format(self.prediction.slug, clusters.TRAIN)
     self.image = '{}/{}'.format(self.prediction.image_repo_owner, self.container_name)
     self.deploy_name = '{}-{}'.format(self.container_name, time_since_epoch())
@@ -35,6 +37,8 @@ class TrainDeploy(AbstractDeploy):
       'PREDICTION_UID': self.prediction.uid,
       'DEPLOYMENT_UID': self.deployment_uid
     }
+
+    super(TrainDeploy, self).deploy()
 
   def on_deploy_success(self):
     self.update_deployment_status(self.deployment.statuses.TRAINING)

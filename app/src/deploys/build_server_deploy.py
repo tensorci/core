@@ -18,8 +18,10 @@ class BuildServerDeploy(AbstractDeploy):
 
   def __init__(self, deployment_uid=None, build_for=None):
     super(BuildServerDeploy, self).__init__(deployment_uid)
-
     self.build_for = build_for
+
+  def deploy(self):
+    self.set_db_reliant_attrs()
     self.container_name = '{}-{}-build'.format(self.prediction.slug, self.build_for)
     self.image = '{}/{}'.format(config.IMAGE_REPO_OWNER, image_names.BUILD_SERVER)
     self.deploy_name = '{}-{}'.format(self.container_name, time_since_epoch())
@@ -51,6 +53,8 @@ class BuildServerDeploy(AbstractDeploy):
       'FOR_CLUSTER': self.build_for,
       'SHA': self.deployment.sha
     }
+
+    super(BuildServerDeploy, self).deploy()
 
   def on_deploy_success(self):
     post_deploy_status = {

@@ -8,15 +8,15 @@ class AbstractDeploy(object):
 
   def __init__(self, deployment_uid=None):
     self.deployment_uid = deployment_uid
-    self.deployment = dbi.find_one(Deployment, {'uid': deployment_uid})
-    self.prediction = self.deployment.prediction
-    self.team = self.prediction.team
-    self.cluster = self.team.cluster
-    self.bucket = self.cluster.bucket
+    self.deployment = None
+    self.prediction = None
+    self.team = None
+    self.cluster = None
+    self.bucket = None
+    self.dlogger = None
+
     self.api_client = None
     self.api = None
-
-    self.dlogger = DeploymentLogger(self.deployment)
 
     # Overwritten in child class
     self.container_name = None
@@ -162,6 +162,14 @@ class AbstractDeploy(object):
       )
 
     return deploy_obj
+
+  def set_db_reliant_attrs(self):
+    self.deployment = dbi.find_one(Deployment, {'uid': self.deployment_uid})
+    self.prediction = self.deployment.prediction
+    self.team = self.prediction.team
+    self.cluster = self.team.cluster
+    self.bucket = self.cluster.bucket
+    self.dlogger = DeploymentLogger(self.deployment)
 
   def update_deployment_status(self, status):
     self.log('Updating Deployment(sha={}) of Prediction(slug={}) to status: {}.'.format(
