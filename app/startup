@@ -7,7 +7,7 @@
 
 if [[ $CORE_ROLE == "worker" ]]; then
     rq worker -c worker_config
-elif [[ $CORE_ROLE == "migrations" ]]; then
+elif [[ $CORE_ROLE == "migration" ]]; then
     python manage.py db upgrade
 else
     /usr/bin/supervisord
