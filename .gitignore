@@ -107,9 +107,4 @@ app.db
 
 .idea/
 
-app/test.py
 app/create_internal_cluster.py
-
-bin/id_rsa.pub
-
-migrations/

@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# Start appropriate process based on it's env role. One of 3 options:
+# (1) Worker
+# (2) Migrations
+# (3) Server (default)
+
+if [[ $CORE_ROLE == "worker" ]]; then
+    rq worker -c worker_config
+elif [[ $CORE_ROLE == "migrations" ]]; then
+    python manage.py db upgrade
+else
+    /usr/bin/supervisord
+fi
