@@ -108,3 +108,5 @@ app.db
 .idea/
 
 app/create_internal_cluster.py
+
+bin/deploy/
