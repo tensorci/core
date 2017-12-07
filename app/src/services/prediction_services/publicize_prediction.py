@@ -11,17 +11,19 @@ class PublicizePrediction(object):
 
   def __init__(self, deployment_uid=None, port=80, target_port=80):
     self.deployment_uid = deployment_uid
-    self.deployment = dbi.find_one(Deployment, {'uid': deployment_uid})
-    self.prediction = self.deployment.prediction
-    self.team = self.prediction.team
-    self.cluster = self.team.cluster
-    self.cluster_name = self.cluster.name
-    self.deploy_name = self.prediction.deploy_name
-    self.service_name = self.deploy_name
     self.port = port
     self.target_port = target_port
+    self.deployment = None
+    self.prediction = None
+    self.team = None
+    self.cluster = None
+    self.cluster_name = None
+    self.deploy_name = None
+    self.service_name = None
 
   def perform(self):
+    self.set_db_reliant_attrs()
+
     # Expose deployment with a LoadBalancer service
     service_success = self.create_service()
 
@@ -130,3 +132,12 @@ class PublicizePrediction(object):
       return False
 
     return True
+
+  def set_db_reliant_attrs(self):
+    self.deployment = dbi.find_one(Deployment, {'uid': self.deployment_uid})
+    self.prediction = self.deployment.prediction
+    self.team = self.prediction.team
+    self.cluster = self.team.cluster
+    self.cluster_name = self.cluster.name
+    self.deploy_name = self.prediction.deploy_name
+    self.service_name = self.deploy_name

@@ -7,7 +7,6 @@ from src.utils import kops
 from src.utils.queue import job_queue
 from time import sleep
 from src.config import get_config
-from kubernetes import client, config
 
 config = get_config()
 
@@ -16,15 +15,15 @@ class CreateCluster(object):
 
   def __init__(self, team_uid=None, deployment_uid=None, with_deploy=False):
     self.team_uid = team_uid
-    self.team = dbi.find_one(Team, {'uid': team_uid})
-    self.cluster = self.team.cluster
-    self.bucket = self.cluster.bucket
-    self.deployment_uid = self.deployment_uid
+    self.deployment_uid = deployment_uid
     self.with_deploy = with_deploy
-    self.config = config
-    self.client = client
+    self.team = None
+    self.cluster = None
+    self.bucket = None
 
   def perform(self):
+    self.set_db_reliant_attrs()
+
     # Create Route53 hosted zone for cluster
     hosted_zone_id, ns_addresses = create_route53_hosted_zone(self.cluster.name)
 
@@ -84,3 +83,8 @@ class CreateCluster(object):
     logger.info('Validated cluster.')
 
     dbi.update(self.cluster, {'validated': True})
+
+  def set_db_reliant_attrs(self):
+    self.team = dbi.find_one(Team, {'uid': self.team_uid})
+    self.cluster = self.team.cluster
+    self.bucket = self.cluster.bucket
