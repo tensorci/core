@@ -71,7 +71,8 @@ class CreateCluster(object):
       node_size=self.cluster.node_type,
       node_count=config.CLUSTER_NODE_COUNT,
       state=state,
-      image=os_map.get(self.cluster.image)
+      image=os_map.get(self.cluster.image),
+      version=os.environ.get('K8S_VERSION')
     )
 
   def validate_cluster(self, state):

@@ -19,13 +19,13 @@ def export_cluster(name=None, state=None):
 
 
 def create_cluster(name=None, zones=None, master_size=None, node_size=None,
-                   node_count=None, state=None, image=None):
+                   node_count=None, state=None, image=None, version=None):
   try:
-    validate_params([name, zones, master_size, node_size, node_count, state, image])
+    validate_params([name, zones, master_size, node_size, node_count, state, image, version])
     assert image in os_map.values()
 
-    os.system('kops create cluster --name {} --zones {} --master-size {} --node-size {} --node-count {} --state {} --image {} --yes'.format(
-      name, zones, master_size, node_size, node_count, state, image))
+    os.system('kops create cluster --name {} --zones {} --master-size {} --node-size {} --node-count {} --state {} --image {} --kubernetes-version {} --yes'.format(
+      name, zones, master_size, node_size, node_count, state, image, version))
   except BaseException as e:
     logger.error('Error while creating cluster (name={}): {}'.format(name, e))
     return False
