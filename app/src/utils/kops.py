@@ -2,7 +2,7 @@ import os
 import re
 from subprocess import check_output
 from aws import os_map
-from src import logger, aplogger
+from src import logger
 
 
 # TODO: add a decorator that validates all args in a function
@@ -27,7 +27,7 @@ def create_cluster(name=None, zones=None, master_size=None, node_size=None,
     os.system('kops create cluster --name {} --zones {} --master-size {} --node-size {} --node-count {} --state {} --image {} --yes'.format(
       name, zones, master_size, node_size, node_count, state, image))
   except BaseException as e:
-    aplogger.error('Error while creating cluster (name={}): {}'.format(name, e))
+    logger.error('Error while creating cluster (name={}): {}'.format(name, e))
     return False
 
   return True

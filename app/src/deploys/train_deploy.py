@@ -38,3 +38,4 @@ class TrainDeploy(AbstractDeploy):
 
   def on_deploy_success(self):
     self.update_deployment_status(self.deployment.statuses.TRAINING)
+    self.log('Train deploy successful.')

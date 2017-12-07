@@ -1,5 +1,5 @@
 from kubernetes import client, config
-from src import dbi, aplogger
+from src import dbi, logger
 from src.models import Deployment
 from src.utils.deployment_logger import DeploymentLogger
 
@@ -11,6 +11,8 @@ class AbstractDeploy(object):
     self.deployment = dbi.find_one(Deployment, {'uid': deployment_uid})
     self.prediction = self.deployment.prediction
     self.team = self.prediction.team
+    self.cluster = self.team.cluster
+    self.bucket = self.cluster.bucket
     self.api_client = None
     self.api = None
 
@@ -171,5 +173,5 @@ class AbstractDeploy(object):
     pass
 
   def log(self, text, complete=False):
-    aplogger.info(text)
+    logger.info(text)
     self.dlogger.info(text, complete=complete)

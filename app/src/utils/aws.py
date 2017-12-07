@@ -1,7 +1,7 @@
 import os
 import boto3
 import re
-from src import aplogger
+from src import logger
 from uuid import uuid4
 
 os_map = {
@@ -10,7 +10,7 @@ os_map = {
 
 
 def create_s3_bucket(name):
-  aplogger.info('Creating S3 Bucket: {}...'.format(name))
+  logger.info('Creating S3 Bucket: {}...'.format(name))
 
   try:
     s3 = boto3.resource('s3')
@@ -21,14 +21,14 @@ def create_s3_bucket(name):
         'LocationConstraint': os.environ.get('AWS_REGION_NAME')
       })
   except BaseException as e:
-    aplogger.error('Error Creating S3 Bucket (name={}) with error: {}'.format(name, e))
+    logger.error('Error Creating S3 Bucket (name={}) with error: {}'.format(name, e))
     return False
 
   return True
 
 
 def create_route53_hosted_zone(name):
-  aplogger.info('Creating Route53 Hosted Zone: {}...'.format(name))
+  logger.info('Creating Route53 Hosted Zone: {}...'.format(name))
 
   try:
     route53 = boto3.client('route53')
@@ -48,14 +48,14 @@ def create_route53_hosted_zone(name):
 
     name_servers = resp.get('DelegationSet', {}).get('NameServers') or []
   except BaseException as e:
-    aplogger.error('Error Creating Route 53 Hosted Zone (name={}) with error: {}'.format(name, e))
+    logger.error('Error Creating Route 53 Hosted Zone (name={}) with error: {}'.format(name, e))
     return None
 
   return hosted_zone_id, name_servers
 
 
 def add_dns_records(hosted_zone_id, domain, records, type):
-  aplogger.info('Adding {} DNS record(s) to {}...'.format(type, domain))
+  logger.info('Adding {} DNS record(s) to {}...'.format(type, domain))
 
   changes = [{
     'Action': 'UPSERT',
@@ -75,7 +75,7 @@ def add_dns_records(hosted_zone_id, domain, records, type):
       ChangeBatch={'Changes': changes}
     )
   except BaseException as e:
-    aplogger.error('Error Adding DNS records to hosted_zone_id({}) with error: {}'.format(hosted_zone_id, e))
+    logger.error('Error Adding DNS records to hosted_zone_id({}) with error: {}'.format(hosted_zone_id, e))
     return False
 
   return True

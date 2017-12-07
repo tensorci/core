@@ -16,6 +16,7 @@ from src.deploys.build_server_deploy import BuildServerDeploy
 from src.services.deployment_services import deployment_status_update_svcs
 from src.utils.deployment_logger import DeploymentLogger
 from src.utils.pyredis import redis
+from src.utils.queue import job_queue
 from time import sleep
 
 create_deployment_model = api.model('Deployment', {
@@ -100,8 +101,8 @@ class RestfulDeployment(Resource):
 
     # Tell user everything is up-to-date if latest deploy has same sha
     # as latest commit and hasn't failed.
-    if deployments and deployments[0].sha == latest_sha and not deployments[0].failed:
-      return {'ok': True, 'up_to_date': True}
+    # if deployments and deployments[0].sha == latest_sha and not deployments[0].failed:
+    #   return {'ok': True, 'up_to_date': True}
 
     # Create new deployment for prediction
     deployment = dbi.create(Deployment, {
@@ -121,11 +122,15 @@ class RestfulDeployment(Resource):
 
     dlogger.info('New SHA detected: {}'.format(latest_sha))
 
+    deployer = BuildServerDeploy(deployment_uid=deployment.uid, build_for=clusters.TRAIN)
+
+    job_queue.enqueue(deployer.deploy)
+
     # Schedule a deploy to the build server
-    create_deploy(BuildServerDeploy, {
-      'deployment_uid': deployment.uid,
-      'build_for': clusters.TRAIN
-    })
+    # create_deploy(BuildServerDeploy, {
+    #   'deployment_uid': deployment.uid,
+    #   'build_for': clusters.TRAIN
+    # })
 
     @stream_with_context
     def stream_logs():

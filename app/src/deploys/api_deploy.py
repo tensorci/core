@@ -4,9 +4,8 @@ from abstract_deploy import AbstractDeploy
 from src import dbi
 from src.utils import clusters
 from src.services.prediction_services.publicize_prediction import PublicizePrediction
+from src.utils.queue import job_queue
 from src.helpers import time_since_epoch
-from src import delayed
-from src.helpers.delay_helper import delay_class_method
 from kubernetes import client, config
 
 
@@ -76,7 +75,6 @@ class ApiDeploy(AbstractDeploy):
       sleep(3)  # wait a hot sec for deployment to be absolutely registered
 
       # Set up ELB and CNAME record for deployment if not already there
-      delayed.add_job(delay_class_method, args=[PublicizePrediction, {
-        'deployment_uid': self.deployment_uid,
-        'port': 443  # Forcing SSL for now
-      }])
+      publicize_pred_svc = PublicizePrediction(deployment_uid=self.deployment_uid, port=443)
+
+      job_queue.enqueue(publicize_pred_svc.perform)

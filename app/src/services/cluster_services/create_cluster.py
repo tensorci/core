@@ -1,5 +1,5 @@
 import os
-from src import dbi, aplogger
+from src import dbi, logger
 from src.models import Team, Cluster
 from src.deploys.api_deploy import ApiDeploy
 from src.utils.aws import create_route53_hosted_zone, add_dns_records, os_map
@@ -40,7 +40,7 @@ class CreateCluster(object):
     if not dns_success:
       return
 
-    aplogger.info('Waiting 60s (TTL) for NS records to take effect...')
+    logger.info('Waiting 60s (TTL) for NS records to take effect...')
     sleep(60)
 
     # Get S3 bucket url
@@ -57,7 +57,7 @@ class CreateCluster(object):
 
     # Make an API deploy once cluster is validated (if desired)
     if self.with_deploy:
-      aplogger.info('Scheduling API deploy...')
+      logger.info('Scheduling API deploy...')
       sleep(5)
       create_deploy(ApiDeploy, {'prediction_uid': self.prediction_uid})
 
@@ -74,10 +74,10 @@ class CreateCluster(object):
 
   def validate_cluster(self, state):
     while not kops.validate_cluster(name=self.cluster.name, state=state):
-      aplogger.info('Validating cluster...')
+      logger.info('Validating cluster...')
       sleep(120)
 
     # Register that the cluster is validated
-    aplogger.info('Validated cluster.')
+    logger.info('Validated cluster.')
 
     dbi.update(self.cluster, {'validated': True})
