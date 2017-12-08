@@ -22,6 +22,7 @@ class BuildServerDeploy(AbstractDeploy):
 
   def deploy(self):
     self.set_db_reliant_attrs()
+
     self.container_name = '{}-{}-build'.format(self.prediction.slug, self.build_for)
     self.image = '{}/{}'.format(config.IMAGE_REPO_OWNER, image_names.BUILD_SERVER)
     self.deploy_name = '{}-{}'.format(self.container_name, time_since_epoch())

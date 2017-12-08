@@ -15,6 +15,8 @@ class ApiDeploy(AbstractDeploy):
     super(ApiDeploy, self).__init__(deployment_uid)
 
   def deploy(self):
+    self.set_db_reliant_attrs()
+
     self.container_name = '{}-{}'.format(self.prediction.slug, clusters.API)
     self.image = '{}/{}'.format(self.prediction.image_repo_owner, self.container_name)
     self.deploy_name = '{}-{}'.format(self.container_name, time_since_epoch())
