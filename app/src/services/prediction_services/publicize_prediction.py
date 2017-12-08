@@ -117,7 +117,7 @@ class PublicizePrediction(object):
     connection_success = self.attempt_connection()
 
     if not connection_success:
-      sleep(20)
+      sleep(60)
       return self.poll_url()
 
     return None
