@@ -31,8 +31,6 @@ class ApiDeploy(AbstractDeploy):
       'S3_BUCKET_NAME': self.cluster.bucket.name,
       'DATASET_DB_URL': os.environ.get('DATASET_DB_URL'),
       'DATASET_TABLE_NAME': self.prediction.dataset_table(),
-      'TEAM': self.team.slug,
-      'TEAM_UID': self.team.uid,
       'PREDICTION': self.prediction.slug,
       'PREDICTION_UID': self.prediction.uid
     }
