@@ -20,7 +20,6 @@ class ApiDeploy(AbstractDeploy):
     self.container_name = '{}-{}'.format(self.prediction.slug, clusters.API)
     self.image = '{}/{}'.format(self.prediction.image_repo_owner, self.container_name)
     self.deploy_name = '{}-{}'.format(self.container_name, time_since_epoch())
-    self.cluster = self.team.cluster
     self.cluster_name = self.cluster.name
     self.ports = [80]
     self.replicas = 3
