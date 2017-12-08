@@ -17,4 +17,4 @@ class DoneTraining(object):
     bs_deployer = BuildServerDeploy(deployment_uid=self.deployment.uid,
                                     build_for=clusters.API)
 
-    job_queue.enqueue(bs_deployer.deploy)
+    job_queue.enqueue(bs_deployer.deploy, timeout=1800)

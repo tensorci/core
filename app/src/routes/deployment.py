@@ -122,7 +122,7 @@ class RestfulDeployment(Resource):
 
     deployer = BuildServerDeploy(deployment_uid=deployment.uid, build_for=clusters.TRAIN)
 
-    job_queue.enqueue(deployer.deploy)
+    job_queue.enqueue(deployer.deploy, timeout=1800)
 
     @stream_with_context
     def stream_logs():

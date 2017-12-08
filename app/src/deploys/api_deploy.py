@@ -82,4 +82,4 @@ class ApiDeploy(AbstractDeploy):
       # Set up ELB and CNAME record for deployment if not already there
       publicize_pred_svc = PublicizePrediction(deployment_uid=self.deployment_uid, port=443)
 
-      job_queue.enqueue(publicize_pred_svc.perform)
+      job_queue.enqueue(publicize_pred_svc.perform, timeout=1800)
