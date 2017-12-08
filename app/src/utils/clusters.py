@@ -1,3 +1,3 @@
-TRAIN = 't'
+TRAIN = 'train'
 API = 'api'
 BUILD_SERVER = 'build'
