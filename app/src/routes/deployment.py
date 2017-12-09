@@ -80,80 +80,74 @@ class RestfulDeployment(Resource):
     # Update the prediction's repo regardless of if it's a new prediction
     prediction = dbi.update(prediction, {'git_repo': git_repo})
 
-    try:
-      repo = fetch_git_repo(git_repo)  # fetch git repo
-      commits = repo.get_commits()  # get first page of commits for repo
-    except BaseException as e:
-      logger.error('Error fetching commits for repo: {} for prediction(slug={}): {}'.format(git_repo, prediction_slug, e))
-      return ERROR_FETCHING_REPO
-
-    try:
-      latest_sha = commits[0].sha  # get sha of latest commit
-    except IndexError:
-      return NO_COMMITS_IN_REPO
-    except BaseException as e:
-      logger.error('Error parsing commits for repo: {} for prediction(slug={}): {}'.format(git_repo, prediction_slug, e))
-      return ERROR_PARSING_COMMITS_FOR_REPO
-
-    # Get all deployments for this prediction, ordered by most recently created
-    deployments = prediction.ordered_deployments()
-
-    # Tell user everything is up-to-date if latest deploy has same sha
-    # as latest commit and hasn't failed.
-    if deployments and deployments[0].sha == latest_sha and not deployments[0].failed:
-      return {'ok': True, 'up_to_date': True}
-
-    # Create new deployment for prediction
-    deployment = dbi.create(Deployment, {
-      'prediction': prediction,
-      'sha': latest_sha
-    })
-
-    # Create a deployment logger instance
-    dlogger = DeploymentLogger(deployment)
-
-    # Log the above activity to the user
-    if is_new_prediction:
-      dlogger.info('Created new prediction: {}'.format(prediction.slug))
-
-    if updated_git_repo:
-      dlogger.info('Updated prediction\'s git repo to {}'.format(git_repo))
-
-    dlogger.info('New SHA detected: {}'.format(latest_sha))
-
-    deployer = BuildServerDeploy(deployment_uid=deployment.uid, build_for=clusters.TRAIN)
-
-    job_queue.enqueue(deployer.deploy, timeout=1800)
+    # try:
+    #   repo = fetch_git_repo(git_repo)  # fetch git repo
+    #   commits = repo.get_commits()  # get first page of commits for repo
+    # except BaseException as e:
+    #   logger.error('Error fetching commits for repo: {} for prediction(slug={}): {}'.format(git_repo, prediction_slug, e))
+    #   return ERROR_FETCHING_REPO
+    #
+    # try:
+    #   latest_sha = commits[0].sha  # get sha of latest commit
+    # except IndexError:
+    #   return NO_COMMITS_IN_REPO
+    # except BaseException as e:
+    #   logger.error('Error parsing commits for repo: {} for prediction(slug={}): {}'.format(git_repo, prediction_slug, e))
+    #   return ERROR_PARSING_COMMITS_FOR_REPO
+    #
+    # # Get all deployments for this prediction, ordered by most recently created
+    # deployments = prediction.ordered_deployments()
+    #
+    # # Tell user everything is up-to-date if latest deploy has same sha
+    # # as latest commit and hasn't failed.
+    # if deployments and deployments[0].sha == latest_sha and not deployments[0].failed:
+    #   return {'ok': True, 'up_to_date': True}
+    #
+    # # Create new deployment for prediction
+    # deployment = dbi.create(Deployment, {
+    #   'prediction': prediction,
+    #   'sha': latest_sha
+    # })
+    #
+    # # Create a deployment logger instance
+    # dlogger = DeploymentLogger(deployment)
+    #
+    # # Log the above activity to the user
+    # if is_new_prediction:
+    #   dlogger.info('Created new prediction: {}'.format(prediction.slug))
+    #
+    # if updated_git_repo:
+    #   dlogger.info('Updated prediction\'s git repo to {}'.format(git_repo))
+    #
+    # dlogger.info('New SHA detected: {}'.format(latest_sha))
+    #
+    # deployer = BuildServerDeploy(deployment_uid=deployment.uid, build_for=clusters.TRAIN)
+    #
+    # job_queue.enqueue(deployer.deploy, timeout=1800)
 
     @stream_with_context
     def stream_logs():
-      complete = False
-
-      while not complete:
-        item = redis.blpop(deployment.uid)
-
-        if not item:
-          continue
-
-        try:
-          item = json.loads(item[1])
-        except BaseException:
-          continue
-
-        complete = item.get('complete') == True
-
-        yield item.get('text') + '\n'
+      while True:
+        sleep(0.5)
+        yield 'hey\n'
+      # complete = False
+      #
+      # while not complete:
+      #   item = redis.blpop(deployment.uid)
+      #
+      #   if not item:
+      #     continue
+      #
+      #   try:
+      #     item = json.loads(item[1])
+      #   except BaseException:
+      #     continue
+      #
+      #   complete = item.get('complete') == True
+      #
+      #   yield item.get('text') + '\n'
 
     return Response(stream_logs(), headers={'X-Accel-Buffering': 'no'})
-
-  def get(self):
-    @stream_with_context
-    def stream():
-      while True:
-        sleep(1)
-        yield 'hey\n'
-
-    return Response(stream(), headers={'X-Accel-Buffering': 'no'})
 
   @namespace.doc('update_deployment_status')
   @namespace.expect(update_deployment_status_model, validate=True)
