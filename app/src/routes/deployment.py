@@ -16,6 +16,7 @@ from src.services.deployment_services import deployment_status_update_svcs
 from src.utils.deployment_logger import DeploymentLogger
 from src.utils.pyredis import redis
 from src.utils.queue import job_queue
+from time import sleep
 
 create_deployment_model = api.model('Deployment', {
   'team_slug': fields.String(required=True),
@@ -144,6 +145,15 @@ class RestfulDeployment(Resource):
         yield item.get('text') + '\n'
 
     return Response(stream_logs(), headers={'X-Accel-Buffering': 'no'})
+
+  def get(self):
+    @stream_with_context
+    def stream():
+      while True:
+        sleep(1)
+        yield 'hey\n'
+
+    return Response(stream(), headers={'X-Accel-Buffering': 'no'})
 
   @namespace.doc('update_deployment_status')
   @namespace.expect(update_deployment_status_model, validate=True)
