@@ -32,11 +32,10 @@ class TrainDeploy(AbstractDeploy):
       'DATASET_TABLE_NAME': self.prediction.dataset_table(),
       'CORE_URL': config.CORE_URL,
       'CORE_API_TOKEN': os.environ.get('CORE_API_TOKEN'),
-      'TEAM': self.team.slug,
-      'TEAM_UID': self.team.uid,
       'PREDICTION': self.prediction.slug,
       'PREDICTION_UID': self.prediction.uid,
-      'DEPLOYMENT_UID': self.deployment_uid
+      'DEPLOYMENT_UID': self.deployment_uid,
+      'REDIS_URL': os.environ.get('REDIS_URL')
     }
 
     super(TrainDeploy, self).deploy()

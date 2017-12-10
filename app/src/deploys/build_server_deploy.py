@@ -45,14 +45,14 @@ class BuildServerDeploy(AbstractDeploy):
     self.envs = {
       'DOCKER_USERNAME': os.environ.get('DOCKER_USERNAME'),
       'DOCKER_PASSWORD': os.environ.get('DOCKER_PASSWORD'),
-      'TEAM': self.team.slug,
-      'TEAM_UID': self.team.uid,
       'PREDICTION': self.prediction.slug,
       'PREDICTION_UID': self.prediction.uid,
       'GIT_REPO': self.prediction.git_repo,
       'IMAGE_OWNER': self.prediction.image_repo_owner,
       'FOR_CLUSTER': self.build_for,
-      'SHA': self.deployment.sha
+      'SHA': self.deployment.sha,
+      'DEPLOYMENT_UID': self.deployment_uid,
+      'REDIS_URL': os.environ.get('REDIS_URL')
     }
 
     super(BuildServerDeploy, self).deploy()

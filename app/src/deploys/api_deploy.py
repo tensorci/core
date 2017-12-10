@@ -41,6 +41,8 @@ class ApiDeploy(AbstractDeploy):
       super(ApiDeploy, self).deploy()
 
   def update_deploy(self):
+    self.log('Updating existing deploy...')
+
     body = {
       'spec': {
         'template': {
