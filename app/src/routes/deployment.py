@@ -121,9 +121,9 @@ class RestfulDeployment(Resource):
 
     dlogger.info('New SHA detected: {}'.format(latest_sha))
 
-    deployer = BuildServerDeploy(deployment_uid=deployment.uid, build_for=clusters.TRAIN)
-
-    job_queue.enqueue(deployer.deploy, timeout=1800)
+    # deployer = BuildServerDeploy(deployment_uid=deployment.uid, build_for=clusters.TRAIN)
+    #
+    # job_queue.enqueue(deployer.deploy, timeout=1800)
 
     @stream_with_context
     def stream_logs():

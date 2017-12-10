@@ -21,8 +21,8 @@ echo "server {
     location @app {
         include uwsgi_params;
         uwsgi_pass unix:///tmp/uwsgi.sock;
-        uwsgi_read_timeout 600s;
-        uwsgi_send_timeout 600s;
+        uwsgi_read_timeout 600;
+        uwsgi_send_timeout 600;
     }
     location $USE_STATIC_URL {
         alias $USE_STATIC_PATH;
