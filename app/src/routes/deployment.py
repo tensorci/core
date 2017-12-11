@@ -16,7 +16,6 @@ from src.services.deployment_services import deployment_status_update_svcs
 from src.utils.deployment_logger import DeploymentLogger
 from src.utils.pyredis import redis
 from src.utils.queue import job_queue
-from time import sleep
 
 create_deployment_model = api.model('Deployment', {
   'team_slug': fields.String(required=True),
