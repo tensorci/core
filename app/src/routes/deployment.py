@@ -130,19 +130,17 @@ class RestfulDeployment(Resource):
       complete = False
 
       while not complete:
-        item = redis.blpop(deployment.uid)
-
-        if not item:
-          continue
+        item = redis.blpop(deployment.uid, timeout=30)
 
         try:
-          item = json.loads(item[1])
-        except BaseException:
-          continue
-
-        complete = item.get('complete') == True
-
-        yield item.get('text') + '\n'
+          if item:
+            item = json.loads(item[1])
+            complete = item.get('complete') == True
+            yield item.get('text') + '\n'
+          else:
+            yield '<tci-keep-alive>\n'
+        except:
+          complete = True
 
     return Response(stream_logs(), headers={'X-Accel-Buffering': 'no'})
 
