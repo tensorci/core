@@ -78,7 +78,7 @@ class DeploymentTrained(Resource):
       logger.error(err)
       return err, 500
 
-    # Ensure deployment status is ds.TRAINING
+    # Ensure deployment status is TRAINING
     if deployment.status != ds.TRAINING:
       err = 'Invalid deployment status change: {} --> {}'.format(deployment.status, ds.DONE_TRAINING)
       logger.error(err)
@@ -192,6 +192,7 @@ def perform_train_deploy(with_api_deploy=False):
   if prediction and prediction.team != team:
     return PREDICTION_NAME_TAKEN
 
+  # Flags we care about for logging purposes
   is_new_prediction = not bool(prediction)
   updated_git_repo = not is_new_prediction and prediction.git_repo != git_repo
 

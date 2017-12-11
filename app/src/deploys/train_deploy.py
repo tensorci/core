@@ -44,4 +44,4 @@ class TrainDeploy(AbstractDeploy):
 
   def on_deploy_success(self):
     self.update_deployment_status(self.deployment.statuses.TRAINING)
-    self.log('Train deploy successful.')
+    self.log('Train deploy successful.', complete=(not self.with_api_deploy))
