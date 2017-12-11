@@ -121,9 +121,9 @@ class RestfulDeployment(Resource):
 
     dlogger.info('New SHA detected: {}'.format(latest_sha))
 
-    # deployer = BuildServerDeploy(deployment_uid=deployment.uid, build_for=clusters.TRAIN)
-    #
-    # job_queue.enqueue(deployer.deploy, timeout=1800)
+    deployer = BuildServerDeploy(deployment_uid=deployment.uid, build_for=clusters.TRAIN)
+
+    job_queue.enqueue(deployer.deploy, timeout=1800)
 
     @stream_with_context
     def stream_logs():
@@ -135,7 +135,7 @@ class RestfulDeployment(Resource):
         try:
           if item:
             item = json.loads(item[1])
-            complete = item.get('complete') == True
+            complete = item.get('complete') is True
             yield item.get('text') + '\n'
           else:
             yield '<tci-keep-alive>\n'
