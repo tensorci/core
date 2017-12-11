@@ -9,8 +9,9 @@ config = get_config()
 
 class TrainDeploy(AbstractDeploy):
 
-  def __init__(self, deployment_uid=None):
+  def __init__(self, deployment_uid=None, with_api_deploy=False):
     super(TrainDeploy, self).__init__(deployment_uid)
+    self.with_api_deploy = with_api_deploy
 
   def deploy(self):
     self.set_db_reliant_attrs()  # TODO: turn into decorator
@@ -35,7 +36,8 @@ class TrainDeploy(AbstractDeploy):
       'PREDICTION': self.prediction.slug,
       'PREDICTION_UID': self.prediction.uid,
       'DEPLOYMENT_UID': self.deployment_uid,
-      'REDIS_URL': os.environ.get('REDIS_URL')
+      'REDIS_URL': os.environ.get('REDIS_URL'),
+      'WITH_API_DEPLOY': int(self.with_api_deploy)
     }
 
     super(TrainDeploy, self).deploy()

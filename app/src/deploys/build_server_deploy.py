@@ -16,9 +16,10 @@ config = get_config()
 
 class BuildServerDeploy(AbstractDeploy):
 
-  def __init__(self, deployment_uid=None, build_for=None):
+  def __init__(self, deployment_uid=None, build_for=None, full_push=False):
     super(BuildServerDeploy, self).__init__(deployment_uid)
     self.build_for = build_for
+    self.full_push = full_push
 
   def deploy(self):
     self.set_db_reliant_attrs()
@@ -115,7 +116,7 @@ class BuildServerDeploy(AbstractDeploy):
     self.log('Scheduling training deploy for prediction(slug={})...'.format(self.prediction.slug))
 
     # Schedule a deploy to the training cluster
-    train_deployer = TrainDeploy(deployment_uid=self.deployment_uid)
+    train_deployer = TrainDeploy(deployment_uid=self.deployment_uid, with_api_deploy=self.full_push)
 
     job_queue.enqueue(train_deployer.deploy, timeout=1800)
 

@@ -17,3 +17,7 @@ ERROR_PARSING_COMMITS_FOR_REPO = {'ok': False, 'code': 1205, 'error': 'error_par
 
 # User Errors
 AUTHENTICATION_FAILED = {'ok': False, 'code': 1300, 'error': 'authentication_failed'}, 401
+
+# Deployment Errors
+NO_DEPLOYMENT_TO_SERVE = {'ok': False, 'code': 1400, 'error': 'no_deployment_to_serve'}, 404
+LATEST_DEPLOYMENT_TRAINING = {'ok': False, 'code': 1401, 'error': 'latest_deployment_still_training'}, 500

@@ -22,13 +22,15 @@ Relationships:
   Bucket --> has_one --> Cluster
   Team --> has_many --> predictions
   Prediction --> belongs_to --> Team
+  Prediction --> has_many --> deployments
+  Deployment --> belongs_to --> Prediction
 """
 import datetime
 from slugify import slugify
 from sqlalchemy.dialects.postgresql import JSON
 from src import db, dbi
 from helpers import auth_util, team_user_roles, user_verification_statuses, instance_types
-from helpers.deployment_statuses import deployment_statuses
+from helpers.deployment_statuses import ds
 from uuid import uuid4
 from operator import attrgetter
 from config import get_config
@@ -250,10 +252,10 @@ class Deployment(db.Model):
   sha = db.Column(db.String(360))
   status = db.Column(db.String(60))
   created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
-  statuses = deployment_statuses
   failed = db.Column(db.Boolean, server_default='f')
+  statuses = ds
 
-  def __init__(self, prediction=None, prediction_id=None, sha=None, status=deployment_statuses.CREATED):
+  def __init__(self, prediction=None, prediction_id=None, sha=None, status=ds.CREATED):
     self.uid = uuid4().hex
 
     if prediction_id:
@@ -267,7 +269,3 @@ class Deployment(db.Model):
   def __repr__(self):
     return '<Deployment id={}, uid={}, prediction_id={}, sha={}, status={}, created_at={}, failed={}>'.format(
       self.id, self.uid, self.prediction_id, self.sha, self.status, self.created_at, self.failed)
-
-  def status_directly_proceeds(self, status):
-    ordered_statuses = self.statuses.ordered_statuses
-    return ordered_statuses.index(status) == ordered_statuses.index(self.status) + 1

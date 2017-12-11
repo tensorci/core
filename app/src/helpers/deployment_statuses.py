@@ -1,4 +1,3 @@
-
 class DeploymentStatuses:
   CREATED = 'created'
   BUILDING_FOR_TRAIN = 'train_building'
@@ -10,7 +9,7 @@ class DeploymentStatuses:
   PREDICTING = 'predicting'
 
   def __init__(self):
-    self.ordered_statuses = [
+    self.statuses = [
       self.CREATED,
       self.BUILDING_FOR_TRAIN,
       self.DONE_BUILDING_FOR_TRAIN,
@@ -21,4 +20,5 @@ class DeploymentStatuses:
       self.PREDICTING
     ]
 
-deployment_statuses = DeploymentStatuses()
+
+ds = DeploymentStatuses()
