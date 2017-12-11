@@ -37,7 +37,7 @@ class TrainDeploy(AbstractDeploy):
       'PREDICTION_UID': self.prediction.uid,
       'DEPLOYMENT_UID': self.deployment_uid,
       'REDIS_URL': os.environ.get('REDIS_URL'),
-      'WITH_API_DEPLOY': int(self.with_api_deploy)
+      'WITH_API_DEPLOY': str(self.with_api_deploy).lower()
     }
 
     super(TrainDeploy, self).deploy()
