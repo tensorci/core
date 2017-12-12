@@ -4,7 +4,7 @@ from abstract_deploy import AbstractDeploy
 from src import dbi, logger
 from src.utils import clusters
 from src.services.prediction_services.publicize_prediction import PublicizePrediction
-from src.utils.queue import job_queue
+from src.utils.job_queue import job_queue
 from src.helpers import time_since_epoch
 from kubernetes import client, config
 
@@ -86,4 +86,4 @@ class ApiDeploy(AbstractDeploy):
       # Set up ELB and CNAME record for deployment if not already there
       publicize_pred_svc = PublicizePrediction(deployment_uid=self.deployment_uid, port=443)
 
-      job_queue.enqueue(publicize_pred_svc.perform, timeout=1800)
+      job_queue.add(publicize_pred_svc.perform)

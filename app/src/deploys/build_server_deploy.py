@@ -8,7 +8,7 @@ from src.helpers import time_since_epoch
 from kubernetes import watch
 from src.utils.aws import create_s3_bucket
 from src import dbi, logger
-from src.utils.queue import job_queue
+from src.utils.job_queue import job_queue
 from src.services.cluster_services.create_cluster import CreateCluster
 
 config = get_config()
@@ -118,8 +118,7 @@ class BuildServerDeploy(AbstractDeploy):
 
     # Schedule a deploy to the training cluster
     train_deployer = TrainDeploy(deployment_uid=self.deployment_uid, with_api_deploy=self.full_push)
-
-    job_queue.enqueue(train_deployer.deploy, timeout=1800)
+    job_queue.add(train_deployer.deploy)
 
   def post_api_building(self):
     self.update_deployment_status(self.deployment.statuses.DONE_BUILDING_FOR_API)
@@ -136,8 +135,7 @@ class BuildServerDeploy(AbstractDeploy):
                 queue=self.deployment_uid)
 
     api_deployer = ApiDeploy(deployment_uid=self.deployment_uid)
-
-    job_queue.enqueue(api_deployer.deploy, timeout=1800)
+    job_queue.add(api_deployer.deploy)
 
   def create_cluster_and_deploy(self):
     logger.info('Scheduling cluster creation for team(slug={})...'.format(self.team.slug),
@@ -147,4 +145,4 @@ class BuildServerDeploy(AbstractDeploy):
                                        deployment_uid=self.deployment_uid,
                                        with_deploy=True)
 
-    job_queue.enqueue(create_cluster_svc.perform, timeout=1800)
+    job_queue.add(create_cluster_svc.perform)

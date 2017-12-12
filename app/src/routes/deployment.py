@@ -13,7 +13,7 @@ from src.utils.gh import fetch_git_repo
 from src.helpers.definitions import core_header_name
 from src.deploys.build_server_deploy import BuildServerDeploy
 from src.utils.pyredis import redis
-from src.utils.queue import job_queue
+from src.utils.job_queue import job_queue
 from src.helpers.deployment_statuses import ds
 
 create_deployment_model = api.model('Deployment', {
@@ -89,7 +89,7 @@ class DeploymentTrained(Resource):
     # If desired to continue on and make API deploy, do so
     if with_api_deploy:
       deployer = BuildServerDeploy(deployment_uid=deployment.uid, build_for=clusters.API)
-      job_queue.enqueue(deployer.deploy, timeout=1800)
+      job_queue.add(deployer.deploy)
 
     return '', 200
 
@@ -156,8 +156,7 @@ class ApiDeployment(Resource):
     logger.info('Found deployment to serve with SHA: {}'.format(latest_deployment.sha), queue=latest_deployment.uid)
 
     deployer = BuildServerDeploy(deployment_uid=latest_deployment.uid, build_for=clusters.API)
-
-    job_queue.enqueue(deployer.deploy, timeout=1800)
+    job_queue.add(deployer.deploy)
 
     return Response(stream_with_context(stream_logs(latest_deployment)), headers={'X-Accel-Buffering': 'no'})
 
@@ -248,7 +247,7 @@ def perform_train_deploy(with_api_deploy=False):
                                build_for=clusters.TRAIN,
                                full_push=with_api_deploy)
 
-  job_queue.enqueue(deployer.deploy, timeout=1800)
+  job_queue.add(deployer.deploy)
 
   return Response(stream_with_context(stream_logs(deployment)), headers={'X-Accel-Buffering': 'no'})
 

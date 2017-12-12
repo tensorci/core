@@ -4,7 +4,7 @@ from src.models import Team, Cluster
 from src.deploys.api_deploy import ApiDeploy
 from src.utils.aws import create_route53_hosted_zone, add_dns_records, os_map
 from src.utils import kops
-from src.utils.queue import job_queue
+from src.utils.job_queue import job_queue
 from time import sleep
 from src.config import get_config
 
@@ -60,7 +60,7 @@ class CreateCluster(object):
       sleep(5)
 
       api_deployer = ApiDeploy(deployment_uid=self.deployment_uid)
-      job_queue.enqueue(api_deployer.deploy, timeout=1800)
+      job_queue.add(api_deployer.deploy)
 
   def kops_create_cluster(self, state):
     return kops.create_cluster(
