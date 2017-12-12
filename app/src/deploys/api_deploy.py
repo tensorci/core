@@ -18,7 +18,7 @@ class ApiDeploy(AbstractDeploy):
     self.set_db_reliant_attrs()
 
     self.container_name = '{}-{}'.format(self.prediction.slug, clusters.API)
-    self.image = '{}/{}'.format(self.prediction.image_repo_owner, self.container_name)
+    self.image = '{}/{}:{}'.format(self.prediction.image_repo_owner, self.container_name, self.deployment.sha)
     self.deploy_name = '{}-{}'.format(self.container_name, time_since_epoch())
     self.cluster_name = self.cluster.name
     self.ports = [80]
@@ -50,7 +50,7 @@ class ApiDeploy(AbstractDeploy):
             'containers': [
               {
                 'name': self.container_name,
-                'image': '{}:latest'.format(self.image)
+                'image': self.image
               }
             ]
           }
