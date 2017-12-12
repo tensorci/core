@@ -160,6 +160,7 @@ class ApiDeployment(Resource):
     dlogger.info('Found deployment to serve with SHA: {}'.format(latest_deployment.sha))
 
     deployer = BuildServerDeploy(deployment_uid=latest_deployment.uid, build_for=clusters.API)
+
     job_queue.enqueue(deployer.deploy, timeout=1800)
 
     return Response(stream_with_context(stream_logs(latest_deployment)), headers={'X-Accel-Buffering': 'no'})
