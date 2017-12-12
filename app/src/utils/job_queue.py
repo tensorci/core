@@ -1,4 +1,4 @@
-from rq import Queue
+from rq import Queue, Worker
 from pyredis import redis
 import os
 
