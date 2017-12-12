@@ -32,7 +32,9 @@ class ApiDeploy(AbstractDeploy):
       'DATASET_DB_URL': os.environ.get('DATASET_DB_URL'),
       'DATASET_TABLE_NAME': self.prediction.dataset_table(),
       'PREDICTION': self.prediction.slug,
-      'PREDICTION_UID': self.prediction.uid
+      'PREDICTION_UID': self.prediction.uid,
+      'CLIENT_ID': self.prediction.client_id,
+      'CLIENT_SECRET': self.prediction.client_secret
     }
 
     if self.prediction.deploy_name:
