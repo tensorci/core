@@ -183,11 +183,13 @@ class Prediction(db.Model):
   git_repo = db.Column(db.String(240))
   image_repo_owner = db.Column(db.String(120))
   deploy_name = db.Column(db.String(360))
+  client_id = db.Column(db.String(240))
+  client_secret = db.Column(db.String(240))
   is_destroyed = db.Column(db.Boolean, server_default='f')
   created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
-  def __init__(self, team=None, team_id=None, name=None, elb=None,
-               domain=None, git_repo=None, image_repo_owner=None, deploy_name=None):
+  def __init__(self, team=None, team_id=None, name=None, elb=None, domain=None, git_repo=None,
+               image_repo_owner=None, deploy_name=None, client_id=None, client_secret=None):
 
     self.uid = uuid4().hex
 
@@ -203,6 +205,8 @@ class Prediction(db.Model):
     self.git_repo = git_repo
     self.image_repo_owner = image_repo_owner or config.IMAGE_REPO_OWNER
     self.deploy_name = deploy_name
+    self.client_id = client_id or uuid4().hex
+    self.client_secret = client_secret or auth_util.fresh_secret()
 
   def __repr__(self):
     return '<Prediction id={}, uid={}, team_id={}, name={}, slug={}, elb={}, domain={}, ' \
