@@ -1,10 +1,10 @@
-import logging
 from logging import StreamHandler, INFO
 import sys
 import os
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from config import get_config
+from utils.logger import Logger
 
 # Create and configure the Flask app
 app = Flask(__name__)
@@ -13,7 +13,7 @@ app.config.from_object(get_config())
 # Set up our logger
 app.logger.addHandler(StreamHandler(sys.stdout))
 app.logger.setLevel(INFO)
-logger = app.logger
+logger = Logger(app.logger)
 
 # Set up Postgres DB
 db = SQLAlchemy(app)

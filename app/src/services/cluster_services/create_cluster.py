@@ -39,7 +39,7 @@ class CreateCluster(object):
     if not dns_success:
       return
 
-    logger.info('Waiting 60s (TTL) for NS records to take effect...')
+    logger.info('Waiting 60s (TTL) for NS records to take effect...', queue=self.deployment_uid)
     sleep(60)
 
     # Get S3 bucket url
@@ -56,7 +56,7 @@ class CreateCluster(object):
 
     # Make an API deploy once cluster is validated (if desired)
     if self.with_deploy:
-      logger.info('Scheduling API deploy...')
+      logger.info('Scheduling API deploy...', queue=self.deployment_uid)
       sleep(5)
 
       api_deployer = ApiDeploy(deployment_uid=self.deployment_uid)
@@ -76,11 +76,11 @@ class CreateCluster(object):
 
   def validate_cluster(self, state):
     while not kops.validate_cluster(name=self.cluster.name, state=state):
-      logger.info('Validating cluster...')
+      logger.info('Validating cluster...', queue=self.deployment_uid)
       sleep(120)
 
     # Register that the cluster is validated
-    logger.info('Validated cluster.')
+    logger.info('Validated cluster.', queue=self.deployment_uid)
 
     dbi.update(self.cluster, {'validated': True})
 

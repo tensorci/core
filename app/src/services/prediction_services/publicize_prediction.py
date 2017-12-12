@@ -44,13 +44,13 @@ class PublicizePrediction(object):
     # Create a CNAME record for your subdomain with the ELB's url
     add_dns_records(os.environ.get('TL_HOSTED_ZONE_ID'), self.prediction.domain, [elb_url], 'CNAME')
 
-    logger.info('Waiting for TTL (60s)...')
+    logger.info('Waiting for TTL (60s)...', queue=self.deployment_uid)
     sleep(60)
 
     # Ping the url until the hostname is resolved
     self.poll_url()
 
-    logger.info('Prediction live at https://{}/api/predict'.format(self.prediction.domain))
+    logger.info('Prediction live at https://{}/api/predict'.format(self.prediction.domain), queue=self.deployment_uid)
 
     dbi.update(self.deployment, {'status': self.deployment.statuses.PREDICTING})
 
@@ -67,7 +67,7 @@ class PublicizePrediction(object):
         os.system('kubectl annotate service {} service.beta.kubernetes.io/aws-load-balancer-ssl-cert={} service.beta.kubernetes.io/aws-load-balancer-ssl-ports={} --context={} --cluster={}'.format(
           self.service_name, os.environ.get('WILDCARD_SSL_CERT_ARN'), self.port, self.cluster_name, self.cluster_name))
     except BaseException as e:
-      logger.error('Error creating service {} with error: {}'.format(self.service_name, e))
+      logger.error('Error creating service {} with error: {}'.format(self.service_name, e), queue=self.deployment_uid)
       return False
 
     return True
@@ -124,7 +124,7 @@ class PublicizePrediction(object):
 
   def attempt_connection(self):
     url = 'https://{}'.format(self.prediction.domain)
-    logger.info('Pinging url {}...'.format(url))
+    logger.info('Pinging url {}...'.format(url), queue=self.deployment_uid)
 
     try:
       requests.get(url)

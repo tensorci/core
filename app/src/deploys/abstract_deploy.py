@@ -1,7 +1,6 @@
 from kubernetes import client, config
 from src import dbi, logger
 from src.models import Deployment
-from src.utils.deployment_logger import DeploymentLogger
 
 
 class AbstractDeploy(object):
@@ -13,7 +12,6 @@ class AbstractDeploy(object):
     self.team = None
     self.cluster = None
     self.bucket = None
-    self.dlogger = None
 
     self.api_client = None
     self.api = None
@@ -169,17 +167,12 @@ class AbstractDeploy(object):
     self.team = self.prediction.team
     self.cluster = self.team.cluster
     self.bucket = self.cluster.bucket
-    self.dlogger = DeploymentLogger(self.deployment)
 
   def update_deployment_status(self, status):
-    self.log('Updating Deployment(sha={}) of Prediction(slug={}) to status: {}.'.format(
-      self.deployment.sha, self.prediction.slug, status))
+    logger.info('Updating Deployment(sha={}) of Prediction(slug={}) to status: {}.'.format(
+      self.deployment.sha, self.prediction.slug, status), queue=self.deployment_uid)
 
     self.deployment = dbi.update(self.deployment, {'status': status})
 
   def on_deploy_success(self):
     pass
-
-  def log(self, text, complete=False):
-    logger.info(text)
-    self.dlogger.info(text, complete=complete)

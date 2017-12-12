@@ -1,5 +1,6 @@
 import os
 from abstract_deploy import AbstractDeploy
+from src import logger
 from src.utils import clusters
 from src.config import get_config
 from src.helpers import time_since_epoch
@@ -44,4 +45,7 @@ class TrainDeploy(AbstractDeploy):
 
   def on_deploy_success(self):
     self.update_deployment_status(self.deployment.statuses.TRAINING)
-    self.log('Train deploy successful.', complete=(not self.with_api_deploy))
+
+    logger.info('Successfully deployed to training cluster.',
+                queue=self.deployment_uid,
+                last_entry=(not self.with_api_deploy))

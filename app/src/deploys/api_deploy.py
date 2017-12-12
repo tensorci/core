@@ -1,7 +1,7 @@
 import os
 from time import sleep
 from abstract_deploy import AbstractDeploy
-from src import dbi
+from src import dbi, logger
 from src.utils import clusters
 from src.services.prediction_services.publicize_prediction import PublicizePrediction
 from src.utils.queue import job_queue
@@ -43,7 +43,7 @@ class ApiDeploy(AbstractDeploy):
       super(ApiDeploy, self).deploy()
 
   def update_deploy(self):
-    self.log('Updating existing deploy...')
+    logger.info('Updating existing deploy...', queue=self.deployment_uid)
 
     body = {
       'spec': {
@@ -75,8 +75,11 @@ class ApiDeploy(AbstractDeploy):
       self.prediction = dbi.update(self.prediction, {'deploy_name': self.deploy_name})
 
     if self.prediction.elb:
-      self.log('Successfully deployed {}.'.format(self.deployment.sha), complete=True)
       self.update_deployment_status(self.deployment.statuses.PREDICTING)
+
+      logger.info('Successfully deployed {}.'.format(self.deployment.sha),
+                  queue=self.deployment_uid,
+                  last_entry=True)
     else:
       sleep(3)  # wait a hot sec for deployment to be absolutely registered
 

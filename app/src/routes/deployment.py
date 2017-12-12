@@ -12,7 +12,6 @@ from src.utils import clusters
 from src.utils.gh import fetch_git_repo
 from src.helpers.definitions import core_header_name
 from src.deploys.build_server_deploy import BuildServerDeploy
-from src.utils.deployment_logger import DeploymentLogger
 from src.utils.pyredis import redis
 from src.utils.queue import job_queue
 from src.helpers.deployment_statuses import ds
@@ -154,10 +153,7 @@ class ApiDeployment(Resource):
     if latest_deployment_status_idx > done_training_idx and not latest_deployment.failed:
       return DEPLOYMENT_UP_TO_DATE
 
-    # Create a deployment logger instance
-    dlogger = DeploymentLogger(latest_deployment)
-
-    dlogger.info('Found deployment to serve with SHA: {}'.format(latest_deployment.sha))
+    logger.info('Found deployment to serve with SHA: {}'.format(latest_deployment.sha), queue=latest_deployment.uid)
 
     deployer = BuildServerDeploy(deployment_uid=latest_deployment.uid, build_for=clusters.API)
 
@@ -239,17 +235,14 @@ def perform_train_deploy(with_api_deploy=False):
     'sha': latest_sha
   })
 
-  # Create a deployment logger instance
-  dlogger = DeploymentLogger(deployment)
-
   # Log the above activity to the user
   if is_new_prediction:
-    dlogger.info('Created new prediction: {}'.format(prediction.slug))
+    logger.info('Created new prediction: {}'.format(prediction.slug), queue=deployment.uid)
 
   if updated_git_repo:
-    dlogger.info('Updated prediction\'s git repo to {}'.format(git_repo))
+    logger.info('Updated prediction\'s git repo to {}'.format(git_repo), queue=deployment.uid)
 
-  dlogger.info('New SHA detected: {}'.format(latest_sha))
+  logger.info('New SHA detected: {}'.format(latest_sha), queue=deployment.uid)
 
   deployer = BuildServerDeploy(deployment_uid=deployment.uid,
                                build_for=clusters.TRAIN,
