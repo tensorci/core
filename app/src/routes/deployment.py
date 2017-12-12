@@ -16,7 +16,7 @@ from src.utils.pyredis import redis
 from src.utils.job_queue import job_queue
 from src.helpers.deployment_statuses import ds
 
-create_deployment_model = api.model('Deployment', {
+train_deployment_model = api.model('Deployment', {
   'team_slug': fields.String(required=True),
   'prediction_slug': fields.String(required=True),
   'git_repo': fields.String(required=True)
@@ -38,7 +38,7 @@ class PushDeployment(Resource):
   """Make a full deployment (train + api deploys)"""
 
   @namespace.doc('push_deployment')
-  @namespace.expect(create_deployment_model, validate=True)
+  @namespace.expect(train_deployment_model, validate=True)
   def post(self):
     return perform_train_deploy(with_api_deploy=True)
 
@@ -48,7 +48,7 @@ class TrainDeployment(Resource):
   """Make a train deployment"""
 
   @namespace.doc('train_deployment')
-  @namespace.expect(create_deployment_model, validate=True)
+  @namespace.expect(train_deployment_model, validate=True)
   def post(self):
     return perform_train_deploy()
 
@@ -158,7 +158,7 @@ class ApiDeployment(Resource):
     deployer = BuildServerDeploy(deployment_uid=latest_deployment.uid, build_for=clusters.API)
     job_queue.add(deployer.deploy)
 
-    return Response(stream_with_context(stream_logs(latest_deployment)), headers={'X-Accel-Buffering': 'no'})
+    return Response(stream_with_context(stream_logs(latest_deployment.uid)), headers={'X-Accel-Buffering': 'no'})
 
 
 def perform_train_deploy(with_api_deploy=False):
@@ -249,21 +249,32 @@ def perform_train_deploy(with_api_deploy=False):
 
   job_queue.add(deployer.deploy)
 
-  return Response(stream_with_context(stream_logs(deployment)), headers={'X-Accel-Buffering': 'no'})
+  return Response(stream_with_context(stream_logs(deployment.uid)), headers={'X-Accel-Buffering': 'no'})
 
 
-def stream_logs(deployment):
+def stream_logs(deployment_uid):
   complete = False
 
   while not complete:
-    item = redis.blpop(deployment.uid, timeout=30)
+    item = redis.blpop(deployment_uid, timeout=30)
 
     try:
-      if item:
-        item = json.loads(item[1])
-        complete = item.get('complete') is True
-        yield item.get('text') + '\n'
-      else:
+      if not item:
         yield '<tci-keep-alive>\n'
+        continue
+
+      item = json.loads(item[1])
+      complete = item.get('last_entry') is True
+
+      # if logger.error, update the deployment to failed=True
+      if item.get('level') == 'error':
+        complete = True
+        deployment = dbi.find_one(Deployment, {'uid': deployment_uid})
+
+        if deployment:
+          logger.error('DEPLOYMENT FAILED: {}'.format(deployment_uid))
+          dbi.update(deployment, {'failed': True})
+
+      yield item.get('text') + '\n'
     except:
-      complete = True
+      break
