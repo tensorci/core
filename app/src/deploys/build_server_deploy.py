@@ -117,7 +117,7 @@ class BuildServerDeploy(AbstractDeploy):
 
     # Schedule a deploy to the training cluster
     train_deployer = TrainDeploy(deployment_uid=self.deployment_uid, with_api_deploy=self.full_push)
-    job_queue.add(train_deployer.deploy)
+    job_queue.add(train_deployer.deploy, meta={'deployment': self.deployment_uid})
 
   def post_api_building(self):
     self.update_deployment_status(self.deployment.statuses.DONE_BUILDING_FOR_API)
@@ -134,7 +134,7 @@ class BuildServerDeploy(AbstractDeploy):
                 queue=self.deployment_uid)
 
     api_deployer = ApiDeploy(deployment_uid=self.deployment_uid)
-    job_queue.add(api_deployer.deploy)
+    job_queue.add(api_deployer.deploy, meta={'deployment': self.deployment_uid})
 
   def create_cluster_and_deploy(self):
     logger.info('Scheduling cluster creation for team(slug={})...'.format(self.team.slug),
@@ -144,4 +144,4 @@ class BuildServerDeploy(AbstractDeploy):
                                        deployment_uid=self.deployment_uid,
                                        with_deploy=True)
 
-    job_queue.add(create_cluster_svc.perform)
+    job_queue.add(create_cluster_svc.perform, meta={'deployment': self.deployment_uid})

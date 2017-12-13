@@ -60,7 +60,7 @@ class CreateCluster(object):
       sleep(5)
 
       api_deployer = ApiDeploy(deployment_uid=self.deployment_uid)
-      job_queue.add(api_deployer.deploy)
+      job_queue.add(api_deployer.deploy, meta={'deployment': self.deployment_uid})
 
   def kops_create_cluster(self, state):
     return kops.create_cluster(

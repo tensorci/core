@@ -89,7 +89,7 @@ class DeploymentTrained(Resource):
     # If desired to continue on and make API deploy, do so
     if with_api_deploy:
       deployer = BuildServerDeploy(deployment_uid=deployment.uid, build_for=clusters.API)
-      job_queue.add(deployer.deploy)
+      job_queue.add(deployer.deploy, meta={'deployment': deployment.uid})
 
     return '', 200
 
@@ -156,7 +156,7 @@ class ApiDeployment(Resource):
     logger.info('Found deployment to serve with SHA: {}'.format(latest_deployment.sha), queue=latest_deployment.uid)
 
     deployer = BuildServerDeploy(deployment_uid=latest_deployment.uid, build_for=clusters.API)
-    job_queue.add(deployer.deploy)
+    job_queue.add(deployer.deploy, meta={'deployment': latest_deployment.uid})
 
     return Response(stream_with_context(stream_logs(latest_deployment.uid)), headers={'X-Accel-Buffering': 'no'})
 
@@ -247,7 +247,7 @@ def perform_train_deploy(with_api_deploy=False):
                                build_for=clusters.TRAIN,
                                full_push=with_api_deploy)
 
-  job_queue.add(deployer.deploy)
+  job_queue.add(deployer.deploy, meta={'deployment': deployment.uid})
 
   return Response(stream_with_context(stream_logs(deployment.uid)), headers={'X-Accel-Buffering': 'no'})
 
