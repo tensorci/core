@@ -45,8 +45,17 @@ class CreateCluster(object):
     # Get S3 bucket url
     bucket_url = self.bucket.url()
 
-    # Create cluster with kops name=cluster.name
-    cluster_created = self.kops_create_cluster(state=bucket_url)
+    # Create cluster with kops
+    cluster_created = kops.create_cluster(
+      name=self.cluster.name,
+      zones=','.join(self.cluster.zones),
+      master_size=self.cluster.master_type,
+      node_size=self.cluster.node_type,
+      node_count=config.CLUSTER_NODE_COUNT,
+      state=bucket_url,
+      image=os_map.get(self.cluster.image),
+      version=os.environ.get('K8S_VERSION')
+    )
 
     if not cluster_created:
       return
@@ -61,18 +70,6 @@ class CreateCluster(object):
 
       api_deployer = ApiDeploy(deployment_uid=self.deployment_uid)
       job_queue.add(api_deployer.deploy, meta={'deployment': self.deployment_uid})
-
-  def kops_create_cluster(self, state):
-    return kops.create_cluster(
-      name=self.cluster.name,
-      zones=','.join(self.cluster.zones),
-      master_size=self.cluster.master_type,
-      node_size=self.cluster.node_type,
-      node_count=config.CLUSTER_NODE_COUNT,
-      state=state,
-      image=os_map.get(self.cluster.image),
-      version=os.environ.get('K8S_VERSION')
-    )
 
   def validate_cluster(self, state):
     while not kops.validate_cluster(name=self.cluster.name, state=state):

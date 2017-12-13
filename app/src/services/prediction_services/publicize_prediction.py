@@ -5,6 +5,7 @@ from src.utils.aws import add_dns_records
 from time import sleep
 import requests
 from kubernetes import client, config
+from src.utils import kubectl
 
 
 class PublicizePrediction(object):
@@ -25,14 +26,36 @@ class PublicizePrediction(object):
     self.set_db_reliant_attrs()
 
     # Expose deployment with a LoadBalancer service
-    service_success = self.create_service()
+    exposed = kubectl.expose(resource='deployment/{}'.format(self.deploy_name),
+                             port=self.port,
+                             target_port=self.target_port,
+                             name=self.service_name,
+                             context=self.cluster_name,
+                             cluster=self.cluster_name)
 
-    if not service_success:
+    if not exposed:
       return
 
-    # We need the CoreV1Api to list_namespaced_service
-    api_client = config.new_client_from_config(context=self.cluster_name)
+    # Annotate service with SSL Cert if port is 443
+    if self.port == 443:
+      sleep(3)
 
+      service_labels = {
+        'service.beta.kubernetes.io/aws-load-balancer-ssl-cert': os.environ.get('WILDCARD_SSL_CERT_ARN'),
+        'service.beta.kubernetes.io/aws-load-balancer-ssl-ports': self.port
+      }
+
+      annotated = kubectl.annotate(resource='service',
+                                   resource_name=self.service_name,
+                                   labels=service_labels,
+                                   context=self.cluster_name,
+                                   cluster=self.cluster_name)
+
+      if not annotated:
+        return
+
+    # We need the CoreV1Api to poll our services
+    api_client = config.new_client_from_config(context=self.cluster_name)
     self.api = client.CoreV1Api(api_client=api_client)
 
     # Get ELB for service
@@ -52,25 +75,8 @@ class PublicizePrediction(object):
 
     logger.info('Prediction live at https://{}/api/predict'.format(self.prediction.domain), queue=self.deployment_uid)
 
+    # Update the deployment to its final status: PREDICTING
     dbi.update(self.deployment, {'status': self.deployment.statuses.PREDICTING})
-
-  def create_service(self):
-    try:
-      # Create the service
-      os.system('kubectl expose deployment/{} --type=LoadBalancer --port={} --target-port={} --name={} --context={} --cluster={}'.format(
-        self.deploy_name, self.port, self.target_port, self.service_name, self.cluster_name, self.cluster_name))
-
-      if self.port == 443:
-        sleep(3)
-
-        # Annotate service with SSL Cert
-        os.system('kubectl annotate service {} service.beta.kubernetes.io/aws-load-balancer-ssl-cert={} service.beta.kubernetes.io/aws-load-balancer-ssl-ports={} --context={} --cluster={}'.format(
-          self.service_name, os.environ.get('WILDCARD_SSL_CERT_ARN'), self.port, self.cluster_name, self.cluster_name))
-    except BaseException as e:
-      logger.error('Error creating service {} with error: {}'.format(self.service_name, e), queue=self.deployment_uid)
-      return False
-
-    return True
 
   def wait_for_elb(self):
     elb = self.get_elb()
