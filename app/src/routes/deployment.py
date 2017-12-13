@@ -189,7 +189,7 @@ def perform_train_deploy(with_api_deploy=False):
     return PREDICTION_NAME_TAKEN
 
   # Flags we care about for logging purposes
-  is_new_prediction = not bool(prediction)
+  is_new_prediction = not prediction
   updated_git_repo = not is_new_prediction and prediction.git_repo != git_repo
 
   if not prediction:
