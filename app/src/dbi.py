@@ -108,6 +108,23 @@ def create(model, params={}):
   return model_instance
 
 
+def upsert(model, params={}, unscoped=False):
+  """
+  Update model if already exists. Create new one if not.
+
+  :param model:     (required) model class to upsert new record for
+  :param params:    (model-dependent) dict of params to upsert model with
+
+  :return: tuple --> (model_instance, is_new)
+  """
+  model_instance = find_one(model, params, unscoped=unscoped)
+
+  if model_instance:
+    return model_instance, False
+
+  return create(model, params), True
+
+
 def destroy(model_instance):
   """
   "Soft" delete a model instance (if allowed); otherwise, hard delete it.

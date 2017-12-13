@@ -25,7 +25,9 @@ class RestfulTeam(Resource):
     if not user:
       return UNAUTHORIZED
 
-    if dbi.find_one(Team, {'slug': slugify(api.payload['name'], separator='-', to_lower=True)}):
+    team_slug = slugify(api.payload['name'], separator='-', to_lower=True)
+
+    if dbi.find_one(Team, {'slug': team_slug}):
       return TEAM_NAME_TAKEN
 
     try:
