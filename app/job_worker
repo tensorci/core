@@ -2,9 +2,10 @@
 
 from rq import Connection, Worker
 from src.helpers.job_helper import handle_job_failure
+from src.utils.pyredis import redis
 
 
-with Connection():
+with Connection(redis):
     w = Worker(['default'])
     w.push_exc_handler(handle_job_failure)
     w.work()

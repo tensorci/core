@@ -8,7 +8,7 @@
 if [[ $CORE_ROLE == "worker" ]]; then
     python -m src.initializers.export_clusters
     chmod +x ./job_worker
-    ./job_worker -c worker_config
+    ./job_worker
 elif [[ $CORE_ROLE == "migration" ]]; then
     python manage.py db upgrade
 else
