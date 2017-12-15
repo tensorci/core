@@ -197,10 +197,16 @@ class TrainDeployment(Resource):
     latest_deployment = deployments[0]
 
     log_stream_key = 'train-{}'.format(latest_deployment.uid)  # redis key for the log stream
-    follow_logs = args.get('follow')  # Do they want to follow the real-time logs or no?
+    follow_logs = args.get('follow') == 'true'  # Do they want to follow the real-time logs or no?
 
-    # If they just want a dump of the current logs that exist up to this point, send those back.
-    if not follow_logs:
+    if follow_logs:
+      # Stream real-time training logs for the latest deploy
+      return Response(stream_with_context(log_streamer.from_stream(log_stream_key)),
+                      headers={'X-Accel-Buffering': 'no'})
+    else:
+      # Following real-time logs is NOT desired here. Just send back a dump of
+      # all the current logs up to this point.
+
       # Get all logs from redis stream
       current_logs = redis.xrange(log_stream_key)
 
@@ -210,11 +216,7 @@ class TrainDeployment(Resource):
       # Format a list of just the log text messages
       log_messages = [data.get('text') for ts, data in current_logs]
 
-      return log_messages
-
-    # Stream real-time training logs for the latest deploy
-    return Response(stream_with_context(log_streamer.from_stream(log_stream_key)),
-                    headers={'X-Accel-Buffering': 'no'})
+      return {'logs': log_messages}
 
 
 def perform_train_deploy(with_api_deploy=False):
