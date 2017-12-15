@@ -1,5 +1,4 @@
 import os
-import json
 from flask_restplus import Resource, fields
 from flask import request, Response, stream_with_context
 from src.routes import namespace, api
@@ -206,7 +205,7 @@ class TrainDeployment(Resource):
       current_logs = redis.xrange(log_stream_key)
 
       if not current_logs:
-        return {'msg': 'No logs to show.'}
+        return NO_LOGS_TO_SHOW
 
       # Format a list of just the log text messages
       log_messages = [data.get('text') for ts, data in current_logs]
