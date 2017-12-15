@@ -6,23 +6,32 @@ from kubernetes import config
 
 
 def perform():
+  kube_config = os.environ.get('KUBECONFIG')
+
   # Contexts map to hold which contexts already exist in our kube config
-  existing_contexts = get_existing_contexts()
+  existing_contexts = get_existing_contexts(kube_config)
 
   # All contexts map
   all_contexts = get_all_contexts()
 
-  # Export missing contexts
-  for name, state in all_contexts.iteritems():
-    if name not in existing_contexts:
-      export_cluster(name=name, state=state)
+  # Find contexts that haven't been exported yet
+  missing_contexts = [(name, state) for name, state in all_contexts.items() if name not in existing_contexts]
+
+  # If we need need to export some missing contexts, remove $KUBECONFIG.lock
+  if missing_contexts and os.path.exists('{}.lock'.format(kube_config)):
+    os.remove('{}.lock'.format(kube_config))
+
+  # Export the missing contexts
+  for context in missing_contexts:
+    name, state = context
+    export_cluster(name=name, state=state)
 
 
-def get_existing_contexts():
+def get_existing_contexts(kube_config):
   contexts = {}
 
   # Make sure our config file exists first before trying to access it
-  if os.path.exists(os.environ.get('KUBECONFIG')):
+  if os.path.exists(kube_config):
     kube_contexts = config.list_kube_config_contexts()
 
     if kube_contexts and not os.environ.get('FORCE_CLUSTER_REFRESH'):

@@ -264,7 +264,7 @@ def stream_logs(deployment_uid):
         continue
 
       item = json.loads(item[1])
-      complete = item.get('last_entry') is True
+      complete = item.get('complete') is True
 
       # if logger.error, update the deployment to failed=True
       if item.get('level') == 'error':

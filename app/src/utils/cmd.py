@@ -101,11 +101,11 @@ def bool_response_cmd(cmd):
   try:
     status, stdout, stderr = execute(cmd)
   except BaseException as e:
-    logger.error('Command () failed with unknown error: {}'.format(' '.join(cmd), e))
+    logger.error('Command {} failed with unknown error: {}'.format(' '.join(cmd), e))
     return False
 
   if status != 0:
-    logger.error('Command () returned non-zero status({}) with error {}'.format(' '.join(cmd), status, stderr))
+    logger.error('Command {} returned non-zero status({}) with error {}'.format(' '.join(cmd), status, stderr))
     return False
 
   return True
