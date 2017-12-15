@@ -8,12 +8,12 @@ from src import logger, dbi
 from src.helpers.user_helper import current_user
 from src.api_responses.errors import *
 from src.api_responses.success import *
-from src.utils import clusters
+from src.utils import clusters, log_streamer
 from src.utils.gh import fetch_git_repo
 from src.helpers.definitions import core_header_name
 from src.deploys.build_server_deploy import BuildServerDeploy
-from src.utils.pyredis import redis
 from src.utils.job_queue import job_queue
+from src.utils.pyredis import redis
 from src.helpers.deployment_statuses import ds
 
 train_deployment_model = api.model('Deployment', {
@@ -112,22 +112,16 @@ class ApiDeployment(Resource):
     prediction_slug = api.payload['prediction_slug']
 
     # Find a team for the provided team_slug that belongs to this user
-    team = [t for t in user.teams() if t.slug == team_slug]
+    team = user.team_for_slug(team_slug)
 
     if not team:
       return TEAM_NOT_FOUND
 
-    team = team[0]
-
-    # Find prediction for provided slug
-    prediction = dbi.find_one(Prediction, {'slug': prediction_slug})
+    # Find prediction for provided slug and team
+    prediction = dbi.find_one(Prediction, {'slug': prediction_slug, 'team': team})
 
     # Prediction required to already exist for API deploy
     if not prediction:
-      return PREDICTION_NOT_FOUND
-
-    # If prediction belongs to another team, just say the prediction wasn't found
-    if prediction.team != team:
       return PREDICTION_NOT_FOUND
 
     # Get all deployments for this prediction, ordered by most recently created
@@ -158,7 +152,70 @@ class ApiDeployment(Resource):
     deployer = BuildServerDeploy(deployment_uid=latest_deployment.uid, build_for=clusters.API)
     job_queue.add(deployer.deploy, meta={'deployment': latest_deployment.uid})
 
-    return Response(stream_with_context(stream_logs(latest_deployment.uid)), headers={'X-Accel-Buffering': 'no'})
+    return Response(stream_with_context(log_streamer.from_list(latest_deployment.uid)),
+                    headers={'X-Accel-Buffering': 'no'})
+
+
+@namespace.route('/deployment/logs')
+class TrainDeployment(Resource):
+  """Get training logs for a deployment"""
+
+  @namespace.doc('get_training_logs')
+  def get(self):
+    # Get current user
+    user = current_user()
+
+    if not user:
+      return UNAUTHORIZED
+
+    # Parse input args
+    args = dict(request.args.items())
+    team_slug = args.get('team_slug')
+    prediction_slug = args.get('prediction_slug')
+
+    if not team_slug or not prediction_slug:
+      return INVALID_INPUT_PAYLOAD
+
+    # Find a team for the provided team_slug that belongs to this user
+    team = user.team_for_slug(team_slug)
+
+    if not team:
+      return TEAM_NOT_FOUND
+
+    # Find prediction for provided slug and team
+    prediction = dbi.find_one(Prediction, {'slug': prediction_slug, 'team': team})
+
+    if not prediction:
+      return PREDICTION_NOT_FOUND
+
+    # Get all deployments for this prediction, ordered by most recently created
+    deployments = prediction.ordered_deployments()
+
+    if not deployments:
+      return NO_DEPLOYMENT_TO_SERVE
+
+    # Get latest deployment for prediction
+    latest_deployment = deployments[0]
+
+    log_stream_key = 'train-{}'.format(latest_deployment.uid)  # redis key for the log stream
+    follow_logs = args.get('follow')  # Do they want to follow the real-time logs or no?
+
+    # If they just want a dump of the current logs that exist up to this point, send those back.
+    if not follow_logs:
+      # Get all logs from redis stream
+      current_logs = redis.xrange(log_stream_key)
+
+      if not current_logs:
+        return {'msg': 'No logs to show.'}
+
+      # Format a list of just the log text messages
+      log_messages = [data.get('text') for ts, data in current_logs]
+
+      return log_messages
+
+    # Stream real-time training logs for the latest deploy
+    return Response(stream_with_context(log_streamer.from_stream(log_stream_key)),
+                    headers={'X-Accel-Buffering': 'no'})
 
 
 def perform_train_deploy(with_api_deploy=False):
@@ -174,12 +231,10 @@ def perform_train_deploy(with_api_deploy=False):
   git_repo = api.payload['git_repo']
 
   # Find a team for the provided team_slug that belongs to this user
-  team = [t for t in user.teams() if t.slug == team_slug]
+  team = user.team_for_slug(team_slug)
 
   if not team:
     return TEAM_NOT_FOUND
-
-  team = team[0]
 
   # Find prediction for provided slug
   prediction = dbi.find_one(Prediction, {'slug': prediction_slug})
@@ -249,32 +304,5 @@ def perform_train_deploy(with_api_deploy=False):
 
   job_queue.add(deployer.deploy, meta={'deployment': deployment.uid})
 
-  return Response(stream_with_context(stream_logs(deployment.uid)), headers={'X-Accel-Buffering': 'no'})
-
-
-def stream_logs(deployment_uid):
-  complete = False
-
-  while not complete:
-    item = redis.blpop(deployment_uid, timeout=30)
-
-    try:
-      if not item:
-        yield '<tci-keep-alive>\n'
-        continue
-
-      item = json.loads(item[1])
-      complete = item.get('complete') is True
-
-      # if logger.error, update the deployment to failed=True
-      if item.get('level') == 'error':
-        complete = True
-        deployment = dbi.find_one(Deployment, {'uid': deployment_uid})
-
-        if deployment:
-          logger.error('DEPLOYMENT FAILED: {}'.format(deployment_uid))
-          dbi.update(deployment, {'failed': True})
-
-      yield item.get('text') + '\n'
-    except:
-      break
+  return Response(stream_with_context(log_streamer.from_list(deployment.uid)),
+                  headers={'X-Accel-Buffering': 'no'})

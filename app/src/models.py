@@ -91,6 +91,19 @@ class User(db.Model):
 
     return dbi.find_all(Team, {'id': team_ids})
 
+  def team_for_slug(self, slug):
+    team_ids = [tu.team_id for tu in self.team_users]
+
+    if not team_ids:
+      return None
+
+    team = dbi.find_all(Team, {'id': team_ids, 'slug': slug})
+
+    if not team:
+      return None
+
+    return team[0]
+
 
 class Token(db.Model):
   id = db.Column(db.Integer, primary_key=True)
