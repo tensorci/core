@@ -24,6 +24,8 @@ Relationships:
   Prediction --> belongs_to --> Team
   Prediction --> has_many --> deployments
   Deployment --> belongs_to --> Prediction
+  Prediction --> has_many --> datasets
+  Dataset --> belongs_to --> Prediction
 """
 import datetime
 from slugify import slugify
@@ -286,3 +288,29 @@ class Deployment(db.Model):
   def __repr__(self):
     return '<Deployment id={}, uid={}, prediction_id={}, sha={}, status={}, created_at={}, failed={}>'.format(
       self.id, self.uid, self.prediction_id, self.sha, self.status, self.created_at, self.failed)
+
+
+class Dataset(db.Model):
+  id = db.Column(db.Integer, primary_key=True)
+  uid = db.Column(db.String, index=True, unique=True)
+  prediction_id = db.Column(db.Integer, db.ForeignKey('prediction.id'), index=True, nullable=False)
+  prediction = db.relationship('Prediction', backref='datasets')
+  name = db.Column(db.String(240), nullable=False)
+  slug = db.Column(db.String(240), index=True, nullable=False)
+  created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+  is_destroyed = db.Column(db.Boolean, server_default='f')
+
+  def __init__(self, prediction=None, prediction_id=None, name=None):
+    self.uid = uuid4().hex
+
+    if prediction_id:
+      self.prediction_id = prediction_id
+    else:
+      self.prediction = prediction
+
+    self.name = name
+    self.slug = slugify(name, separator='-', to_lower=True)
+
+  def __repr__(self):
+    return '<Dataset id={}, uid={}, prediction_id={}, name={}, slug={}, created_at={}, is_destroyed={}>'.format(
+      self.id, self.uid, self.prediction_id, self.name, self.slug, self.created_at, self.is_destroyed)
