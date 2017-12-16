@@ -22,3 +22,7 @@ AUTHENTICATION_FAILED = {'ok': False, 'code': 1300, 'error': 'authentication_fai
 # Deployment Errors
 NO_DEPLOYMENT_TO_SERVE = {'ok': False, 'code': 1400, 'error': 'no_deployment_to_serve'}, 404
 LATEST_DEPLOYMENT_TRAINING = {'ok': False, 'code': 1401, 'error': 'latest_deployment_still_training'}, 500
+
+# Dataset
+DATASET_NAME_TAKEN = {'ok': False, 'code': 1500, 'error': 'dataset_name_taken'}, 500
+DATASET_CREATION_FAILED = {'ok': False, 'code': 1501, 'error': 'dataset_creation_failed'}, 500

@@ -7,3 +7,4 @@ namespace = api.namespace('api')
 from team import *
 from user import *
 from deployment import *
+from dataset import *
