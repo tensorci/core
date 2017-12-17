@@ -1,4 +1,5 @@
 import os
+import json
 from sqlalchemy import create_engine
 
 dataset_db_url = os.environ.get('DATASET_DB_URL')
@@ -10,8 +11,9 @@ else:
 
 
 def create_table(name):
-  engine.execute('CREATE TABLE {}(id serial PRIMARY KEY, data JSON);'.format(name))
+  engine.execute('CREATE TABLE {} (id serial PRIMARY KEY NOT NULL, data json NOT NULL);'.format(name))
 
 
 def populate_records(records, table=None):
-  # Add all this shit to the table
+  for r in records:
+    engine.execute('INSERT INTO {} (data) VALUES (\'{}\')'.format(table, json.dumps(r)))
