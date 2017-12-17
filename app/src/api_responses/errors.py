@@ -23,7 +23,10 @@ AUTHENTICATION_FAILED = {'ok': False, 'code': 1300, 'error': 'authentication_fai
 NO_DEPLOYMENT_TO_SERVE = {'ok': False, 'code': 1400, 'error': 'no_deployment_to_serve'}, 404
 LATEST_DEPLOYMENT_TRAINING = {'ok': False, 'code': 1401, 'error': 'latest_deployment_still_training'}, 500
 
-# Dataset
+# Dataset Errors
 DATASET_NAME_TAKEN = {'ok': False, 'code': 1500, 'error': 'dataset_name_taken'}, 500
 DATASET_CREATION_FAILED = {'ok': False, 'code': 1501, 'error': 'dataset_creation_failed'}, 500
 NO_FILE_PROVIDED = {'ok': False, 'code': 1502, 'error': 'no_file_provided'}, 500
+
+# Bucket Errors
+BUCKET_NOT_FOUND = {'ok': False, 'code': 1600, 'error': 'bucket_not_found'}, 404

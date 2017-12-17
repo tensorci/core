@@ -6,6 +6,7 @@ from src import logger, dbi
 from src.helpers.user_helper import current_user
 from src.api_responses.errors import *
 from src.api_responses.success import *
+from src.services.dataset_services.create_dataset import CreateDataset
 
 
 @namespace.route('/dataset')
@@ -26,16 +27,16 @@ class RestfulDataset(Resource):
     prediction_slug = payload.get('prediction_slug')
     dataset_slug = payload.get('dataset_slug')
 
+    # Validate payload
     if not team_slug or not prediction_slug or not dataset_slug:
       return INVALID_INPUT_PAYLOAD
 
+    # Get dataset file
     files = dict(request.files.items()) or {}
     f = files.get('file')
 
     if not f:
       return NO_FILE_PROVIDED
-
-    stream = f.stream
 
     # Find a team for the provided team_slug that belongs to this user
     team = user.team_for_slug(team_slug)
@@ -49,20 +50,18 @@ class RestfulDataset(Resource):
     if not prediction:
       return PREDICTION_NOT_FOUND
 
+    # Check to see if a dataset already exists for this slug within this prediction
     dataset = dbi.find_one(Dataset, {'slug': dataset_slug, 'prediction': prediction})
 
     if dataset:
       return DATASET_NAME_TAKEN
 
     try:
-      dataset = dbi.create(Dataset, {
-        'prediction': prediction,
-        'name': dataset_slug
-      })
+      # Create the dataset
+      svc = CreateDataset(dataset_slug, prediction=prediction, fileobj=f)
+      svc.perform()
     except BaseException as e:
       logger.error('Error creating Dataset(name={}, prediction={}): {}'.format(dataset_slug, prediction, e))
       return DATASET_CREATION_FAILED
-
-    # TODO: add all the uploading logic here
 
     return DATASET_CREATION_SUCCESS

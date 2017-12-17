@@ -9,15 +9,9 @@ else:
   print('DATASET_DB_URL env not set. Not creating SQLAlchemy engine.')
 
 
-def get_conn():
-  return engine.connect()
-
-
 def create_table(name):
-  conn = get_conn()
-  # Create a table named <name> with a json column named 'data'
+  engine.execute('CREATE TABLE {}(id serial PRIMARY KEY, data JSON);'.format(name))
 
 
 def populate_records(records, table=None):
-  # Do a batch insert to <table> with data=record for each record in records
-  pass
+  # Add all this shit to the table
