@@ -25,8 +25,11 @@ class CreateDataset(object):
     if type(data) != list:
       raise BaseException('Data is not a JSON array')
 
+    prediction_slug = self.prediction.slug.replace('-', '_')
+    dataset_slug = dataset.slug.replace('-', '_')
+
     # Create a new table in our dataset DB for the dataset's records
-    table_name = '{}_{}'.format(self.prediction.slug, dataset.slug)
+    table_name = '{}_{}'.format(prediction_slug, dataset_slug)
     dataset_db.create_table(table_name)
 
     # Batch insert the data into the table
