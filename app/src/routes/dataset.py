@@ -1,4 +1,5 @@
-from flask_restplus import Resource, fields
+from flask import request
+from flask_restplus import Resource
 from src.routes import namespace, api
 from src.models import Prediction, Dataset
 from src import logger, dbi
@@ -6,19 +7,12 @@ from src.helpers.user_helper import current_user
 from src.api_responses.errors import *
 from src.api_responses.success import *
 
-create_dataset_model = api.model('Dataset', {
-  'prediction_slug': fields.String(required=True),
-  'team_slug': fields.String(required=True),
-  'dataset_slug': fields.String(required=True)
-})
-
 
 @namespace.route('/dataset')
 class RestfulDataset(Resource):
   """Restful interface for the Dataset model"""
 
   @namespace.doc('create_dataset')
-  @namespace.expect(create_dataset_model, validate=True)
   def post(self):
     # Get current user
     user = current_user()
@@ -27,9 +21,21 @@ class RestfulDataset(Resource):
       return UNAUTHORIZED
 
     # Get refs to payload info
-    team_slug = api.payload['team_slug']
-    prediction_slug = api.payload['prediction_slug']
-    dataset_slug = api.payload['dataset_slug']
+    payload = dict(request.form.items())
+    team_slug = payload.get('team_slug')
+    prediction_slug = payload.get('prediction_slug')
+    dataset_slug = payload.get('dataset_slug')
+
+    if not team_slug or not prediction_slug or not dataset_slug:
+      return INVALID_INPUT_PAYLOAD
+
+    files = dict(request.files.items()) or {}
+    f = files.get('file')
+
+    if not f:
+      return NO_FILE_PROVIDED
+
+    stream = f.stream
 
     # Find a team for the provided team_slug that belongs to this user
     team = user.team_for_slug(team_slug)
