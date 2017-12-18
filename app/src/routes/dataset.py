@@ -44,11 +44,24 @@ class RestfulDataset(Resource):
     if not team:
       return TEAM_NOT_FOUND
 
-    # Find prediction for provided slug and team
-    prediction = dbi.find_one(Prediction, {'slug': prediction_slug, 'team': team})
+    # Conditionally upsert prediction:
+
+    # Find prediction for slug
+    prediction = dbi.find_one(Prediction, {'slug': prediction_slug})
+
+    # If prediction already belongs to another team, respond saying the name is not available.
+    if prediction and prediction.team != team:
+      return PREDICTION_NAME_TAKEN
 
     if not prediction:
-      return PREDICTION_NOT_FOUND
+      try:
+        prediction = dbi.create(Prediction, {
+          'team': team,
+          'name': prediction_slug
+        })
+      except BaseException as e:
+        logger.error('Error creating Prediction(name={}, team={}): {}'.format(prediction_slug, team, e))
+        return PREDICTION_CREATION_FAILED
 
     # Check to see if a dataset already exists for this slug within this prediction
     dataset = dbi.find_one(Dataset, {'slug': dataset_slug, 'prediction': prediction})
