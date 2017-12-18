@@ -311,6 +311,9 @@ class Dataset(db.Model):
     self.name = name
     self.slug = slugify(name, separator='-', to_lower=True)
 
+  def table(self):
+    return '{}_{}'.format(self.prediction.slug, self.slug).replace('-', '_')
+
   def __repr__(self):
     return '<Dataset id={}, uid={}, prediction_id={}, name={}, slug={}, created_at={}, is_destroyed={}>'.format(
       self.id, self.uid, self.prediction_id, self.name, self.slug, self.created_at, self.is_destroyed)
