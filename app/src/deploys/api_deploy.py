@@ -23,13 +23,18 @@ class ApiDeploy(AbstractDeploy):
     self.ports = [80]
     self.replicas = 3
 
+    if self.dataset:
+      dataset_table = self.dataset.table()
+    else:
+      dataset_table = ''
+
     self.envs = {
       'AWS_ACCESS_KEY_ID': os.environ.get('AWS_ACCESS_KEY_ID'),
       'AWS_SECRET_ACCESS_KEY': os.environ.get('AWS_SECRET_ACCESS_KEY'),
       'AWS_REGION_NAME': os.environ.get('AWS_REGION_NAME'),
       'S3_BUCKET_NAME': self.cluster.bucket.name,
       'DATASET_DB_URL': os.environ.get('DATASET_DB_URL'),
-      'DATASET_TABLE_NAME': self.prediction.dataset_table(),
+      'DATASET_TABLE_NAME': dataset_table,
       'PREDICTION': self.prediction.slug,
       'PREDICTION_UID': self.prediction.uid,
       'CLIENT_ID': self.prediction.client_id,
