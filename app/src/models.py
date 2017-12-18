@@ -231,9 +231,6 @@ class Prediction(db.Model):
       self.id, self.uid, self.team_id, self.name, self.slug, self.elb, self.domain,
       self.git_repo, self.image_repo_owner, self.deploy_name, self.model_ext, self.is_destroyed, self.created_at)
 
-  def dataset_table(self):
-    return '{}-{}'.format(self.slug, self.uid)
-
   def ordered_deployments(self):
     return sorted(self.deployments, key=attrgetter('created_at'), reverse=True)
 

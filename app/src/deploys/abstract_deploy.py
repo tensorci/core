@@ -12,6 +12,7 @@ class AbstractDeploy(object):
     self.team = None
     self.cluster = None
     self.bucket = None
+    self.dataset = None
 
     self.api_client = None
     self.api = None
@@ -167,6 +168,11 @@ class AbstractDeploy(object):
     self.team = self.prediction.team
     self.cluster = self.team.cluster
     self.bucket = self.cluster.bucket
+
+    datasets = self.prediction.datasets
+
+    if datasets:
+      self.dataset = datasets[0]
 
   def update_deployment_status(self, status):
     logger.info('Updating Deployment(sha={}) of Prediction(slug={}) to status: {}.'.format(

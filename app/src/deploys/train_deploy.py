@@ -25,13 +25,18 @@ class TrainDeploy(AbstractDeploy):
     self.job = True
     self.restart_policy = 'Never'
 
+    if self.dataset:
+      dataset_table = self.dataset.table()
+    else:
+      dataset_table = ''
+
     self.envs = {
       'AWS_ACCESS_KEY_ID': os.environ.get('AWS_ACCESS_KEY_ID'),
       'AWS_SECRET_ACCESS_KEY': os.environ.get('AWS_SECRET_ACCESS_KEY'),
       'AWS_REGION_NAME': os.environ.get('AWS_REGION_NAME'),
       'S3_BUCKET_NAME': self.cluster.bucket.name,
       'DATASET_DB_URL': os.environ.get('DATASET_DB_URL'),
-      'DATASET_TABLE_NAME': self.prediction.dataset_table(),
+      'DATASET_TABLE_NAME': dataset_table,
       'CORE_URL': config.CORE_URL,
       'CORE_API_TOKEN': os.environ.get('CORE_API_TOKEN'),
       'PREDICTION': self.prediction.slug,

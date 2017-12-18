@@ -16,4 +16,4 @@ def create_table(name):
 
 def populate_records(records, table=None):
   for r in records:
-    engine.execute('INSERT INTO {} (data) VALUES (\'{}\')'.format(table, json.dumps(r)))
+    engine.execute('INSERT INTO {} (data) VALUES (\'{}\');'.format(table, json.dumps(r)))
