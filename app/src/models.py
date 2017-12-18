@@ -200,11 +200,12 @@ class Prediction(db.Model):
   deploy_name = db.Column(db.String(360))
   client_id = db.Column(db.String(240))
   client_secret = db.Column(db.String(240))
+  model_ext = db.Column(db.String(60))
   is_destroyed = db.Column(db.Boolean, server_default='f')
   created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
   def __init__(self, team=None, team_id=None, name=None, elb=None, domain=None, git_repo=None,
-               image_repo_owner=None, deploy_name=None, client_id=None, client_secret=None):
+               image_repo_owner=None, deploy_name=None, client_id=None, client_secret=None, model_ext=None):
 
     self.uid = uuid4().hex
 
@@ -222,18 +223,25 @@ class Prediction(db.Model):
     self.deploy_name = deploy_name
     self.client_id = client_id or uuid4().hex
     self.client_secret = client_secret or auth_util.fresh_secret()
+    self.model_ext = model_ext
 
   def __repr__(self):
     return '<Prediction id={}, uid={}, team_id={}, name={}, slug={}, elb={}, domain={}, ' \
-           'git_repo={}, image_repo_owner={}, deploy_name={}, is_destroyed={}, created_at={}>'.format(
+           'git_repo={}, image_repo_owner={}, deploy_name={}, model_ext={}, is_destroyed={}, created_at={}>'.format(
       self.id, self.uid, self.team_id, self.name, self.slug, self.elb, self.domain,
-      self.git_repo, self.image_repo_owner, self.deploy_name, self.is_destroyed, self.created_at)
+      self.git_repo, self.image_repo_owner, self.deploy_name, self.model_ext, self.is_destroyed, self.created_at)
 
   def dataset_table(self):
     return '{}-{}'.format(self.slug, self.uid)
 
   def ordered_deployments(self):
     return sorted(self.deployments, key=attrgetter('created_at'), reverse=True)
+
+  def model_file(self):
+    if not self.model_ext:
+      return None
+
+    return '{}.{}'.format(self.slug, self.model_ext)
 
 
 class Bucket(db.Model):

@@ -18,7 +18,8 @@ from src.helpers.deployment_statuses import ds
 train_deployment_model = api.model('Deployment', {
   'team_slug': fields.String(required=True),
   'prediction_slug': fields.String(required=True),
-  'git_repo': fields.String(required=True)
+  'git_repo': fields.String(required=True),
+  'model_ext': fields.String(required=True)
 })
 
 deployment_trained_model = api.model('Deployment', {
@@ -230,6 +231,7 @@ def perform_train_deploy(with_api_deploy=False):
   team_slug = api.payload['team_slug']
   prediction_slug = api.payload['prediction_slug']
   git_repo = api.payload['git_repo']
+  model_ext = api.payload['model_ext']
 
   # Find a team for the provided team_slug that belongs to this user
   team = user.team_for_slug(team_slug)
@@ -258,8 +260,8 @@ def perform_train_deploy(with_api_deploy=False):
       logger.error('Error creating Prediction(name={}, team={}): {}'.format(prediction_slug, team, e))
       return PREDICTION_CREATION_FAILED
 
-  # Update the prediction's repo regardless of if it's a new prediction
-  prediction = dbi.update(prediction, {'git_repo': git_repo})
+  # Always update the prediction's repo and model extension
+  prediction = dbi.update(prediction, {'git_repo': git_repo, 'model_ext': model_ext})
 
   try:
     repo = fetch_git_repo(git_repo)  # fetch git repo

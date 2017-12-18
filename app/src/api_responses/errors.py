@@ -16,6 +16,7 @@ NO_COMMITS_IN_REPO = {'ok': False, 'code': 1203, 'error': 'no_commits_found_in_r
 ERROR_FETCHING_REPO = {'ok': False, 'code': 1204, 'error': 'error_fetching_repo'}, 500
 ERROR_PARSING_COMMITS_FOR_REPO = {'ok': False, 'code': 1205, 'error': 'error_parsing_repo_commits'}, 500
 ERROR_PULLING_MODEL_FILE = {'ok': False, 'code': 1206, 'error': 'error_pulling_model_file'}, 500
+NO_MODEL_FILE_FOUND = {'ok': False, 'code': 1207, 'error': 'no_model_file_found', 'log': 'No model file found.'}, 404
 
 # User Errors
 AUTHENTICATION_FAILED = {'ok': False, 'code': 1300, 'error': 'authentication_failed'}, 401

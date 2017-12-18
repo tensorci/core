@@ -44,14 +44,20 @@ class FetchModel(Resource):
 
     # Download the file from S3 and stream it back to the client
     s3 = boto3.resource('s3')
-    key = prediction.slug + '.ckpt'  # TODO: make this ext storable somewhere
+    key = prediction.model_file()
+
+    if not key:
+      return NO_MODEL_FILE_FOUND
 
     try:
       file = s3.Object(bucket.name, key).get()
+
+    # TODO: except boto3 NoSuchKey exception and return NO_MODEL_FILE_FOUND
     except BaseException as e:
       logger.error('Error fetching model file from S3 (bucket={}, key={}): {}'.format(bucket.name, key, e))
       return ERROR_PULLING_MODEL_FILE
 
     resp = make_response(file['Body'].read())
+    resp.headers['Model-File-Type'] = prediction.model_ext
 
     return resp
