@@ -1,4 +1,5 @@
 import boto3
+from botocore.exceptions import ClientError
 from flask import make_response, request
 from flask_restplus import Resource
 from src.routes import namespace, api
@@ -51,8 +52,11 @@ class FetchModel(Resource):
 
     try:
       file = s3.Object(bucket.name, key).get()
-
-    # TODO: except boto3 NoSuchKey exception and return NO_MODEL_FILE_FOUND
+    except ClientError as e:
+      if e.response['Error']['Code'] == 'NoSuchKey':
+        return NO_MODEL_FILE_FOUND
+      else:
+        raise e
     except BaseException as e:
       logger.error('Error fetching model file from S3 (bucket={}, key={}): {}'.format(bucket.name, key, e))
       return ERROR_PULLING_MODEL_FILE
