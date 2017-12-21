@@ -176,7 +176,7 @@ class AbstractDeploy(object):
 
   def update_deployment_status(self, status):
     logger.info('Updating Deployment(sha={}) of Prediction(slug={}) to status: {}.'.format(
-      self.deployment.sha, self.prediction.slug, status), queue=self.deployment_uid)
+      self.deployment.sha, self.prediction.slug, status))
 
     self.deployment = dbi.update(self.deployment, {'status': status})
 

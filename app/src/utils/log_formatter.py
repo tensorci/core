@@ -35,4 +35,4 @@ def training_log(log):
   if log.get('method'):
     prefix += ' [{}]'.format(log.get('method'))
 
-  return '{}: {}\n'.format(prefix, text)
+  return '{}: {}'.format(prefix, text) + '\n'

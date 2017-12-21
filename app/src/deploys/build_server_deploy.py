@@ -55,7 +55,10 @@ class BuildServerDeploy(AbstractDeploy):
       'REDIS_URL': os.environ.get('REDIS_URL')
     }
 
-    logger.info('Deploying to build server...', queue=self.deployment_uid, section=True)
+    if self.build_for == clusters.TRAIN:
+      logger.info('Building for training cluster...', queue=self.deployment_uid, section=True)
+    elif self.build_for == clusters.API:
+      logger.info('Building for API cluster...', queue=self.deployment_uid, section=True)
 
     super(BuildServerDeploy, self).deploy()
 
@@ -82,21 +85,14 @@ class BuildServerDeploy(AbstractDeploy):
       if etype == 'ADDED':
         logger.info('Job {} started.'.format(self.deploy_name))
 
-        if self.build_for == clusters.TRAIN:
-          logger.info('Building for training cluster', queue=self.deployment_uid, section=True)
-        elif self.build_for == clusters.API:
-          logger.info('Building for API cluster', queue=self.deployment_uid, section=True)
-
       if status.get('failed') is not None:
         logger.error('FAILED JOB, {}, for deployment(sha={}) of prediction(slug={}).'.format(
           self.deploy_name, self.deployment.sha, self.prediction.slug))
 
         logger.error('Build job failed.', queue=self.deployment_uid)
-
         watcher.stop()
 
       if status.get('succeeded'):
-        logger.info('Job {} succeeded.'.format(self.deploy_name))
         logger.info('Successfully built image', queue=self.deployment_uid)
         self.on_build_success()
         watcher.stop()
