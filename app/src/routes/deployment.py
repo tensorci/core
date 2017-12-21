@@ -292,14 +292,17 @@ def perform_train_deploy(with_api_deploy=False):
     'sha': latest_sha
   })
 
-  # Log the above activity to the user
+  # Start showing logs to the user
   if is_new_prediction:
-    logger.info('Created new prediction: {}'.format(prediction.slug), queue=deployment.uid)
+    logger.info('Creating new prediction'.format(prediction.slug), queue=deployment.uid, section=True)
+    logger.info('Name: {}'.format(prediction.slug), queue=deployment.uid)
 
   if updated_git_repo:
-    logger.info('Updated prediction\'s git repo to {}'.format(git_repo), queue=deployment.uid)
+    logger.info('Detected new git repository'.format(git_repo), queue=deployment.uid, section=True)
+    logger.info('Repo: '.format(git_repo), queue=deployment.uid)
 
-  logger.info('New SHA detected: {}'.format(latest_sha), queue=deployment.uid)
+  logger.info('New SHA detected', queue=deployment.uid, section=True)
+  logger.info('SHA: {}'.format(latest_sha), queue=deployment.uid)
 
   deployer = BuildServerDeploy(deployment_uid=deployment.uid,
                                build_for=clusters.TRAIN,
