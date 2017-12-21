@@ -54,4 +54,4 @@ class TrainDeploy(AbstractDeploy):
 
     logger.info('Successfully deployed to training cluster.',
                 queue=self.deployment_uid,
-                last_entry=(not self.with_api_deploy))
+                last_entry=True)
