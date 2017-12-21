@@ -14,6 +14,7 @@ from src.deploys.build_server_deploy import BuildServerDeploy
 from src.utils.job_queue import job_queue
 from src.utils.pyredis import redis
 from src.helpers.deployment_statuses import ds
+from src.utils.log_formatter import training_log
 
 train_deployment_model = api.model('Deployment', {
   'team_slug': fields.String(required=True),
@@ -219,7 +220,7 @@ class TrainDeployment(Resource):
         return NO_LOGS_TO_SHOW
 
       # Format a list of just the log text messages
-      log_messages = [data.get('text') for ts, data in current_logs]
+      log_messages = [training_log(data).rstrip() for ts, data in current_logs]
 
       return {'logs': log_messages}
 
