@@ -151,7 +151,7 @@ class ApiDeployment(Resource):
                 queue=latest_deployment.uid,
                 section=True)
 
-    logger.info('Scheduling API build...', queue=latest_deployment.uid)
+    logger.info('Scheduling API build...', queue=latest_deployment.uid, section=True)
 
     deployer = BuildServerDeploy(deployment_uid=latest_deployment.uid, build_for=clusters.API)
     job_queue.add(deployer.deploy, meta={'deployment': latest_deployment.uid})
@@ -307,7 +307,7 @@ def perform_train_deploy(with_api_deploy=False):
 
   logger.info('New SHA detected: {}'.format(latest_sha), queue=deployment.uid, section=True)
 
-  logger.info('Scheduling training build...', queue=deployment.uid)
+  logger.info('Scheduling training build...', queue=deployment.uid, section=True)
 
   deployer = BuildServerDeploy(deployment_uid=deployment.uid,
                                build_for=clusters.TRAIN,

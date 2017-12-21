@@ -45,7 +45,7 @@ class TrainDeploy(AbstractDeploy):
       'WITH_API_DEPLOY': str(self.with_api_deploy).lower()
     }
 
-    logger.info('Deploying...', queue=self.deployment_uid)
+    logger.info('Deploying...', queue=self.deployment_uid, section=True)
 
     super(TrainDeploy, self).deploy()
 
