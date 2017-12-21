@@ -55,6 +55,8 @@ class BuildServerDeploy(AbstractDeploy):
       'REDIS_URL': os.environ.get('REDIS_URL')
     }
 
+    logger.info('Deploying to build server...', queue=self.deployment_uid, section=True)
+
     super(BuildServerDeploy, self).deploy()
 
   def on_deploy_success(self):
@@ -81,9 +83,9 @@ class BuildServerDeploy(AbstractDeploy):
         logger.info('Job {} started.'.format(self.deploy_name))
 
         if self.build_for == clusters.TRAIN:
-          logger.info('Building for training cluster...', queue=self.deployment_uid, section=True)
+          logger.info('Building for training cluster', queue=self.deployment_uid, section=True)
         elif self.build_for == clusters.API:
-          logger.info('Building for API cluster...', queue=self.deployment_uid, section=True)
+          logger.info('Building for API cluster', queue=self.deployment_uid, section=True)
 
       if status.get('failed') is not None:
         logger.error('FAILED JOB, {}, for deployment(sha={}) of prediction(slug={}).'.format(
@@ -115,7 +117,7 @@ class BuildServerDeploy(AbstractDeploy):
       bucket_name = '{}-{}'.format(self.team.slug, self.team.uid)
       bucket_success = create_s3_bucket(bucket_name)
 
-      logger.info('Configuring model storage...', queue=self.deployment_uid, section=True)
+      logger.info('Configuring model storage', queue=self.deployment_uid, section=True)
 
       if not bucket_success:
         logger.error('Model storage creation failed.', queue=self.deployment_uid)
@@ -124,7 +126,7 @@ class BuildServerDeploy(AbstractDeploy):
       logger.info('Done', queue=self.deployment_uid)
       dbi.update(self.bucket, {'name': bucket_name})
 
-    logger.info('Scheduling deploy to training cluster', queue=self.deployment_uid, section=True)
+    logger.info('Scheduling deploy to training cluster...', queue=self.deployment_uid, section=True)
 
     # Schedule a deploy to the training cluster
     train_deployer = TrainDeploy(deployment_uid=self.deployment_uid, with_api_deploy=self.full_push)
@@ -141,13 +143,13 @@ class BuildServerDeploy(AbstractDeploy):
       self.create_cluster_and_deploy()
 
   def create_api_deploy(self):
-    logger.info('Scheduling deploy to API cluster', queue=self.deployment_uid, section=True)
+    logger.info('Scheduling deploy to API cluster...', queue=self.deployment_uid, section=True)
 
     api_deployer = ApiDeploy(deployment_uid=self.deployment_uid)
     job_queue.add(api_deployer.deploy, meta={'deployment': self.deployment_uid})
 
   def create_cluster_and_deploy(self):
-    logger.info('Scheduling API cluster creation', queue=self.deployment_uid, section=True)
+    logger.info('Scheduling API cluster creation...', queue=self.deployment_uid, section=True)
 
     create_cluster_svc = CreateCluster(team_uid=self.team.uid,
                                        deployment_uid=self.deployment_uid,

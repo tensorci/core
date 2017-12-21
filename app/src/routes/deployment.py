@@ -147,7 +147,10 @@ class ApiDeployment(Resource):
     if latest_deployment_status_idx > done_training_idx and not latest_deployment.failed:
       return DEPLOYMENT_UP_TO_DATE
 
-    logger.info('Found deployment to serve with SHA: {}'.format(latest_deployment.sha), queue=latest_deployment.uid)
+    logger.info('New deployment detected to serve', queue=latest_deployment.uid, section=True)
+    logger.info('SHA: {}', queue=latest_deployment.sha)
+
+    logger.info('Scheduling API build...', queue=latest_deployment.uid, section=True)
 
     deployer = BuildServerDeploy(deployment_uid=latest_deployment.uid, build_for=clusters.API)
     job_queue.add(deployer.deploy, meta={'deployment': latest_deployment.uid})
@@ -294,7 +297,7 @@ def perform_train_deploy(with_api_deploy=False):
 
   # Start showing logs to the user
   if is_new_prediction:
-    logger.info('Creating new prediction'.format(prediction.slug), queue=deployment.uid, section=True)
+    logger.info('Creating new project'.format(prediction.slug), queue=deployment.uid, section=True)
     logger.info('Name: {}'.format(prediction.slug), queue=deployment.uid)
 
   if updated_git_repo:
@@ -303,6 +306,8 @@ def perform_train_deploy(with_api_deploy=False):
 
   logger.info('New SHA detected', queue=deployment.uid, section=True)
   logger.info('SHA: {}'.format(latest_sha), queue=deployment.uid)
+
+  logger.info('Scheduling training build...', queue=deployment.uid, section=True)
 
   deployer = BuildServerDeploy(deployment_uid=deployment.uid,
                                build_for=clusters.TRAIN,
