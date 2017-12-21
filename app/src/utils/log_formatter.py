@@ -51,6 +51,6 @@ def colorize(text, method):
     return color(text, fg='green')
 
   if method == 'test':
-    return color(text, fg='blue')
+    return color(text, fg='cyan')
 
   return text
