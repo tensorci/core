@@ -93,7 +93,7 @@ class BuildServerDeploy(AbstractDeploy):
         watcher.stop()
 
       if status.get('succeeded'):
-        logger.info('Successfully built image', queue=self.deployment_uid)
+        logger.info('Successfully built image.', queue=self.deployment_uid)
         self.on_build_success()
         watcher.stop()
 
@@ -113,7 +113,7 @@ class BuildServerDeploy(AbstractDeploy):
       bucket_name = '{}-{}'.format(self.team.slug, self.team.uid)
       bucket_success = create_s3_bucket(bucket_name)
 
-      logger.info('Configuring model storage', queue=self.deployment_uid, section=True)
+      logger.info('Configuring model storage...', queue=self.deployment_uid, section=True)
 
       if not bucket_success:
         logger.error('Model storage creation failed.', queue=self.deployment_uid)

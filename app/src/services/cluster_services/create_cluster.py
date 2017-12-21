@@ -24,8 +24,8 @@ class CreateCluster(object):
   def perform(self):
     self.set_db_reliant_attrs()
 
-    logger.info('Creating API cluster (this only has to happen once)', queue=self.deployment_uid, section=True)
-    logger.info('Adding DNS records (this could take a minute)', queue=self.deployment_uid)
+    logger.info('Creating API cluster (this only has to happen once)...', queue=self.deployment_uid, section=True)
+    logger.info('Adding DNS records (this could take a minute)...', queue=self.deployment_uid)
 
     # Create Route53 hosted zone for cluster
     hosted_zone_id, ns_addresses = create_route53_hosted_zone(self.cluster.name)
@@ -47,7 +47,7 @@ class CreateCluster(object):
     # Get S3 bucket url
     bucket_url = self.bucket.url()
 
-    logger.info('Spinning up instances', queue=self.deployment_uid)
+    logger.info('Spinning up instances...', queue=self.deployment_uid)
 
     # Create cluster with kops
     cluster_created = kops.create_cluster(
@@ -64,14 +64,14 @@ class CreateCluster(object):
     if not cluster_created:
       return
 
-    logger.info('Validating cluster (this could take awhile)', queue=self.deployment_uid)
+    logger.info('Validating cluster (this could take awhile)...', queue=self.deployment_uid)
 
     # Wait until our cluster is up and running
     self.validate_cluster(bucket_url)
 
     # Make an API deploy once cluster is validated (if desired)
     if self.with_deploy:
-      logger.info('Scheduling deploy to API cluster', queue=self.deployment_uid, section=True)
+      logger.info('Scheduling deploy to API cluster...', queue=self.deployment_uid, section=True)
       sleep(5)
 
       api_deployer = ApiDeploy(deployment_uid=self.deployment_uid)
@@ -83,7 +83,7 @@ class CreateCluster(object):
       sleep(120)
 
     # Register that the cluster is validated
-    logger.info('Cluster successfully created', queue=self.deployment_uid)
+    logger.info('Cluster successfully created.', queue=self.deployment_uid)
 
     dbi.update(self.cluster, {'validated': True})
 

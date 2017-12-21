@@ -25,8 +25,8 @@ class PublicizePrediction(object):
   def perform(self):
     self.set_db_reliant_attrs()
 
-    logger.info('Publicizing prediction', queue=self.deployment_uid, section=True)
-    logger.info('Exposing deployment', queue=self.deployment_uid)
+    logger.info('Publicizing prediction...', queue=self.deployment_uid, section=True)
+    logger.info('Exposing deployment...', queue=self.deployment_uid)
 
     # Expose deployment with a LoadBalancer service
     exposed = kubectl.expose(resource='deployment/{}'.format(self.deploy_name),
@@ -77,8 +77,10 @@ class PublicizePrediction(object):
     # Ping the url until the hostname is resolved
     self.poll_url()
 
-    logger.info('Publication success', queue=self.deployment_uid)
-    logger.info('Prediction live at https://{}/api/predict'.format(self.prediction.domain), queue=self.deployment_uid)
+    logger.info('Publication successful.', queue=self.deployment_uid)
+    logger.info('Prediction live at https://{}/api/predict'.format(self.prediction.domain),
+                queue=self.deployment_uid,
+                last_entry=True)
 
     # Update the deployment to its final status: PREDICTING
     dbi.update(self.deployment, {'status': self.deployment.statuses.PREDICTING})
