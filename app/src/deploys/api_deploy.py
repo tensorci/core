@@ -41,14 +41,14 @@ class ApiDeploy(AbstractDeploy):
       'CLIENT_SECRET': self.prediction.client_secret
     }
 
+    logger.info('Deploying...', queue=self.deployment_uid)
+
     if self.prediction.deploy_name:
       self.update_deploy()
     else:
       super(ApiDeploy, self).deploy()
 
   def update_deploy(self):
-    logger.info('Updating existing deploy...', queue=self.deployment_uid)
-
     body = {
       'spec': {
         'template': {
@@ -80,11 +80,11 @@ class ApiDeploy(AbstractDeploy):
 
     if self.prediction.elb:
       self.update_deployment_status(self.deployment.statuses.PREDICTING)
-
-      logger.info('Successfully deployed {}.'.format(self.deployment.sha),
-                  queue=self.deployment_uid,
-                  last_entry=True)
+      logger.info('Successfully deployed to API', queue=self.deployment_uid, last_entry=True)
     else:
+      logger.info('Successfully deployed to API', queue=self.deployment_uid)
+      logger.info('Scheduling prediction for publication...', queue=self.deployment_uid, section=True)
+
       sleep(3)  # wait a hot sec for deployment to be absolutely registered
 
       # Set up ELB and CNAME record for deployment if not already there

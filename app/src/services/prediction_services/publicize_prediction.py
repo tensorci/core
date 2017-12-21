@@ -25,6 +25,9 @@ class PublicizePrediction(object):
   def perform(self):
     self.set_db_reliant_attrs()
 
+    logger.info('Publicizing prediction', queue=self.deployment_uid, section=True)
+    logger.info('Exposing deployment', queue=self.deployment_uid)
+
     # Expose deployment with a LoadBalancer service
     exposed = kubectl.expose(resource='deployment/{}'.format(self.deploy_name),
                              port=self.port,
@@ -64,15 +67,17 @@ class PublicizePrediction(object):
     # Update the prediction record with the ELB's url
     self.prediction = dbi.update(self.prediction, {'elb': elb_url})
 
+    logger.info('Assigning url to prediction...', queue=self.deployment_uid)
+
     # Create a CNAME record for your subdomain with the ELB's url
     add_dns_records(os.environ.get('TL_HOSTED_ZONE_ID'), self.prediction.domain, [elb_url], 'CNAME')
 
-    logger.info('Waiting for TTL (60s)...', queue=self.deployment_uid)
     sleep(60)
 
     # Ping the url until the hostname is resolved
     self.poll_url()
 
+    logger.info('Publication success', queue=self.deployment_uid)
     logger.info('Prediction live at https://{}/api/predict'.format(self.prediction.domain), queue=self.deployment_uid)
 
     # Update the deployment to its final status: PREDICTING
@@ -130,7 +135,7 @@ class PublicizePrediction(object):
 
   def attempt_connection(self):
     url = 'https://{}'.format(self.prediction.domain)
-    logger.info('Pinging url {}...'.format(url), queue=self.deployment_uid)
+    logger.info('Pinging url until response...', queue=self.deployment_uid)
 
     try:
       requests.get(url)
