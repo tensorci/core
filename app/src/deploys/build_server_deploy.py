@@ -4,7 +4,7 @@ from train_deploy import TrainDeploy
 from api_deploy import ApiDeploy
 from src.utils import image_names, clusters
 from src.config import get_config
-from src.helpers import time_since_epoch
+from src.helpers import ms_since_epoch
 from kubernetes import watch
 from src.utils.aws import create_s3_bucket
 from src import dbi, logger
@@ -25,7 +25,7 @@ class BuildServerDeploy(AbstractDeploy):
     self.set_db_reliant_attrs()
     self.container_name = '{}-{}-build'.format(self.prediction.slug, self.build_for)
     self.image = '{}/{}'.format(config.IMAGE_REPO_OWNER, image_names.BUILD_SERVER)
-    self.deploy_name = '{}-{}'.format(self.container_name, time_since_epoch())
+    self.deploy_name = '{}-{}'.format(self.container_name, ms_since_epoch(as_int=True))
     self.cluster_name = os.environ.get('BS_CLUSTER_NAME')
     self.job = True
     self.restart_policy = 'Never'

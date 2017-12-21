@@ -1,5 +1,6 @@
 import json
 from pyredis import redis
+from src.helpers import ms_since_epoch
 
 
 class Logger(object):
@@ -26,7 +27,9 @@ class Logger(object):
       data = {
         'text': text,
         'level': level,
-        'complete': kwargs.get('last_entry')
+        'complete': kwargs.get('last_entry'),
+        'ts': ms_since_epoch(),
+        'section': kwargs.get('section')
       }
 
       redis.rpush(kwargs.get('queue'), json.dumps(data))

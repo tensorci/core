@@ -1,6 +1,5 @@
 import urllib
 import sys
-import calendar
 import time
 
 if sys.version_info[0] < 3:
@@ -19,5 +18,10 @@ def url_encode_str(string):
   return quote(string)
 
 
-def time_since_epoch():
-  return calendar.timegm(time.gmtime())
+def ms_since_epoch(as_int=False):
+  ms = time.time() * 1000
+
+  if as_int:
+    return int(round(ms))
+
+  return ms

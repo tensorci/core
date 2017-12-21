@@ -1,4 +1,5 @@
 import json
+import log_formatter
 from src import logger, dbi
 from pyredis import redis
 from src.models import Deployment
@@ -30,7 +31,7 @@ def from_list(list_key):
           logger.error('DEPLOYMENT FAILED: {}'.format(list_key))
           dbi.update(deployment, {'failed': True})
 
-      yield item.get('text') + '\n'
+      yield log_formatter.deploy_log(item)
     except:
       break
 
@@ -50,7 +51,7 @@ def from_stream(stream_key):
         # yield the first log and continue
         if not first_log_yielded:
           first_log_yielded = True
-          yield data.get('text', '') + '\n'
+          yield log_formatter.training_log(data)
           continue
 
         # Get all logs since timestamp=ts
@@ -68,7 +69,7 @@ def from_stream(stream_key):
 
         for item in items:
           ts, data = item
-          yield data.get('text', '') + '\n'
+          yield log_formatter.training_log(data)
       except:
         break
   else:
@@ -81,6 +82,6 @@ def from_stream(stream_key):
           continue
 
         ts, data = item[0]
-        yield data.get('text', '') + '\n'
+        yield log_formatter.training_log(data)
       except:
         break

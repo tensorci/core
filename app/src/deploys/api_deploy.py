@@ -5,7 +5,7 @@ from src import dbi, logger
 from src.utils import clusters
 from src.services.prediction_services.publicize_prediction import PublicizePrediction
 from src.utils.job_queue import job_queue
-from src.helpers import time_since_epoch
+from src.helpers import ms_since_epoch
 from kubernetes import client, config
 
 
@@ -18,7 +18,7 @@ class ApiDeploy(AbstractDeploy):
     self.set_db_reliant_attrs()
     self.container_name = '{}-{}'.format(self.prediction.slug, clusters.API)
     self.image = '{}/{}:{}'.format(self.prediction.image_repo_owner, self.container_name, self.deployment.sha)
-    self.deploy_name = '{}-{}'.format(self.container_name, time_since_epoch())
+    self.deploy_name = '{}-{}'.format(self.container_name, ms_since_epoch(as_int=True))
     self.cluster_name = self.cluster.name
     self.ports = [80]
     self.replicas = 3

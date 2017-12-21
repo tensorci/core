@@ -3,7 +3,7 @@ from abstract_deploy import AbstractDeploy
 from src import logger
 from src.utils import clusters
 from src.config import get_config
-from src.helpers import time_since_epoch
+from src.helpers import ms_since_epoch
 
 config = get_config()
 
@@ -18,7 +18,7 @@ class TrainDeploy(AbstractDeploy):
     self.set_db_reliant_attrs()  # TODO: turn into decorator
     self.container_name = '{}-{}'.format(self.prediction.slug, clusters.TRAIN)
     self.image = '{}/{}:{}'.format(self.prediction.image_repo_owner, self.container_name, self.deployment.sha)
-    self.deploy_name = '{}-{}'.format(self.container_name, time_since_epoch())
+    self.deploy_name = '{}-{}'.format(self.container_name, ms_since_epoch(as_int=True))
     self.cluster = self.team.cluster
     self.cluster_name = os.environ.get('TRAIN_CLUSTER_NAME')
     self.job = True
