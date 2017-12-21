@@ -27,7 +27,7 @@ def training_log(log):
   if not text:
     return '\n'
 
-  ms = int(log.get('ts') or ms_since_epoch())
+  ms = float(log.get('ts')) or ms_since_epoch()
   dt = datetime.fromtimestamp(ms / 1000.0, pytz.utc).strftime('%Y-%m-%dT%H:%M:%S.%f')
 
   prefix = dt
@@ -35,4 +35,4 @@ def training_log(log):
   if log.get('method'):
     prefix += ' [{}]'.format(log.get('method'))
 
-  return '{}: {}'.format(prefix, text) + '\n'
+  return '{}: {}\n'.format(prefix, text)
