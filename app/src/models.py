@@ -24,6 +24,8 @@ Relationships:
   Prediction --> belongs_to --> Team
   Prediction --> has_many --> deployments
   Deployment --> belongs_to --> Prediction
+  Deployment --> has_one --> TrainJob
+  TrainJob --> has_one --> Deployment
   Prediction --> has_many --> datasets
   Dataset --> belongs_to --> Prediction
 """
@@ -275,6 +277,7 @@ class Deployment(db.Model):
   prediction = db.relationship('Prediction', backref='deployments')
   sha = db.Column(db.String(360))
   status = db.Column(db.String(60))
+  train_job = db.relationship('TrainJob', uselist=False, back_populates='deployment')
   created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
   failed = db.Column(db.Boolean, server_default='f')
   statuses = ds
@@ -302,10 +305,13 @@ class Dataset(db.Model):
   prediction = db.relationship('Prediction', backref='datasets')
   name = db.Column(db.String(240), nullable=False)
   slug = db.Column(db.String(240), index=True, nullable=False)
+  retrain_step_size = db.Column(db.Integer)
+  last_train_record_count = db.Column(db.Integer)
   created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
   is_destroyed = db.Column(db.Boolean, server_default='f')
 
-  def __init__(self, prediction=None, prediction_id=None, name=None):
+  def __init__(self, prediction=None, prediction_id=None, name=None,
+               retrain_step_size=None, last_train_record_count=0):
     self.uid = uuid4().hex
 
     if prediction_id:
@@ -315,10 +321,21 @@ class Dataset(db.Model):
 
     self.name = name
     self.slug = slugify(name, separator='-', to_lower=True)
+    self.retrain_step_size = retrain_step_size
+    self.last_train_record_count = last_train_record_count
 
   def table(self):
     return '{}_{}'.format(self.prediction.slug, self.slug).replace('-', '_')
 
   def __repr__(self):
     return '<Dataset id={}, uid={}, prediction_id={}, name={}, slug={}, created_at={}, is_destroyed={}>'.format(
-      self.id, self.uid, self.prediction_id, self.name, self.slug, self.created_at, self.is_destroyed)
+      self.id, self.uid, self.prediction_id, self.name, self.slug, self.retrain_step_size,
+      self.last_train_record_count, self.created_at, self.is_destroyed)
+
+
+class TrainJob(db.Model):
+  id = db.Column(db.Integer, primary_key=True)
+  deployment_id = db.Column(db.Integer, db.ForeignKey('deployment.id'), index=True, nullable=False)
+  deployment = db.relationship('Deployment', back_populates='train_job')
+  started_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+  ended_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
