@@ -17,3 +17,12 @@ def create_table(name):
 def populate_records(records, table=None):
   for r in records:
     engine.execute('INSERT INTO {} (data) VALUES (\'{}\');'.format(table, json.dumps(r)))
+
+
+def record_count(table=None):
+  result = [r for r in engine.execute('SELECT COUNT(*) FROM {};'.format(table))]
+
+  if not result or not result[0]:
+    return 0
+
+  return int(result[0][0])
