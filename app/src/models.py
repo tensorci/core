@@ -355,6 +355,6 @@ class TrainJob(db.Model):
   def end(self):
     return dbi.update(self, {'ended_at': datetime.datetime.utcnow()})
 
-  # TODO: make sure this isn't fucked
   def duration(self):
     return self.ended_at - self.started_at
+
