@@ -9,3 +9,4 @@ from user import *
 from deployment import *
 from dataset import *
 from prediction import *
+from integration import *

@@ -411,12 +411,12 @@ class PredictionIntegration(db.Model):
   integration_id = db.Column(db.Integer, db.ForeignKey('integration.id'), index=True, nullable=False)
   integration = db.relationship('Integration', backref='prediction_integrations')
   api_key = db.Column(db.String(360))
-  metadata = db.Column(JSON)
+  meta = db.Column(JSON)
   is_destroyed = db.Column(db.Boolean, server_default='f')
   created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
   def __init__(self, prediction=None, prediction_id=None, integration=None,
-               integration_id=None, api_key=None, metadata=None):
+               integration_id=None, api_key=None, meta=None):
     self.uid = uuid4().hex
 
     if prediction_id:
@@ -430,8 +430,8 @@ class PredictionIntegration(db.Model):
       self.integration = integration
 
     self.api_key = api_key
-    self.metadata = metadata or {}
+    self.meta = meta or {}
 
   def __repr__(self):
-    return '<PredictionIntegration id={}, uid={}, prediction_id={}, integration_id={}, api_key={}, metadata={}, created_at={}, is_destroyed={}>'.format(
-      self.id, self.uid, self.prediction_id, self.integration_id, self.api_key, self.metadata, self.created_at, self.is_destroyed)
+    return '<PredictionIntegration id={}, uid={}, prediction_id={}, integration_id={}, api_key={}, meta={}, created_at={}, is_destroyed={}>'.format(
+      self.id, self.uid, self.prediction_id, self.integration_id, self.api_key, self.meta, self.created_at, self.is_destroyed)
