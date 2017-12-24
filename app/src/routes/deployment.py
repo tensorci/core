@@ -89,12 +89,10 @@ class DeploymentTrained(Resource):
     # Update deployment to DONE_TRAINING status
     deployment = dbi.update(deployment, {'status': ds.DONE_TRAINING})
 
-    # Deploy to API if desired
-    if with_api_deploy:
+    if with_api_deploy:  # continue on, deploying to API cluster
       deployer = BuildServerDeploy(deployment_uid=deployment.uid, build_for=clusters.API)
       job_queue.add(deployer.deploy, meta={'deployment': deployment.uid})
-    elif update_prediction_model:
-      # If the API deploy needs to pull the latest trained model, tell it to do so
+    elif update_prediction_model:  # tell the API cluster to pull the latest model
       pred_messenger = PredMessenger(prediction_uid=deployment.prediction.uid)
       job_queue.add(pred_messenger.update_model)
 
