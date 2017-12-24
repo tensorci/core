@@ -12,5 +12,14 @@ class OAuth(Resource):
   """
   @namespace.doc('oauth_callback')
   def post(self, slug):
-    print slug
+    return ''
+
+
+@namespace.route('/webhook/<string:slug>')
+class Webhook(Resource):
+  """
+  Webhook endpoint for integrations
+  """
+  @namespace.doc('integrations_webhook')
+  def post(self, slug):
     return ''
