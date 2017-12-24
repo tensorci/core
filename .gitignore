@@ -110,3 +110,5 @@ app.db
 app/create_internal_cluster.py
 
 bin/deploy/
+
+*.pem
