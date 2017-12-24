@@ -1,16 +1,19 @@
 #!/bin/bash
 
-# Start appropriate process based on it's env role. One of 3 options:
+# Start appropriate process based on it's env role. One of 4 options:
 # (1) Worker
 # (2) Migrations
+# (3) Retrain watcher
 # (3) Server (default)
 
 if [[ $CORE_ROLE == "worker" ]]; then
-    python -m src.initializers.export_clusters
-    chmod +x ./job_worker
-    ./job_worker
+  python -m src.initializers.export_clusters
+  chmod +x ./job_worker
+  ./job_worker
 elif [[ $CORE_ROLE == "migration" ]]; then
-    python manage.py db upgrade
+  python manage.py db upgrade
+elif [[ $CORE_ROLE == "retrain_watcher" ]]; then
+  python retrain_watcher.py
 else
-    /usr/bin/supervisord
+  /usr/bin/supervisord
 fi
