@@ -13,6 +13,7 @@ from src.helpers.definitions import core_header_name
 from src.deploys.build_server_deploy import BuildServerDeploy
 from src.utils.job_queue import job_queue
 from src.utils.pyredis import redis
+from src.utils.pred_messenger import PredMessenger
 from src.helpers.deployment_statuses import ds
 from src.utils.log_formatter import training_log
 
@@ -68,6 +69,7 @@ class DeploymentTrained(Resource):
     # Get required params
     deployment_uid = api.payload['deployment_uid']
     with_api_deploy = api.payload['with_api_deploy']
+    update_prediction_model = api.payload['update_prediction_model']
 
     # Get deployment for uid
     deployment = dbi.find_one(Deployment, {'uid': deployment_uid})
@@ -87,10 +89,14 @@ class DeploymentTrained(Resource):
     # Update deployment to DONE_TRAINING status
     deployment = dbi.update(deployment, {'status': ds.DONE_TRAINING})
 
-    # If desired to continue on and make API deploy, do so
+    # Deploy to API if desired
     if with_api_deploy:
       deployer = BuildServerDeploy(deployment_uid=deployment.uid, build_for=clusters.API)
       job_queue.add(deployer.deploy, meta={'deployment': deployment.uid})
+    elif update_prediction_model:
+      # If the API deploy needs to pull the latest trained model, tell it to do so
+      pred_messenger = PredMessenger(prediction_uid=deployment.prediction.uid)
+      job_queue.add(pred_messenger.update_model)
 
     return '', 200
 

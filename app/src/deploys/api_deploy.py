@@ -38,7 +38,8 @@ class ApiDeploy(AbstractDeploy):
       'PREDICTION': self.prediction.slug,
       'PREDICTION_UID': self.prediction.uid,
       'CLIENT_ID': self.prediction.client_id,
-      'CLIENT_SECRET': self.prediction.client_secret
+      'CLIENT_SECRET': self.prediction.client_secret,
+      'INTERNAL_MSG_TOKEN': self.prediction.internal_msg_token
     }
 
     logger.info('Deploying...', queue=self.deployment_uid, section=True)

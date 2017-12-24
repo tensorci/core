@@ -203,11 +203,13 @@ class Prediction(db.Model):
   client_id = db.Column(db.String(240))
   client_secret = db.Column(db.String(240))
   model_ext = db.Column(db.String(60))
+  internal_msg_token = db.Column(db.String(240))
   is_destroyed = db.Column(db.Boolean, server_default='f')
   created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
   def __init__(self, team=None, team_id=None, name=None, elb=None, domain=None, git_repo=None,
-               image_repo_owner=None, deploy_name=None, client_id=None, client_secret=None, model_ext=None):
+               image_repo_owner=None, deploy_name=None, client_id=None, client_secret=None,
+               model_ext=None, internal_msg_token=None):
 
     self.uid = uuid4().hex
 
@@ -226,6 +228,7 @@ class Prediction(db.Model):
     self.client_id = client_id or uuid4().hex
     self.client_secret = client_secret or auth_util.fresh_secret()
     self.model_ext = model_ext
+    self.internal_msg_token = internal_msg_token or auth_util.fresh_secret()
 
   def __repr__(self):
     return '<Prediction id={}, uid={}, team_id={}, name={}, slug={}, elb={}, domain={}, ' \
@@ -241,6 +244,9 @@ class Prediction(db.Model):
       return None
 
     return '{}.{}'.format(self.slug, self.model_ext)
+
+  def api_url(self):
+    return 'https://{}/api'.format(self.domain)
 
 
 class Bucket(db.Model):
