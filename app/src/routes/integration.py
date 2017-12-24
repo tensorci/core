@@ -7,7 +7,9 @@ from src import logger, dbi
 
 @namespace.route('/oauth/<string:slug>')
 class OAuth(Resource):
-
+  """
+  OAuth callback endpoint for integrations
+  """
   @namespace.doc('oauth_callback')
   def post(self, slug):
     print slug
