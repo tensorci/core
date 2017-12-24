@@ -32,3 +32,6 @@ NO_FILE_PROVIDED = {'ok': False, 'code': 1502, 'error': 'no_file_provided'}, 500
 
 # Bucket Errors
 BUCKET_NOT_FOUND = {'ok': False, 'code': 1600, 'error': 'bucket_not_found'}, 404
+
+# Integration Errors
+INTEGRATION_NOT_FOUND = {'ok': False, 'code': 1700, 'error': 'integration_not_found'}, 404

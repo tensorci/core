@@ -11,3 +11,6 @@ NO_LOGS_TO_SHOW = {'ok': True, 'log': 'No logs to show.'}, 200
 
 # Dataset
 DATASET_CREATION_SUCCESS = {'ok': True, 'message': 'Dataset Successfully Created'}, 201
+
+# PredictionIntegration
+PREDICTION_INTEGRATION_CREATION_SUCCESS = {'ok': True, 'message': 'PredictionIntegration Successfully Created'}, 201
