@@ -89,6 +89,14 @@ class DeploymentTrained(Resource):
     # Update deployment to DONE_TRAINING status
     deployment = dbi.update(deployment, {'status': ds.DONE_TRAINING})
 
+    # Get the deployment's train_job
+    train_job = deployment.train_job
+
+    if train_job:
+      train_job.end()  # mark the train_job as ended
+    else:
+      logger.warn('Deployment(uid={}) has no train_job for some reason...'.format(deployment.uid))
+
     if with_api_deploy:  # continue on, deploying to API cluster
       deployer = BuildServerDeploy(deployment_uid=deployment.uid, build_for=clusters.API)
       job_queue.add(deployer.deploy, meta={'deployment': deployment.uid})

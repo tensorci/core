@@ -344,4 +344,17 @@ class TrainJob(db.Model):
   deployment_id = db.Column(db.Integer, db.ForeignKey('deployment.id'), index=True, nullable=False)
   deployment = db.relationship('Deployment', back_populates='train_job')
   started_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
-  ended_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+  ended_at = db.Column(db.DateTime)
+
+  def __init__(self, deployment=None, deployment_id=None):
+    if deployment_id:
+      self.deployment_id = deployment_id
+    else:
+      self.deployment = deployment
+
+  def end(self):
+    return dbi.update(self, {'ended_at': datetime.datetime.utcnow()})
+
+  # TODO: make sure this isn't fucked
+  def duration(self):
+    return self.ended_at - self.started_at

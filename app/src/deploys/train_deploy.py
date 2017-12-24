@@ -1,6 +1,7 @@
 import os
 from abstract_deploy import AbstractDeploy
-from src import logger
+from src import logger, dbi
+from src.models import TrainJob
 from src.utils import clusters
 from src.config import get_config
 from src.helpers import ms_since_epoch
@@ -52,7 +53,11 @@ class TrainDeploy(AbstractDeploy):
     super(TrainDeploy, self).deploy()
 
   def on_deploy_success(self):
+    # Update deployment status to TRAINING
     self.update_deployment_status(self.deployment.statuses.TRAINING)
+
+    # Create a TrainJob for this Deployment to track time spent on cluster
+    dbi.create(TrainJob, {'deployment': self.deployment})
 
     logger.info('Successfully deployed to training cluster.',
                 queue=self.deployment_uid,
