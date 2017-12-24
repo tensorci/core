@@ -5,8 +5,10 @@ from src.models import Prediction, Deployment
 from src.utils.dataset_db import record_count
 from src.utils import clusters
 from src.deploys.build_server_deploy import BuildServerDeploy
+from src.deploys.train_deploy import TrainDeploy
 from src.utils.job_queue import job_queue
 from time import sleep
+from src.helpers.deployment_statuses import ds
 
 
 def watch(intv=60):
@@ -57,14 +59,23 @@ def watch(intv=60):
           'sha': latest_deployment.sha
         })
 
+        # Schedule a training build if the latest deployment hasn't already uploaded a build for this SHA.
+        if ds.statuses.index(latest_deployment.status) < ds.statuses.index(ds.DONE_BUILDING_FOR_TRAIN):
+          deployer = BuildServerDeploy(deployment_uid=deployment.uid,
+                                       build_for=clusters.TRAIN,
+                                       update_prediction_model=True)
+        else:
+          # A build for this SHA has already been uploaded, so just deploy directly to the training cluster.
+          deployment = dbi.update(deployment, {'status': ds.DONE_BUILDING_FOR_TRAIN})
+
+          deployer = TrainDeploy(deployment_uid=deployment.uid,
+                                 update_prediction_model=True)
+
+        # Schedule deploy
+        job_queue.add(deployer.deploy, meta={'deployment': deployment.uid})
+
         # Update the dataset with it's new current record count
         dbi.update(dataset, {'last_train_record_count': curr_record_count})
-
-        # Schedule a new training build
-        deployer = BuildServerDeploy(deployment_uid=deployment.uid,
-                                     build_for=clusters.TRAIN)
-
-        job_queue.add(deployer.deploy, meta={'deployment': deployment.uid})
 
     sleep(intv)
 
