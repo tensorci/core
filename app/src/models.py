@@ -28,6 +28,12 @@ Relationships:
   TrainJob --> has_one --> Deployment
   Prediction --> has_many --> datasets
   Dataset --> belongs_to --> Prediction
+  Prediction --> has_one --> PredictionSetting
+  PredictionSetting --> has_one --> Prediction
+  PredictionIntegration --> belongs_to --> Prediction
+  PredictionIntegration --> belongs_to --> Integration
+  Prediction --> has_many --> prediction_integrations
+  Integration --> has_many --> prediction_integrations
 """
 import datetime
 from slugify import slugify
@@ -204,6 +210,7 @@ class Prediction(db.Model):
   client_secret = db.Column(db.String(240))
   model_ext = db.Column(db.String(60))
   internal_msg_token = db.Column(db.String(240))
+  prediction_setting = db.relationship('PredictionSetting', uselist=False, back_populates='prediction')
   is_destroyed = db.Column(db.Boolean, server_default='f')
   created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
@@ -358,3 +365,73 @@ class TrainJob(db.Model):
   def duration(self):
     return self.ended_at - self.started_at
 
+
+class PredictionSetting(db.Model):
+  id = db.Column(db.Integer, primary_key=True)
+  prediction_id = db.Column(db.Integer, db.ForeignKey('prediction.id'), index=True, nullable=False)
+  prediction = db.relationship('Prediction', back_populates='prediction_setting')
+  retrain_on_merge = db.Column(db.Boolean, server_default='f')
+
+  def __init__(self, prediction=None, prediction_id=None, retrain_on_merge=False):
+    if prediction_id:
+      self.prediction_id = prediction_id
+    else:
+      self.prediction = prediction
+
+    self.retrain_on_merge = retrain_on_merge
+
+  def __repr__(self):
+    return '<PredictionSetting id={}, prediction_id={}, retrain_on_merge={}>'.format(
+      self.id, self.prediction_id, self.retrain_on_merge)
+
+
+class Integration(db.Model):
+  id = db.Column(db.Integer, primary_key=True)
+  uid = db.Column(db.String, index=True, unique=True)
+  name = db.Column(db.String(240), nullable=False)
+  slug = db.Column(db.String(240), index=True, unique=True)
+  created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+  is_destroyed = db.Column(db.Boolean, server_default='f')
+
+  def __init__(self, name=None):
+    self.uid = uuid4().hex
+    self.name = name
+    self.slug = slugify(name, separator='-', to_lower=True)
+
+  def __repr__(self):
+    return '<Integration id={}, uid={}, name={}, slug={}, created_at={}, is_destroyed={}>'.format(
+      self.id, self.uid, self.name, self.slug, self.created_at, self.is_destroyed)
+
+
+class PredictionIntegration(db.Model):
+  id = db.Column(db.Integer, primary_key=True)
+  uid = db.Column(db.String, index=True, unique=True)
+  prediction_id = db.Column(db.Integer, db.ForeignKey('prediction.id'), index=True, nullable=False)
+  prediction = db.relationship('Prediction', backref='prediction_integrations')
+  integration_id = db.Column(db.Integer, db.ForeignKey('integration.id'), index=True, nullable=False)
+  integration = db.relationship('Integration', backref='prediction_integrations')
+  api_key = db.Column(db.String(360))
+  metadata = db.Column(JSON)
+  is_destroyed = db.Column(db.Boolean, server_default='f')
+  created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+
+  def __init__(self, prediction=None, prediction_id=None, integration=None,
+               integration_id=None, api_key=None, metadata=None):
+    self.uid = uuid4().hex
+
+    if prediction_id:
+      self.prediction_id = prediction_id
+    else:
+      self.prediction = prediction
+
+    if integration_id:
+      self.integration_id = integration_id
+    else:
+      self.integration = integration
+
+    self.api_key = api_key
+    self.metadata = metadata or {}
+
+  def __repr__(self):
+    return '<PredictionIntegration id={}, uid={}, prediction_id={}, integration_id={}, api_key={}, metadata={}, created_at={}, is_destroyed={}>'.format(
+      self.id, self.uid, self.prediction_id, self.integration_id, self.api_key, self.metadata, self.created_at, self.is_destroyed)
