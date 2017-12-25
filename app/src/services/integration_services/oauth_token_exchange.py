@@ -1,4 +1,5 @@
 import requests
+from urlparse import parse_qs
 
 
 class OAuthTokenExchange(object):
@@ -14,36 +15,29 @@ class OAuthTokenExchange(object):
     # Get url and build payload for integration
     url = self.integration.oauth_token_exchange_url
     args = {}
-    headers = self.build_headers()
     data = self.build_payload()
 
-    if headers:
-      args['headers'] = headers
-
     if data:
-      args['json'] = data
+      args['params'] = data
 
     # Request access token from temp code
     resp = requests.post(url, **args)
 
-    import code; code.interact(local=locals())
+    if resp.status_code not in (200, 201):
+      return self
 
-    if resp.status_code in (200, 201):
-      try:
-        json = resp.json() or {}
-        self.access_token = json.get('access_token')
-      except:
-        pass
+    content = resp.content
+
+    if not content:
+      return self
+
+    content = parse_qs(content) or {}
+    access_token = content.get('access_token')
+
+    if access_token:
+      self.access_token = access_token[0]
 
     return self
-
-  def build_headers(self):
-    headers = {}
-
-    if self.integration.slug == 'github':
-      headers['Accept'] = 'application/vnd.github.machine-man-preview+json'
-
-    return headers
 
   def build_payload(self):
     payload = {
@@ -56,6 +50,6 @@ class OAuthTokenExchange(object):
       payload['state'] = self.state
 
     if self.redirect_uri:
-      payload['redirect_uri'] = self.red
+      payload['redirect_uri'] = self.redirect_uri
 
     return payload

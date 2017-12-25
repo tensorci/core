@@ -117,7 +117,8 @@ def upsert(model, params={}, unscoped=False):
 
   :return: tuple --> (model_instance, is_new)
   """
-  model_instance = find_one(model, params, unscoped=unscoped)
+  query_params = {k: v for k, v in params.items()}
+  model_instance = find_one(model, query_params, unscoped=unscoped)
 
   if model_instance:
     return model_instance, False

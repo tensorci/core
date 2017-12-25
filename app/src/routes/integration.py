@@ -6,6 +6,9 @@ from src.api_responses.errors import *
 from src.api_responses.success import *
 from src import logger, dbi
 from src.services.integration_services.oauth_token_exchange import OAuthTokenExchange
+from src.config import get_config
+
+config = get_config()
 
 
 @namespace.route('/oauth/<string:slug>')
@@ -41,6 +44,7 @@ class OAuth(Resource):
     try:
       token_swap_svc = OAuthTokenExchange(integration=integration,
                                           temp_code=temp_code,
+                                          redirect_uri='http://localhost:5000/api/oauth/github',
                                           state=state)
       token_swap_svc.perform()
     except BaseException as e:
@@ -54,7 +58,7 @@ class OAuth(Resource):
       return OAUTH_TOKEN_SWAP_FAILED
 
     try:
-      pred_integration = dbi.upsert(PredictionIntegration, {
+      pred_integration, is_new = dbi.upsert(PredictionIntegration, {
         'prediction': prediction,
         'integration': integration
       })
@@ -63,10 +67,10 @@ class OAuth(Resource):
         state, slug, e))
       return PREDICTION_INTEGRATION_UPSERT_FAILED
 
-    if pred_integration.api_token != token_swap_svc.access_token:
-      dbi.update(pred_integration, {'api_token': token_swap_svc.access_token})
+    if pred_integration.api_key != token_swap_svc.access_token:
+      dbi.update(pred_integration, {'api_key': token_swap_svc.access_token})
 
-    # TODO: is this access token for just this user or this entire integration?
+    # TODO: I think this is a user token, so we'll probably save this in a new UserIntegration model
 
     return PREDICTION_INTEGRATION_CREATION_SUCCESS
 
@@ -83,4 +87,8 @@ class Webhook(Resource):
     if not integration:
       return INTEGRATION_NOT_FOUND
 
-    return ''
+    logger.info('{} webhook heard'.format(slug))
+    logger.info('Payload: {}'.format(api.payload))
+    logger.info('Headers: {}'.format(request.headers))
+
+    return {}, 200
