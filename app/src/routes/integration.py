@@ -7,6 +7,7 @@ from src.api_responses.success import *
 from src import logger, dbi
 from src.services.integration_services.oauth_token_exchange import OAuthTokenExchange
 from src.config import get_config
+from urlparse import urlparse
 
 config = get_config()
 
@@ -42,9 +43,12 @@ class OAuth(Resource):
       return PREDICTION_NOT_FOUND
 
     try:
+      parsed_url = urlparse(request.url)
+      redirect_uri = '{}://{}{}'.format(parsed_url.scheme, parsed_url.netloc, parsed_url.path)
+
       token_swap_svc = OAuthTokenExchange(integration=integration,
                                           temp_code=temp_code,
-                                          redirect_uri='http://localhost:5000/api/oauth/github',
+                                          redirect_uri=redirect_uri,
                                           state=state)
       token_swap_svc.perform()
     except BaseException as e:
@@ -87,7 +91,7 @@ class Webhook(Resource):
     if not integration:
       return INTEGRATION_NOT_FOUND
 
-    logger.info('{} webhook heard'.format(slug))
+    logger.info('{} webhook heard for prediction'.format(slug, prediction))
     logger.info('Payload: {}'.format(api.payload))
     logger.info('Headers: {}'.format(request.headers))
 
