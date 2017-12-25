@@ -38,7 +38,7 @@ Relationships:
 import datetime
 from slugify import slugify
 from sqlalchemy.dialects.postgresql import JSON
-from src import db, dbi
+from src import db, dbi, logger
 from helpers import auth_util, team_user_roles, user_verification_statuses, instance_types
 from helpers.deployment_statuses import ds
 from uuid import uuid4
@@ -203,7 +203,7 @@ class Prediction(db.Model):
   slug = db.Column(db.String(240), index=True, unique=True)
   elb = db.Column(db.String(240))
   domain = db.Column(db.String(360))
-  git_repo = db.Column(db.String(240))
+  git_repo = db.Column(db.String(240), index=True)
   image_repo_owner = db.Column(db.String(120))
   deploy_name = db.Column(db.String(360))
   client_id = db.Column(db.String(240))
@@ -396,7 +396,7 @@ class Integration(db.Model):
   def __init__(self, name=None):
     self.uid = uuid4().hex
     self.name = name
-    self.slug = slugify(name, separator='-', to_lower=True)
+    self.slug = slugify(name, separator='_', to_lower=True)
 
   def __repr__(self):
     return '<Integration id={}, uid={}, name={}, slug={}, created_at={}, is_destroyed={}>'.format(

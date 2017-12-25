@@ -15,3 +15,4 @@ def fetch_git_repo(repo_url):
     full_repo_name = full_repo_name[:-4]
 
   return gh.get_repo(full_repo_name, lazy=False)
+
