@@ -35,3 +35,7 @@ BUCKET_NOT_FOUND = {'ok': False, 'code': 1600, 'error': 'bucket_not_found'}, 404
 
 # Integration Errors
 INTEGRATION_NOT_FOUND = {'ok': False, 'code': 1700, 'error': 'integration_not_found'}, 404
+OAUTH_TOKEN_SWAP_FAILED = {'ok': False, 'code': 1701, 'error': 'oauth_token_swap_failed'}, 500
+
+# PredictionIntegration Errors
+PREDICTION_INTEGRATION_UPSERT_FAILED = {'ok': False, 'code': 1800, 'error': 'prediction_integration_upsert_failed'}, 500

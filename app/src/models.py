@@ -390,17 +390,23 @@ class Integration(db.Model):
   uid = db.Column(db.String, index=True, unique=True)
   name = db.Column(db.String(240), nullable=False)
   slug = db.Column(db.String(240), index=True, unique=True)
+  oauth_token_exchange_url = db.Column(db.String)
+  client_id = db.Column(db.String(240))
+  client_secret = db.Column(db.String(240))
   created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
   is_destroyed = db.Column(db.Boolean, server_default='f')
 
-  def __init__(self, name=None):
+  def __init__(self, name=None, oauth_token_exchange_url=None, client_id=None, client_secret=None):
     self.uid = uuid4().hex
     self.name = name
     self.slug = slugify(name, separator='-', to_lower=True)
+    self.oauth_token_exchange_url = oauth_token_exchange_url
+    self.client_id = client_id
+    self.client_secret = client_secret
 
   def __repr__(self):
-    return '<Integration id={}, uid={}, name={}, slug={}, created_at={}, is_destroyed={}>'.format(
-      self.id, self.uid, self.name, self.slug, self.created_at, self.is_destroyed)
+    return '<Integration id={}, uid={}, name={}, slug={}, oauth_token_exchange_url={}, client_id={}, client_secret={}, created_at={}, is_destroyed={}>'.format(
+      self.id, self.uid, self.name, self.slug, self.oauth_token_exchange_url, self.client_id, self.client_secret, self.created_at, self.is_destroyed)
 
 
 class PredictionIntegration(db.Model):
