@@ -7,7 +7,7 @@ Tables:
   Bucket
   Repo
   User
-  Token
+  Session
   RepoUser
   Integration
   IntegrationSetting
@@ -31,8 +31,8 @@ Relationships:
   RepoUser -- belongs_to --> User
   Provider --> has_many --> users
   User --> belongs_to --> Provider
-  User --> has_many --> tokens
-  Token --> belongs_to --> User
+  User --> has_many --> sessions
+  Session --> belongs_to --> User
   Repo --> has_one --> Integration
   Integration --> has_one --> Repo
   Integration --> has_one --> IntegrationSetting
@@ -48,7 +48,7 @@ import datetime
 from slugify import slugify
 from sqlalchemy.dialects.postgresql import JSON
 from src import db, dbi, logger
-from helpers import auth_util, repo_user_roles, instance_types
+from helpers import auth_util, repo_user_roles, instance_types, user_verification_statuses
 from helpers.deployment_statuses import ds
 from uuid import uuid4
 from operator import attrgetter
@@ -60,17 +60,19 @@ class Provider(db.Model):
   uid = db.Column(db.String, index=True, unique=True, nullable=False)
   name = db.Column(db.String(240), nullable=False)
   slug = db.Column(db.String(240), index=True, unique=True, nullable=False)
+  domain = db.Column(db.String(240))
   created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
   is_destroyed = db.Column(db.Boolean, server_default='f')
 
-  def __init__(self, name=None):
+  def __init__(self, name=None, domain=None):
     self.uid = uuid4().hex
     self.name = name
     self.slug = slugify(name, separator='-', to_lower=True)
+    self.domain = domain
 
   def __repr__(self):
-    return '<Provider id={}, uid={}, name={}, slug={}, created_at={}, is_destroyed={}>'.format(
-      self.id, self.uid, self.name, self.slug, self.created_at, self.is_destroyed)
+    return '<Provider id={}, uid={}, name={}, slug={}, domain={}, created_at={}, is_destroyed={}>'.format(
+      self.id, self.uid, self.name, self.slug, self.domain, self.created_at, self.is_destroyed)
 
 
 class Team(db.Model):
@@ -180,7 +182,7 @@ class Repo(db.Model):
   uid = db.Column(db.String, index=True, unique=True, nullable=False)
   team_id = db.Column(db.Integer, db.ForeignKey('team.id'), index=True, nullable=False)
   team = db.relationship('Team', backref='repos')
-  slug = db.Column(db.String(240), index=True, unique=True)
+  slug = db.Column(db.String(240), index=True)
   elb = db.Column(db.String(240))
   domain = db.Column(db.String(360))
   image_repo_owner = db.Column(db.String(120))
@@ -193,10 +195,8 @@ class Repo(db.Model):
   is_destroyed = db.Column(db.Boolean, server_default='f')
   created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
-  def __init__(self, team=None, team_id=None, slug=None, elb=None, domain=None,
-               image_repo_owner=None, deploy_name=None, client_id=None, client_secret=None,
-               model_ext=None, internal_msg_token=None):
-
+  def __init__(self, team=None, team_id=None, slug=None, elb=None, domain=None, image_repo_owner=None,
+               deploy_name=None, client_id=None, client_secret=None, model_ext=None, internal_msg_token=None):
     self.uid = uuid4().hex
 
     if team_id:
@@ -206,6 +206,7 @@ class Repo(db.Model):
 
     self.slug = slug
     self.elb = elb
+    # TODO -- come up with a unique domain format that works across providers
     self.domain = domain or '{}.{}'.format(self.slug, config.DOMAIN)
     self.image_repo_owner = image_repo_owner or config.IMAGE_REPO_OWNER
     self.deploy_name = deploy_name
@@ -220,8 +221,8 @@ class Repo(db.Model):
       self.id, self.uid, self.team_id, self.slug, self.elb, self.domain,
       self.image_repo_owner, self.deploy_name, self.model_ext, self.is_destroyed, self.created_at)
 
-  # TODO: Fix/adjust these instance methods
   def ordered_deployments(self):
+    # TODO: optimize this by order-ing in the actual query
     return sorted(self.deployments, key=attrgetter('created_at'), reverse=True)
 
   def model_file(self):
@@ -233,9 +234,6 @@ class Repo(db.Model):
   def api_url(self):
     return 'https://{}/api'.format(self.domain)
 
-  def url(self):
-    pass
-
 
 class User(db.Model):
   id = db.Column(db.Integer, primary_key=True)
@@ -244,11 +242,16 @@ class User(db.Model):
   provider = db.relationship('Provider', backref='users')
   email = db.Column(db.String(120), index=True, unique=True)
   username = db.Column(db.String(120), index=True)
-  hashed_pw = db.Column(db.String(120))
+  access_token = db.Column(db.String(240))
+  verification_status = db.Column(db.Integer, nullable=False)
+  verification_secret = db.Column(db.String(64))
   is_destroyed = db.Column(db.Boolean, server_default='f')
   created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
-  def __init__(self, provider=None, provider_id=None, email=None, username=None, hashed_pw=None):
+  ver_statuses = user_verification_statuses
+
+  def __init__(self, provider=None, provider_id=None, email=None, username=None,
+               access_token=None, verification_status=user_verification_statuses.NOT_CONTACTED):
     self.uid = uuid4().hex
 
     if provider_id:
@@ -258,29 +261,31 @@ class User(db.Model):
 
     self.email = email
     self.username = username
-    self.hashed_pw = hashed_pw
+    self.access_token = access_token
+    self.verification_status = verification_status
+    self.verification_secret = auth_util.fresh_secret()
 
   def __repr__(self):
     return '<User id={}, uid={}, provider_id={}, email={}, username={}, is_destroyed={}, created_at={}>'.format(
       self.id, self.uid, self.provider_id, self.email, self.username, self.is_destroyed, self.created_at)
 
 
-class Token(db.Model):
+class Session(db.Model):
   id = db.Column(db.Integer, primary_key=True)
   user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True, nullable=False)
-  user = db.relationship('User', backref='tokens')
-  secret = db.Column(db.String(64))
+  user = db.relationship('User', backref='sessions')
+  token = db.Column(db.String(64))
 
-  def __init__(self, user=None, user_id=None, secret=None):
+  def __init__(self, user=None, user_id=None, token=None):
     if user_id:
       self.user_id = user_id
     else:
       self.user = user
 
-    self.secret = auth_util.fresh_secret()
+    self.token = token or auth_util.fresh_secret()
 
   def __repr__(self):
-    return '<Token id={}, user_id={}>'.format(self.id, self.user_id)
+    return '<Session id={}, user_id={}>'.format(self.id, self.user_id)
 
 
 class RepoUser(db.Model):
@@ -321,7 +326,7 @@ class Integration(db.Model):
   uid = db.Column(db.String, index=True, unique=True, nullable=False)
   repo_id = db.Column(db.Integer, db.ForeignKey('repo.id'), index=True, nullable=False)
   repo = db.relationship('Repo', back_populates='integration')
-  access_token = db.Column(db.String(360))
+  access_token = db.Column(db.String(240))
   meta = db.Column(JSON)
   integration_setting = db.relationship('IntegrationSetting', uselist=False, back_populates='integration')
   is_destroyed = db.Column(db.Boolean, server_default='f')
@@ -339,8 +344,8 @@ class Integration(db.Model):
     self.meta = meta or {}
 
   def __repr__(self):
-    return '<Integration id={}, uid={}, repo_id={}, access_token={}, meta={}, created_at={}, is_destroyed={}>'.format(
-      self.id, self.uid, self.repo_id, self.access_token, self.meta, self.created_at, self.is_destroyed)
+    return '<Integration id={}, uid={}, repo_id={}, meta={}, created_at={}, is_destroyed={}>'.format(
+      self.id, self.uid, self.repo_id, self.meta, self.created_at, self.is_destroyed)
 
 
 class IntegrationSetting(db.Model):
@@ -441,11 +446,14 @@ class Dataset(db.Model):
     self.last_train_record_count = last_train_record_count
 
   def table(self):
+    # TODO: This is gonna have to be more unique now
     return '{}_{}'.format(self.repo.slug, self.slug).replace('-', '_')
 
   def __repr__(self):
-    return '<Dataset id={}, uid={}, repo_id={}, name={}, slug={}, retrain_step_size={}, last_train_record_count={}, created_at={}, is_destroyed={}>'.format(
-      self.id, self.uid, self.repo_id, self.name, self.slug, self.retrain_step_size, self.last_train_record_count, self.created_at, self.is_destroyed)
+    return '<Dataset id={}, uid={}, repo_id={}, name={}, slug={}, retrain_step_size={}, ' \
+           'last_train_record_count={}, created_at={}, is_destroyed={}>'.format(
+      self.id, self.uid, self.repo_id, self.name, self.slug, self.retrain_step_size,
+      self.last_train_record_count, self.created_at, self.is_destroyed)
 
 
 
