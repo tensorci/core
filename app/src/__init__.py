@@ -3,12 +3,12 @@ import sys
 import os
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from config import get_config
+from config import config
 from utils.logger import Logger
 
 # Create and configure the Flask app
 app = Flask(__name__)
-app.config.from_object(get_config())
+app.config.from_object(config)
 
 # Set up our logger
 app.logger.addHandler(StreamHandler(sys.stdout))

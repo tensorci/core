@@ -49,3 +49,6 @@ class TestConfig(Config):
 def get_config():
   config_class = globals().get('{}Config'.format(env().capitalize()))
   return config_class()
+
+
+config = get_config()

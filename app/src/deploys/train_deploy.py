@@ -3,10 +3,8 @@ from abstract_deploy import AbstractDeploy
 from src import logger, dbi
 from src.models import TrainJob
 from src.utils import clusters
-from src.config import get_config
+from src.config import config
 from src.helpers import ms_since_epoch
-
-config = get_config()
 
 
 class TrainDeploy(AbstractDeploy):

@@ -3,15 +3,13 @@ from abstract_deploy import AbstractDeploy
 from train_deploy import TrainDeploy
 from api_deploy import ApiDeploy
 from src.utils import image_names, clusters
-from src.config import get_config
+from src.config import config
 from src.helpers import ms_since_epoch
 from kubernetes import watch
 from src.utils.aws import create_s3_bucket
 from src import dbi, logger
 from src.utils.job_queue import job_queue
 from src.services.cluster_services.create_cluster import CreateCluster
-
-config = get_config()
 
 
 class BuildServerDeploy(AbstractDeploy):
