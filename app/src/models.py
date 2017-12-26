@@ -29,6 +29,8 @@ Relationships:
   User --> has_many --> repo_users
   RepoUser -- belongs_to --> Repo
   RepoUser -- belongs_to --> User
+  Provider --> has_many --> users
+  User --> belongs_to --> Provider
   User --> has_many --> tokens
   Token --> belongs_to --> User
   Repo --> has_one --> Integration
@@ -46,7 +48,7 @@ import datetime
 from slugify import slugify
 from sqlalchemy.dialects.postgresql import JSON
 from src import db, dbi, logger
-from helpers import auth_util, repo_user_roles, user_verification_statuses, instance_types
+from helpers import auth_util, repo_user_roles, instance_types
 from helpers.deployment_statuses import ds
 from uuid import uuid4
 from operator import attrgetter
@@ -238,22 +240,29 @@ class Repo(db.Model):
 class User(db.Model):
   id = db.Column(db.Integer, primary_key=True)
   uid = db.Column(db.String, index=True, unique=True, nullable=False)
+  provider_id = db.Column(db.Integer, db.ForeignKey('provider.id'), index=True, nullable=False)
+  provider = db.relationship('Provider', backref='users')
   email = db.Column(db.String(120), index=True, unique=True)
   username = db.Column(db.String(120), index=True)
   hashed_pw = db.Column(db.String(120))
-  # TODO: password from github?
   is_destroyed = db.Column(db.Boolean, server_default='f')
   created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
-  def __init__(self, email=None, username=None, hashed_pw=None):
+  def __init__(self, provider=None, provider_id=None, email=None, username=None, hashed_pw=None):
     self.uid = uuid4().hex
+
+    if provider_id:
+      self.provider_id = provider_id
+    else:
+      self.provider = provider
+
     self.email = email
     self.username = username
     self.hashed_pw = hashed_pw
 
   def __repr__(self):
-    return '<User id={}, uid={}, email={}, username={}, is_destroyed={}, created_at={}>'.format(
-      self.id, self.uid, self.email, self.username, self.is_destroyed, self.created_at)
+    return '<User id={}, uid={}, provider_id={}, email={}, username={}, is_destroyed={}, created_at={}>'.format(
+      self.id, self.uid, self.provider_id, self.email, self.username, self.is_destroyed, self.created_at)
 
 
 class Token(db.Model):
