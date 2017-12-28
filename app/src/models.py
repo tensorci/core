@@ -29,10 +29,12 @@ Relationships:
   User --> has_many --> repo_users
   RepoUser -- belongs_to --> Repo
   RepoUser -- belongs_to --> User
-  Provider --> has_many --> users
-  User --> belongs_to --> Provider
-  User --> has_many --> sessions
-  Session --> belongs_to --> User
+  Provider --> has_many --> provider_users
+  User --> has_many --> provider_users
+  ProviderUser --> belongs_to --> Provider
+  ProviderUser --> belongs_to --> User
+  ProviderUser --> has_many --> sessions
+  Session --> belongs_to --> ProviderUser
   Repo --> has_one --> Integration
   Integration --> has_one --> Repo
   Integration --> has_one --> IntegrationSetting
@@ -252,11 +254,8 @@ class Repo(db.Model):
 class User(db.Model):
   id = db.Column(db.Integer, primary_key=True)
   uid = db.Column(db.String, index=True, unique=True, nullable=False)
-  provider_id = db.Column(db.Integer, db.ForeignKey('provider.id'), index=True, nullable=False)
-  provider = db.relationship('Provider', backref='users')
   email = db.Column(db.String(120), index=True, unique=True)
-  username = db.Column(db.String(120), index=True)
-  access_token = db.Column(db.String(240))
+  hashed_pw = db.Column(db.String(240))
   verification_status = db.Column(db.Integer, nullable=False)
   verification_secret = db.Column(db.String(64))
   is_destroyed = db.Column(db.Boolean, server_default='f')
@@ -264,8 +263,31 @@ class User(db.Model):
 
   ver_statuses = user_verification_statuses
 
-  def __init__(self, provider=None, provider_id=None, email=None, username=None,
-               access_token=None, verification_status=user_verification_statuses.NOT_CONTACTED):
+  def __init__(self, email=None, hashed_pw=None, verification_status=user_verification_statuses.NOT_CONTACTED):
+    self.uid = uuid4().hex
+    self.email = email
+    self.hashed_pw = hashed_pw
+    self.verification_status = verification_status
+    self.verification_secret = auth_util.fresh_secret()
+
+  def __repr__(self):
+    return '<User id={}, uid={}, email={}, hashed_pw={}, verification_status={}, is_destroyed={}, created_at={}>'.format(
+      self.id, self.uid, self.email, self.hashed_pw, self.verification_status, self.is_destroyed, self.created_at)
+
+
+class ProviderUser(db.Model):
+  id = db.Column(db.Integer, primary_key=True)
+  uid = db.Column(db.String, index=True, unique=True, nullable=False)
+  provider_id = db.Column(db.Integer, db.ForeignKey('provider.id'), index=True, nullable=False)
+  provider = db.relationship('Provider', backref='provider_users')
+  user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True, nullable=False)
+  user = db.relationship('User', backref='provider_users')
+  username = db.Column(db.String(120), index=True, unique=True)
+  access_token = db.Column(db.String(240))
+  is_destroyed = db.Column(db.Boolean, server_default='f')
+  created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+
+  def __init__(self, provider=None, provider_id=None, user=None, user_id=None, username=None, access_token=None):
     self.uid = uuid4().hex
 
     if provider_id:
@@ -273,36 +295,38 @@ class User(db.Model):
     else:
       self.provider = provider
 
-    self.email = email
-    self.username = username
-    self.access_token = access_token
-    self.verification_status = verification_status
-    self.verification_secret = auth_util.fresh_secret()
-
-  def __repr__(self):
-    return '<User id={}, uid={}, provider_id={}, email={}, username={}, is_destroyed={}, created_at={}>'.format(
-      self.id, self.uid, self.provider_id, self.email, self.username, self.is_destroyed, self.created_at)
-
-  def create_session(self):
-    return dbi.create(Session, {'user': self})
-
-
-class Session(db.Model):
-  id = db.Column(db.Integer, primary_key=True)
-  user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True, nullable=False)
-  user = db.relationship('User', backref='sessions')
-  token = db.Column(db.String(64))
-
-  def __init__(self, user=None, user_id=None, token=None):
     if user_id:
       self.user_id = user_id
     else:
       self.user = user
 
+    self.username = username
+    self.access_token = access_token
+
+  def __repr__(self):
+    return '<ProviderUser id={}, uid={}, provider_id={}, user_id={}, username={}, is_destroyed={}, created_at={}>'.format(
+      self.id, self.uid, self.provider_id, self.user_id, self.username, self.is_destroyed, self.created_at)
+
+  def create_session(self):
+    return dbi.create(Session, {'provider_user': self})
+
+
+class Session(db.Model):
+  id = db.Column(db.Integer, primary_key=True)
+  provider_user_id = db.Column(db.Integer, db.ForeignKey('provider_user.id'), index=True, nullable=False)
+  provider_user = db.relationship('ProviderUser', backref='sessions')
+  token = db.Column(db.String(64))
+
+  def __init__(self, provider_user=None, provider_user_id=None, token=None):
+    if provider_user_id:
+      self.provider_user_id = provider_user_id
+    else:
+      self.provider_user = provider_user
+
     self.token = token or auth_util.fresh_secret()
 
   def __repr__(self):
-    return '<Session id={}, user_id={}>'.format(self.id, self.user_id)
+    return '<Session id={}, provider_user_id={}>'.format(self.id, self.provider_user_id)
 
 
 class RepoUser(db.Model):

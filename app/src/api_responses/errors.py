@@ -33,11 +33,15 @@ NO_FILE_PROVIDED = {'ok': False, 'code': 1502, 'error': 'no_file_provided'}, 500
 # Bucket Errors
 BUCKET_NOT_FOUND = {'ok': False, 'code': 1600, 'error': 'bucket_not_found'}, 404
 
-# Integration Errors
-INTEGRATION_NOT_FOUND = {'ok': False, 'code': 1700, 'error': 'integration_not_found'}, 404
+# OAuth Errors
 INVALID_OAUTH_TEMP_CODE = {'ok': False, 'code': 1701, 'error': 'invalid_oauth_temp_code'}, 500
 INVALID_OAUTH_STATE_VALUE = {'ok': False, 'code': 1702, 'error': 'invalid_oauth_state_value'}, 500
-OAUTH_TOKEN_SWAP_FAILED = {'ok': False, 'code': 1703, 'error': 'oauth_token_swap_failed'}, 500
+
 
 # PredictionIntegration Errors
 PREDICTION_INTEGRATION_UPSERT_FAILED = {'ok': False, 'code': 1800, 'error': 'prediction_integration_upsert_failed'}, 500
+
+# Provider Errors
+PROVIDER_NOT_FOUND = {'ok': False, 'code': 1900, 'error': 'provider_not_found'}, 404
+GITHUB_API_USER_ERROR = {'ok': False, 'code': 1901, 'error': 'github_api_user_error'}, 500
+GITHUB_API_EMAIL_ERROR = {'ok': False, 'code': 1902, 'error': 'github_api_email_error'}, 500

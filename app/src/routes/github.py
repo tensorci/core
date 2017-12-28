@@ -4,8 +4,9 @@ from src.routes import namespace, api
 from src.api_responses.errors import *
 from src.api_responses.success import *
 from src import logger, dbi, db
-from src.models import Provider, User
+from src.models import Provider, ProviderUser, User
 from github import Github
+from src.helpers import auth_util
 from src.helpers.definitions import auth_header_name
 
 
@@ -36,7 +37,7 @@ class OAuthCallback(Resource):
       logger.error('No temporary "code" arg provided in github OAuth callback.')
       return INVALID_OAUTH_TEMP_CODE
 
-    # Get github provider and oauth class
+    # Get github provider and oauth class instance
     github = Provider.github()
     oauth = github.oauth()
 
@@ -46,19 +47,53 @@ class OAuthCallback(Resource):
     # Instantiate github api client library
     gh_client = Github(access_token)
 
-    # Get current authed Github user and his/her username
-    gh_user = gh_client.get_user()
-    username = gh_user.login
+    try:
+      # Get current authed Github user and his/her username
+      gh_user = gh_client.get_user()
+      username = gh_user.login
+    except BaseException as e:
+      logger.error('Error getting authenticated Github user and username with error: {}'.format(e))
+      return GITHUB_API_USER_ERROR
 
-    # Upsert user and update access_token
-    user, is_new = dbi.upsert(User, {'provider': github, 'username': username})
-    user = dbi.update(user, {'access_token': access_token})
+    # Attempt to find existing provider_user for username
+    provider_user = dbi.find_one(ProviderUser, {
+      'provider': github,
+      'username': username
+    })
 
-    # Create new Session for user
-    session = user.create_session()
+    # If provider_user doesn't exist yet, create it (and upsert user)
+    if not provider_user:
+      try:
+        # Get primary email for Github user so we can find his User record if it exists
+        primary_email = [email.get('email') for email in gh_user.get_emails() if email.get('primary')]
+      except BaseException as e:
+        logger.error('Error reqeusting emails for Github user {}: {}'.format(username, e))
+        return GITHUB_API_EMAIL_ERROR
+
+      if not primary_email:
+        logger.error('No primary email found for Github user with username: {}'.format(username))
+        return GITHUB_API_EMAIL_ERROR
+
+      primary_email = primary_email[0]
+
+      # Upsert User for email
+      user, is_new = dbi.upsert(User, {'email': primary_email})
+
+      # Create provider user
+      provider_user = dbi.create(ProviderUser, {
+        'provider': github,
+        'user': user,
+        'username': username
+      })
+
+    # Update access token
+    provider_user = dbi.update(provider_user, {'access_token': access_token})
+
+    # Create new Session for provider_user
+    session = provider_user.create_session()
 
     # Create redirect response with session token in the header
     resp = make_response(redirect('/'))
-    resp.headers[auth_header_name] = session.token
+    resp.headers[auth_header_name] = auth_util.serialize_token(session.id, session.token)
 
     return resp

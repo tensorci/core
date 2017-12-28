@@ -8,11 +8,12 @@ from src import logger, dbi
 from src.models import Team
 from src.services.team_services.create_team import CreateTeam
 
+
 create_team_model = api.model('Team', {
   'name': fields.String(required=True)
 })
 
-
+# DEPRECATED
 @namespace.route('/team')
 class RestfulTeam(Resource):
   """Restful Team Interface"""
@@ -44,6 +45,7 @@ class RestfulTeam(Resource):
     return ''
 
 
+# DEPRECATED
 @namespace.route('/teams')
 class AllTeamsForUSer(Resource):
   """Endpoints related to all teams for a user"""
