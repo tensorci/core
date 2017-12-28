@@ -1,87 +1,64 @@
-from flask import request, redirect
+from flask import request, redirect, make_response
 from flask_restplus import Resource
 from src.routes import namespace, api
-from src.models import Integration, Prediction, PredictionIntegration
 from src.api_responses.errors import *
 from src.api_responses.success import *
 from src import logger, dbi, db
-from src.integrations.gh import GH
+from src.models import Provider, User
+from github import Github
+from src.helpers.definitions import auth_header_name
 
 
-@namespace.route('/github/installed')
-class Installed(Resource):
+@namespace.route('/github/oauth_url')
+class OAuthUrl(Resource):
   """
-  Hit any time a GitHub user installs the TensorCI GitHub App
-
-  args:
-    - installation_id (int)
+  Build GitHub OAuth url and return it to user for them to nav to
   """
+  @namespace.doc('get_oauth_url')
   def get(self):
+    oauth = Provider.github().oauth()
+    return {'url': oauth.get_oauth_url()}
+
+
+@namespace.route('/github/oauth')
+class OAuthCallback(Resource):
+  """
+  Endpoint hit after a user authorizes the TensorCI GitHub OAuth App
+  """
+  @namespace.doc('oauth_user')
+  def get(self):
+    # Parse request args
     args = dict(request.args.items())
-    installation_id = args.get('installation_id')
+    temp_code = args.get('code')
 
-    if not installation_id:
-      logger.error()
-      return
+    # Ensure temporary code is provided
+    if not temp_code:
+      logger.error('No temporary "code" arg provided in github OAuth callback.')
+      return INVALID_OAUTH_TEMP_CODE
 
-    try:
-      installation_id = int(installation_id)
-    except:
-      logger.error()
-      return
+    # Get github provider and oauth class
+    github = Provider.github()
+    oauth = github.oauth()
 
-    github = GH()
+    # Request access token for Github user
+    access_token = oauth.get_access_token(code=temp_code)
 
-    try:
-      # Use pem file and special payload to create a JWT
-      # Use JWT as header ("Authorization: Bearer YOUR_JWT") to request installation access_token
-      #   https://api.github.com/installations/:installation_id/access_tokens
-      #   # => {'token': 'asdfasdf'}
-      # Create new client for GH...Github(access_token=<token>)
-      installation = github.get_installation(installation_id)
-      repos = github.repo_urls_for_installation(installation)
-    except BaseException as e:
-      logger.error()
-      return
+    # Instantiate github api client library
+    gh_client = Github(access_token)
 
-    for repo in repos:
-      try:
-        prediction = dbi.find_one(Prediction, {'git_repo': repo})
+    # Get current authed Github user and his/her username
+    gh_user = gh_client.get_user()
+    username = gh_user.login
 
-        if not prediction:
-          # Redirect somewhere for user to name prediction and create team if need be.
-          # Will need to store the installation_id somewhere though in the meantime...maybe a draft table or something
-          redirect('/finishthisshit')
+    # Upsert user and update access_token
+    user, is_new = dbi.upsert(User, {'provider': github, 'username': username})
+    user = dbi.update(user, {'access_token': access_token})
 
-        prediction_integration, is_new = dbi.upsert(PredictionIntegration, {
-          'prediction': prediction,
-          'integration': github.integration
-        })
+    # Create new Session for user
+    session = user.create_session()
 
-        dbi.update(prediction_integration, {'installation_id': installation_id})
-      except BaseException as e:
-        logger.error()
-        return
+    # Create redirect response with session token in the header
+    resp = make_response(redirect('/'))
+    resp.headers[auth_header_name] = session.token
 
-    return {}, 200
-
-
-@namespace.route('/webhook/<string:slug>')
-class Webhook(Resource):
-  """
-  Webhook endpoint for integrations
-  """
-  @namespace.doc('integrations_webhook')
-  def post(self, slug):
-    integration = dbi.find_one(Integration, {'slug': slug})
-
-    if not integration:
-      return INTEGRATION_NOT_FOUND
-
-    logger.info('{} webhook heard'.format(slug))
-    logger.info('Payload: {}'.format(api.payload))
-    logger.info('Args: {}'.format(request.args.items()))
-    logger.info('Headers: {}'.format(request.headers))
-
-    return {}, 200
-
+    return resp

@@ -45,10 +45,11 @@ Relationships:
   Dataset --> belongs_to --> Repo
 """
 import datetime
+import importlib
 from slugify import slugify
 from sqlalchemy.dialects.postgresql import JSON
 from src import db, dbi, logger
-from helpers import auth_util, repo_user_roles, instance_types, user_verification_statuses
+from helpers import auth_util, repo_user_roles, instance_types, user_verification_statuses, providers
 from helpers.deployment_statuses import ds
 from uuid import uuid4
 from operator import attrgetter
@@ -64,6 +65,8 @@ class Provider(db.Model):
   created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
   is_destroyed = db.Column(db.Boolean, server_default='f')
 
+  providers = providers
+
   def __init__(self, name=None, domain=None):
     self.uid = uuid4().hex
     self.name = name
@@ -73,6 +76,17 @@ class Provider(db.Model):
   def __repr__(self):
     return '<Provider id={}, uid={}, name={}, slug={}, domain={}, created_at={}, is_destroyed={}>'.format(
       self.id, self.uid, self.name, self.slug, self.domain, self.created_at, self.is_destroyed)
+
+  def github(self):
+    return dbi.find_one(self, {'slug': self.providers.GITHUB})
+
+  def oauth(self):
+    oauth_mod = importlib.import_module('src.services.provider_services.oauth.{}_oauth'.format(self.slug))
+    klass = getattr(oauth_mod, '{}OAuth'.format(self.name))
+    return klass(provider=self)
+
+  def url(self):
+    return 'https://' + self.domain
 
 
 class Team(db.Model):
@@ -268,6 +282,9 @@ class User(db.Model):
   def __repr__(self):
     return '<User id={}, uid={}, provider_id={}, email={}, username={}, is_destroyed={}, created_at={}>'.format(
       self.id, self.uid, self.provider_id, self.email, self.username, self.is_destroyed, self.created_at)
+
+  def create_session(self):
+    return dbi.create(Session, {'user': self})
 
 
 class Session(db.Model):
