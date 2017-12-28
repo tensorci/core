@@ -389,7 +389,7 @@ class IntegrationSetting(db.Model):
   id = db.Column(db.Integer, primary_key=True)
   uid = db.Column(db.String, index=True, unique=True, nullable=False)
   integration_id = db.Column(db.Integer, db.ForeignKey('integration.id'), index=True, nullable=False)
-  integration = db.relationship('integration', back_populates='integration_setting')
+  integration = db.relationship('Integration', back_populates='integration_setting')
   retrain_on_merge = db.Column(db.Boolean, server_default='f')
 
   def __init__(self, integration=None, integration_id=None, retrain_on_merge=False):
