@@ -79,9 +79,6 @@ class Provider(db.Model):
     return '<Provider id={}, uid={}, name={}, slug={}, domain={}, created_at={}, is_destroyed={}>'.format(
       self.id, self.uid, self.name, self.slug, self.domain, self.created_at, self.is_destroyed)
 
-  def github(self):
-    return dbi.find_one(self, {'slug': self.providers.GITHUB})
-
   def oauth(self):
     oauth_mod = importlib.import_module('src.services.provider_services.oauth.{}_oauth'.format(self.slug))
     klass = getattr(oauth_mod, '{}OAuth'.format(self.name))
@@ -89,6 +86,10 @@ class Provider(db.Model):
 
   def url(self):
     return 'https://' + self.domain
+
+  @staticmethod
+  def github():
+    return dbi.find_one(Provider, {'slug': providers.GITHUB})
 
 
 class Team(db.Model):
