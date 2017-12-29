@@ -1,4 +1,4 @@
-from flask import request, redirect, make_response
+from flask import request, redirect
 from flask_restplus import Resource
 from src.routes import namespace, api
 from src.api_responses.errors import *
@@ -6,8 +6,7 @@ from src.api_responses.success import *
 from src import logger, dbi, db
 from src.models import Provider, ProviderUser, User
 from github import Github
-from src.helpers import auth_util
-from src.helpers.definitions import auth_header_name
+from urllib import urlencode
 
 
 @namespace.route('/github/oauth_url')
@@ -92,8 +91,5 @@ class OAuthCallback(Resource):
     # Create new Session for provider_user
     session = provider_user.create_session()
 
-    # Create redirect response with session token in the header
-    resp = make_response(redirect('/'))
-    resp.headers[auth_header_name] = auth_util.serialize_token(session.id, session.token)
-
-    return resp
+    # Create redirect response with session token
+    return redirect('/oauth_redirect?auth={}'.format(urlencode(session.token)))

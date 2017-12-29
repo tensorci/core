@@ -9,7 +9,7 @@ Tables:
   User
   ProviderUser
   Session
-  RepoUser
+  RepoProviderUser
   Integration
   IntegrationSetting
   Deployment
@@ -26,10 +26,10 @@ Relationships:
   Bucket --> has_one --> Cluster
   Team --> has_many --> repos
   Repo --> belongs_to --> Team
-  Repo --> has_many --> repo_users
-  User --> has_many --> repo_users
-  RepoUser -- belongs_to --> Repo
-  RepoUser -- belongs_to --> User
+  Repo --> has_many --> repo_provider_users
+  ProviderUser --> has_many --> repo_provider_users
+  RepoProviderUser -- belongs_to --> Repo
+  RepoProviderUser -- belongs_to --> ProviderUser
   Provider --> has_many --> provider_users
   User --> has_many --> provider_users
   ProviderUser --> belongs_to --> Provider
@@ -52,6 +52,7 @@ import importlib
 from slugify import slugify
 from sqlalchemy.dialects.postgresql import JSON
 from src import db, dbi, logger
+from sqlalchemy.orm import joinedload
 from helpers import auth_util, repo_user_roles, instance_types, user_verification_statuses, providers
 from helpers.deployment_statuses import ds
 from uuid import uuid4
@@ -306,6 +307,16 @@ class ProviderUser(db.Model):
   def create_session(self):
     return dbi.create(Session, {'provider_user': self})
 
+  def repos(self):
+    """
+    has_many repos through RepoProviderUser
+    """
+    repo_provider_users = db.session.query(RepoProviderUser) \
+      .options(joinedload(RepoProviderUser.repo)) \
+      .filter_by(is_destroyed=False, provider_user_id=self.id).all()
+
+    return [rpu.repo for rpu in repo_provider_users]
+
 
 class Session(db.Model):
   id = db.Column(db.Integer, primary_key=True)
@@ -325,20 +336,20 @@ class Session(db.Model):
     return '<Session id={}, provider_user_id={}>'.format(self.id, self.provider_user_id)
 
 
-class RepoUser(db.Model):
+class RepoProviderUser(db.Model):
   id = db.Column(db.Integer, primary_key=True)
   uid = db.Column(db.String, index=True, unique=True, nullable=False)
   repo_id = db.Column(db.Integer, db.ForeignKey('repo.id'), index=True, nullable=False)
-  repo = db.relationship('Repo', backref='repo_users')
-  user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True, nullable=False)
-  user = db.relationship('User', backref='repo_users')
+  repo = db.relationship('Repo', backref='repo_provider_users')
+  provider_user_id = db.Column(db.Integer, db.ForeignKey('provider_user.id'), index=True, nullable=False)
+  provider_user = db.relationship('ProviderUser', backref='repo_provider_users')
   role = db.Column(db.Integer, nullable=False)
   is_destroyed = db.Column(db.Boolean, server_default='f')
   created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
   roles = repo_user_roles
 
-  def __init__(self, repo=None, repo_id=None, user=None, user_id=None, role=repo_user_roles.MEMBER):
+  def __init__(self, repo=None, repo_id=None, provider_user=None, provider_user_id=None, role=repo_user_roles.MEMBER):
     self.uid = uuid4().hex
 
     if repo_id:
@@ -346,16 +357,16 @@ class RepoUser(db.Model):
     else:
       self.repo = repo
 
-    if user_id:
-      self.user_id = user_id
+    if provider_user_id:
+      self.provider_user_id = provider_user_id
     else:
-      self.user = user
+      self.provider_user = provider_user
 
     self.role = role
 
   def __repr__(self):
-    return '<RepoUser id={}, uid={}, repo_id={}, user_id={}, role={}, is_destroyed={}, created_at={}>'.format(
-      self.id, self.uid, self.repo_id, self.user_id, self.role, self.is_destroyed, self.created_at)
+    return '<RepoProviderUser id={}, uid={}, repo_id={}, provider_user_id={}, role={}, is_destroyed={}, created_at={}>'.format(
+      self.id, self.uid, self.repo_id, self.provider_user_id, self.role, self.is_destroyed, self.created_at)
 
 
 class Integration(db.Model):

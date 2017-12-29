@@ -65,28 +65,16 @@ def verify_secret(secret1, secret2):
   return hmac.compare_digest(secret1, secret2)
 
 
-def serialize_token(token_id, secret):
+def serialize_token(session_id, secret):
   """
-  :returns: <token_id>%<secret>
+  :returns: <session_id>%<secret>
   """
-  return str(token_id) + '%' + secret
+  return str(session_id) + '%' + secret
 
 
 def unserialize_token(token):
   """
-  :returns: {token_id, secret}
-
-  >>> token_id = 1
-  >>> secret = fresh_secret()
-  >>> token = serialize_token(token_id, secret)
-  >>> x = unserialize_token(token)
-  >>> x['token_id']
-  1
-  >>> 'secret' in x
-  True
-  >>> len(x.items())
-  2
+  :returns: {session_id, token}
   """
-  # TODO do something graceful when unserializing fails.
-  token_id, secret = token.split('%')
-  return dict(token_id=int(token_id), secret=secret)
+  session_id, secret = token.split('%')
+  return dict(session_id=int(session_id), secret=secret)
