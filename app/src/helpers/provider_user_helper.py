@@ -7,17 +7,10 @@ from src.helpers import decode_url_encoded_str
 
 
 def current_provider_user():
-  # Get token by cookie or header (cookie has priority)
-  if request.cookies.get(cookie_name):
-    token = decode_url_encoded_str(request.cookies.get(cookie_name))
-  elif request.headers.get(auth_header_name):
-    token = request.headers.get(auth_header_name)
-  else:
+  if not request.headers.get(auth_header_name):
     return None
 
-  if not token:
-    return None
-
+  token = decode_url_encoded_str(request.headers.get(auth_header_name))
   session_info = unserialize_token(token)
 
   if not session_info.get('session_id') or not session_info.get('secret'):

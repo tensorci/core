@@ -64,10 +64,16 @@ class RestfulRepos(Resource):
 
     # Upsert each team and each repo for that team
     for team_name, repo_names in teams_map.items():
-      team, team_is_new = dbi.upsert(Team, {
-        'name': team_name,
-        'provider': provider
-      })
+      team_slug = slugify(team_name, separator='-', to_lower=True)
+
+      # Upsert team
+      team = dbi.find_one(Team, {'slug': team_slug, 'provider': provider})
+
+      if team:
+        team_is_new = False
+      else:
+        team = dbi.create(Team, {'name': team_name, 'provider': provider})
+        team_is_new = True
 
       for repo_name in repo_names:
         repo_slug = slugify(repo_name, separator='-', to_lower=True)

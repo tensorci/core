@@ -7,7 +7,8 @@ from src.api_responses.success import *
 from src import logger, dbi, db
 from src.models import Provider, ProviderUser, User
 from github import Github
-from src.helpers import url_encode_str
+from src.helpers import url_encode_str, auth_util
+
 
 @namespace.route('/github/oauth_url')
 class OAuthUrl(Resource):
@@ -98,4 +99,5 @@ class OAuthCallback(Resource):
     session = provider_user.create_session()
 
     # Create redirect response with session token
-    return redirect('http://localhost:3000/oauth_redirect?auth={}'.format(url_encode_str(session.token)))
+    token = auth_util.serialize_token(session.id, session.token)
+    return redirect('http://localhost:3000/oauth_redirect?auth={}'.format(url_encode_str(token)))

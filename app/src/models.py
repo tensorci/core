@@ -334,12 +334,10 @@ class ProviderUser(db.Model):
 
     repo_ids = [r.repo_id for r in dbi.find_all(RepoProviderUser, {'id': self.id})]
 
-    repos = db.session.query(Repo) \
+    return db.session.query(Repo) \
       .options(joinedload(Repo.team)) \
       .filter(Repo.id.in_(repo_ids)) \
       .filter_by(is_destroyed=False).all()
-
-    return [rpu.repo for rpu in repo_provider_users]
 
   def available_repos(self):
     """
