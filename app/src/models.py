@@ -217,7 +217,7 @@ class Repo(db.Model):
   is_destroyed = db.Column(db.Boolean, server_default='f')
   created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
-  def __init__(self, team=None, team_id=None, name=None, elb=None, domain=None, image_repo_owner=None,
+  def __init__(self, team=None, team_id=None, name=None, slug=None, elb=None, domain=None, image_repo_owner=None,
                deploy_name=None, client_id=None, client_secret=None, model_ext=None, internal_msg_token=None):
     self.uid = uuid4().hex
 
@@ -227,7 +227,7 @@ class Repo(db.Model):
       self.team = team
 
     self.name = name
-    self.slug = slugify(self.name, separator='-', to_lower=True)
+    self.slug = slug or slugify(self.name, separator='-', to_lower=True)
     self.elb = elb
     # TODO -- come up with a unique domain format that works across providers
     self.domain = domain or '{}.{}'.format(self.slug, config.DOMAIN)
