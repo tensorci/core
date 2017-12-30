@@ -381,7 +381,7 @@ class RepoProviderUser(db.Model):
 
   roles = repo_user_roles
 
-  def __init__(self, repo=None, repo_id=None, provider_user=None, provider_user_id=None, role=repo_user_roles.MEMBER):
+  def __init__(self, repo=None, repo_id=None, provider_user=None, provider_user_id=None, role=repo_user_roles.MEMBER_READ):
     self.uid = uuid4().hex
 
     if repo_id:

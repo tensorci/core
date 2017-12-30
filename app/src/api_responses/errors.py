@@ -36,7 +36,7 @@ BUCKET_NOT_FOUND = {'ok': False, 'code': 1600, 'error': 'bucket_not_found'}, 404
 # OAuth Errors
 INVALID_OAUTH_TEMP_CODE = {'ok': False, 'code': 1701, 'error': 'invalid_oauth_temp_code'}, 500
 INVALID_OAUTH_STATE_VALUE = {'ok': False, 'code': 1702, 'error': 'invalid_oauth_state_value'}, 500
-
+INVALID_BETA_ACCESS_CODE = {'ok': False, 'code': 1703, 'error': 'invalid_beta_access_code'}, 500
 
 # PredictionIntegration Errors
 PREDICTION_INTEGRATION_UPSERT_FAILED = {'ok': False, 'code': 1800, 'error': 'prediction_integration_upsert_failed'}, 500

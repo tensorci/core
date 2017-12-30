@@ -80,15 +80,14 @@ class RestfulRepos(Resource):
           })
 
           # Also create new RepoProviderUser when creating new Repo
-          # his/her role will depend on
           if repo.owner.login == provider_user.username:
             role = RepoProviderUser.roles.OWNER
           elif repo.permissions.admin:
             role = RepoProviderUser.roles.ADMIN
+          elif repo.permissions.push:
+            role = RepoProviderUser.roles.MEMBER_WRITE
           else:
-            # TODO: ideally, you shouldn't be able to create a TensorCI repo from a Github repo if
-            # you're neither the owner or an admin...
-            role = RepoProviderUser.roles.MEMBER
+            role = RepoProviderUser.roles.MEMBER_READ
 
           dbi.create(RepoProviderUser, {
             'repo': repo,

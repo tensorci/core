@@ -1,3 +1,4 @@
+import os
 from flask import request, redirect
 from flask_restplus import Resource
 from src.routes import namespace, api
@@ -6,8 +7,7 @@ from src.api_responses.success import *
 from src import logger, dbi, db
 from src.models import Provider, ProviderUser, User
 from github import Github
-from urllib import urlencode
-
+from src.helpers import url_encode_str
 
 @namespace.route('/github/oauth_url')
 class OAuthUrl(Resource):
@@ -16,7 +16,13 @@ class OAuthUrl(Resource):
   """
   @namespace.doc('get_oauth_url')
   def get(self):
+    args = dict(request.args.items())
+
+    if not args.get('betaCode') or args.get('betaCode') != os.environ.get('BETA_ACCESS_CODE'):
+      return INVALID_BETA_ACCESS_CODE
+
     oauth = Provider.github().oauth()
+
     return {'url': oauth.get_oauth_url()}
 
 
@@ -92,4 +98,4 @@ class OAuthCallback(Resource):
     session = provider_user.create_session()
 
     # Create redirect response with session token
-    return redirect('/oauth_redirect?auth={}'.format(urlencode(session.token)))
+    return redirect('http://localhost:3000/oauth_redirect?auth={}'.format(url_encode_str(session.token)))
