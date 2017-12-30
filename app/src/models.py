@@ -58,6 +58,7 @@ from helpers.deployment_statuses import ds
 from uuid import uuid4
 from operator import attrgetter
 from config import config
+from github import Github
 
 
 class Provider(db.Model):
@@ -88,6 +89,13 @@ class Provider(db.Model):
 
   def url(self):
     return 'https://' + self.domain
+
+  def client(self):
+    clients = {
+      providers.GITHUB: Github
+    }
+
+    return clients.get(self.slug)
 
   @staticmethod
   def github():
@@ -195,6 +203,7 @@ class Repo(db.Model):
   uid = db.Column(db.String, index=True, unique=True, nullable=False)
   team_id = db.Column(db.Integer, db.ForeignKey('team.id'), index=True, nullable=False)
   team = db.relationship('Team', backref='repos')
+  name = db.Column(db.String(240))
   slug = db.Column(db.String(240), index=True)
   elb = db.Column(db.String(240))
   domain = db.Column(db.String(360))
@@ -208,7 +217,7 @@ class Repo(db.Model):
   is_destroyed = db.Column(db.Boolean, server_default='f')
   created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
-  def __init__(self, team=None, team_id=None, slug=None, elb=None, domain=None, image_repo_owner=None,
+  def __init__(self, team=None, team_id=None, name=None, elb=None, domain=None, image_repo_owner=None,
                deploy_name=None, client_id=None, client_secret=None, model_ext=None, internal_msg_token=None):
     self.uid = uuid4().hex
 
@@ -217,7 +226,8 @@ class Repo(db.Model):
     else:
       self.team = team
 
-    self.slug = slug
+    self.name = name
+    self.slug = slugify(self.name, separator='-', to_lower=True)
     self.elb = elb
     # TODO -- come up with a unique domain format that works across providers
     self.domain = domain or '{}.{}'.format(self.slug, config.DOMAIN)
@@ -229,9 +239,9 @@ class Repo(db.Model):
     self.internal_msg_token = internal_msg_token or auth_util.fresh_secret()
 
   def __repr__(self):
-    return '<Repo id={}, uid={}, team_id={}, slug={}, elb={}, domain={}, ' \
+    return '<Repo id={}, uid={}, team_id={}, name={}, slug={}, elb={}, domain={}, ' \
            'image_repo_owner={}, deploy_name={}, model_ext={}, is_destroyed={}, created_at={}>'.format(
-      self.id, self.uid, self.team_id, self.slug, self.elb, self.domain,
+      self.id, self.uid, self.team_id, self.name, self.slug, self.elb, self.domain,
       self.image_repo_owner, self.deploy_name, self.model_ext, self.is_destroyed, self.created_at)
 
   def ordered_deployments(self):
@@ -246,6 +256,9 @@ class Repo(db.Model):
 
   def api_url(self):
     return 'https://{}/api'.format(self.domain)
+
+  def full_name(self):
+    return '{}/{}'.format(self.team.name, self.name)
 
 
 class User(db.Model):
@@ -307,15 +320,34 @@ class ProviderUser(db.Model):
   def create_session(self):
     return dbi.create(Session, {'provider_user': self})
 
+  def authed_instance(self):
+    provider = self.provider
+    provider_client = provider.client()
+
+    if provider.slug == providers.GITHUB:
+      return provider_client(self.access_token, per_page=100).get_user()
+
   def repos(self):
     """
-    has_many repos through RepoProviderUser
+    :has_many: repos through RepoProviderUser
     """
-    repo_provider_users = db.session.query(RepoProviderUser) \
-      .options(joinedload(RepoProviderUser.repo)) \
-      .filter_by(is_destroyed=False, provider_user_id=self.id).all()
+
+    repo_ids = [r.repo_id for r in dbi.find_all(RepoProviderUser, {'id': self.id})]
+
+    repos = db.session.query(Repo) \
+      .options(joinedload(Repo.team)) \
+      .filter(Repo.id.in_(repo_ids)) \
+      .filter_by(is_destroyed=False).all()
 
     return [rpu.repo for rpu in repo_provider_users]
+
+  def available_repos(self):
+    """
+    Get all available repos for a provider user through the external provider service
+    (e.g. Get all Github repos for a Github user)
+    """
+    authed_provider_user = self.authed_instance()
+    return [r for r in authed_provider_user.get_repos()]
 
 
 class Session(db.Model):

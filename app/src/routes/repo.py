@@ -7,10 +7,10 @@ from src.helpers.provider_user_helper import current_provider_user
 from src import logger, dbi
 
 
-@namespace.route('/repos/dashboard')
+@namespace.route('/repos')
 class DashboardRepos(Resource):
   """
-  Fetch repos for the dashboard
+  Fetch repos for the dashboard for a provider_user
   """
   @namespace.doc('dashboard_repos')
   def get(self):
