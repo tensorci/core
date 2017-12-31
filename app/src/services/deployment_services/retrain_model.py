@@ -9,8 +9,8 @@ from src.helpers.deployment_statuses import ds
 
 class RetrainModel(object):
 
-  def __init__(self, prediction=None, latest_deployment=None, dataset=None, curr_record_count=None):
-    self.prediction = prediction
+  def __init__(self, repo=None, latest_deployment=None, dataset=None, curr_record_count=None):
+    self.repo = repo
     self.latest_deployment = latest_deployment
     self.dataset = dataset
     self.curr_record_count = curr_record_count
@@ -18,7 +18,7 @@ class RetrainModel(object):
   def perform(self):
     # Create new deployment with the same SHA as the latest deployment.
     new_deployment = dbi.create(Deployment, {
-      'prediction': self.prediction,
+      'repo': self.repo,
       'sha': self.latest_deployment.sha
     })
 

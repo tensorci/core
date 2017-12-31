@@ -15,7 +15,7 @@ class PublicizePrediction(object):
     self.port = port
     self.target_port = target_port
     self.deployment = None
-    self.prediction = None
+    self.repo = None
     self.team = None
     self.cluster = None
     self.cluster_name = None
@@ -64,13 +64,13 @@ class PublicizePrediction(object):
     # Get ELB for service
     elb_url = self.wait_for_elb()
 
-    # Update the prediction record with the ELB's url
-    self.prediction = dbi.update(self.prediction, {'elb': elb_url})
+    # Update the repo record with the ELB's url
+    self.repo = dbi.update(self.repo, {'elb': elb_url})
 
     logger.info('Assigning url to prediction...', queue=self.deployment_uid)
 
     # Create a CNAME record for your subdomain with the ELB's url
-    add_dns_records(os.environ.get('TL_HOSTED_ZONE_ID'), self.prediction.domain, [elb_url], 'CNAME')
+    add_dns_records(os.environ.get('TL_HOSTED_ZONE_ID'), self.repo.domain, [elb_url], 'CNAME')
 
     sleep(60)
 
@@ -78,7 +78,7 @@ class PublicizePrediction(object):
     self.poll_url()
 
     logger.info('Publication successful.', queue=self.deployment_uid)
-    logger.info('Prediction live at https://{}/api/predict'.format(self.prediction.domain),
+    logger.info('Prediction live at https://{}/api/predict'.format(self.repo.domain),
                 queue=self.deployment_uid,
                 last_entry=True)
 
@@ -136,7 +136,7 @@ class PublicizePrediction(object):
     return None
 
   def attempt_connection(self):
-    url = 'https://{}'.format(self.prediction.domain)
+    url = 'https://{}'.format(self.repo.domain)
     logger.info('Pinging url until response...', queue=self.deployment_uid)
 
     try:
@@ -148,9 +148,9 @@ class PublicizePrediction(object):
 
   def set_db_reliant_attrs(self):
     self.deployment = dbi.find_one(Deployment, {'uid': self.deployment_uid})
-    self.prediction = self.deployment.prediction
-    self.team = self.prediction.team
+    self.repo = self.deployment.repo
+    self.team = self.repo.team
     self.cluster = self.team.cluster
     self.cluster_name = self.cluster.name
-    self.deploy_name = self.prediction.deploy_name
+    self.deploy_name = self.repo.deploy_name
     self.service_name = self.deploy_name
