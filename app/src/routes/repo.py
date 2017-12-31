@@ -171,7 +171,7 @@ class RegisterRepo(Resource):
       repo_full_name = '{}/{}'.format(team_name, repo_name)
 
       try:
-        external_repo = provider_client.get_repo(repo_full_name)
+        external_repo = provider_client.get_repo(repo_full_name, lazy=False)
       except BaseException as e:
         logger.error('Error fetching external repo -- username={}, provider={}, repo_full_name={}'.format(
           provider_user.username, provider.name, repo_full_name))
