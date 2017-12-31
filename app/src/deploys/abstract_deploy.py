@@ -10,6 +10,7 @@ class AbstractDeploy(object):
     self.deployment = None
     self.repo = None
     self.team = None
+    self.provider = None
     self.cluster = None
     self.bucket = None
     self.dataset = None
@@ -166,6 +167,7 @@ class AbstractDeploy(object):
     self.deployment = dbi.find_one(Deployment, {'uid': self.deployment_uid})
     self.repo = self.deployment.repo
     self.team = self.repo.team
+    self.provider = self.team.provider
     self.cluster = self.team.cluster
     self.bucket = self.cluster.bucket
 

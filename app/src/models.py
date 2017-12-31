@@ -229,8 +229,12 @@ class Repo(db.Model):
     self.name = name
     self.slug = slug or slugify(self.name, separator='-', to_lower=True)
     self.elb = elb
-    # TODO -- come up with a unique domain format that works across providers
-    self.domain = domain or '{}.{}'.format(self.slug, config.DOMAIN)
+
+    if not domain:
+      # TODO: Incorporate provider slug when you start using multiple providers.
+      domain = '{}-{}.{}'.format(self.team.slug, self.slug, config.DOMAIN)
+
+    self.domain = domain
     self.image_repo_owner = image_repo_owner or config.IMAGE_REPO_OWNER
     self.deploy_name = deploy_name
     self.client_id = client_id or uuid4().hex
