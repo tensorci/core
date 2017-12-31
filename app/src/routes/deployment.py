@@ -99,7 +99,7 @@ class DeploymentTrained(Resource):
       deployer = BuildServerDeploy(deployment_uid=deployment.uid, build_for=clusters.API)
       job_queue.add(deployer.deploy, meta={'deployment': deployment.uid})
     elif update_prediction_model:  # tell the API cluster to pull the latest model
-      pred_messenger = PredMessenger(prediction_uid=deployment.prediction.uid)
+      pred_messenger = PredMessenger(repo_uid=deployment.repo.uid)
       job_queue.add(pred_messenger.update_model)
 
     return '', 200
