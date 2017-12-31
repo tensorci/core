@@ -6,7 +6,6 @@ namespace = api.namespace('api')
 # Add all route handlers here:
 from provider_user import *
 # from deployment import *
-# from dataset import *
-# from prediction import *
+from dataset import *
 from gh import *
 from repo import *

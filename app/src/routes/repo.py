@@ -1,3 +1,6 @@
+import boto3
+from botocore.exceptions import ClientError
+from flask import make_response, request
 from flask_restplus import Resource, fields
 from src.routes import namespace, api
 from src.api_responses.errors import *
@@ -270,3 +273,70 @@ class GetAvailableRepos(Resource):
           resp['repos'].append(formatted_repo)
 
     return resp, 200
+
+
+@namespace.route('/repo/model')
+class FetchModel(Resource):
+  """Fetch model file for repo from S3
+  and stream it back to the client"""
+
+  @namespace.doc('fetch_model')
+  def get(self):
+    provider_user = current_provider_user()
+
+    if not provider_user:
+      return UNAUTHORIZED
+
+    # Get refs to payload info
+    payload = dict(request.form.items())
+    git_url = payload.get('git_url')
+
+    provider_domain, team_name, repo_name = parse_git_url(git_url)
+
+    # Find the provider by the passed domain
+    provider = dbi.find_one(Provider, {'domain': provider_domain})
+
+    if not provider:
+      return PROVIDER_NOT_FOUND
+
+    if provider != provider_user.provider:
+      return PROVIDER_MISMATCH
+
+    # Find team and repo
+    team_slug = slugify(team_name, separator='-', to_lower=True)
+    team = dbi.find_one(Team, {'slug': team_slug, 'provider': provider})
+
+    if team:
+      repo_slug = slugify(repo_name, separator='-', to_lower=True)
+      repo = dbi.find_one(Repo, {'team': team, 'slug': repo_slug})
+    else:
+      repo = None
+
+    if not repo:
+      return REPO_NOT_REGISTERED
+
+    # Get the team's S3 bucket
+    bucket = team.cluster.bucket
+
+    # Download the file from S3 and stream it back to the client
+    s3 = boto3.resource('s3')
+    key = repo.model_file()
+
+    if not key:
+      return NO_MODEL_FILE_FOUND
+
+    try:
+      file = s3.Object(bucket.name, key).get()
+    except ClientError as e:
+      if e.response['Error']['Code'] == 'NoSuchKey':
+        return NO_MODEL_FILE_FOUND
+      else:
+        raise e
+    except BaseException as e:
+      logger.error('Error fetching model file from S3 (bucket={}, key={}): {}'.format(bucket.name, key, e))
+      return ERROR_PULLING_MODEL_FILE
+
+    resp = make_response(file['Body'].read())
+    resp.headers['Model-File-Type'] = repo.model_ext
+
+    return resp
