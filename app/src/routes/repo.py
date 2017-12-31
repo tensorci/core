@@ -52,7 +52,7 @@ class RestfulRepos(Resource):
     # Get the repos to-be-created from the payload
     new_repos = api.payload['repos']
 
-    # Group the new repos by team
+    # Group the new repos by team name
     teams_map = {}
     for data in new_repos:
       team_name = data.get('team_name')
@@ -60,10 +60,10 @@ class RestfulRepos(Resource):
       if team_name not in teams_map:
         teams_map[team_name] = []
 
-      teams_map[team_name].append(data.get('repo_name'))
+      teams_map[team_name].append(data)
 
     # Upsert each team and each repo for that team
-    for team_name, repo_names in teams_map.items():
+    for team_name, repos in teams_map.items():
       team_slug = slugify(team_name, separator='-', to_lower=True)
 
       # Upsert team
@@ -75,7 +75,8 @@ class RestfulRepos(Resource):
         team = dbi.create(Team, {'name': team_name, 'provider': provider})
         team_is_new = True
 
-      for repo_name in repo_names:
+      for repo_info in repos:
+        repo_name = repo_info.get('repo_name')
         repo_slug = slugify(repo_name, separator='-', to_lower=True)
 
         # Create new repo if team is new OR if repo doesn't exist yet
@@ -86,11 +87,11 @@ class RestfulRepos(Resource):
           })
 
           # Also create new RepoProviderUser when creating new Repo
-          if repo.owner.login == provider_user.username:
+          if team_name == provider_user.username:
             role = RepoProviderUser.roles.OWNER
-          elif repo.permissions.admin:
+          elif repo_info.get('is_admin'):
             role = RepoProviderUser.roles.ADMIN
-          elif repo.permissions.push:
+          elif repo_info.get('has_push_access'):
             role = RepoProviderUser.roles.MEMBER_WRITE
           else:
             role = RepoProviderUser.roles.MEMBER_READ
@@ -113,46 +114,7 @@ class RegisterRepo(Resource):
   @namespace.doc('create_tensorci_repo')
   @namespace.expect(create_repo_model, validate=True)
   def post(self):
-    provider_user = current_provider_user()
-
-    if not provider_user:
-      return UNAUTHORIZED
-
-    team_name = api.payload['team_name']
-    repo_name = api.payload['repo_name']
-    provider = provider_user.provider
-
-    team, team_is_new = dbi.upsert(Team, {
-      'name': team_name,
-      'provider': provider
-    })
-
-    repo_slug = slugify(repo_name, separator='-', to_lower=True)
-
-    # Create new repo if team is new OR if repo doesn't exist yet
-    if team_is_new or not dbi.find_one(Repo, {'team': team, 'slug': repo_slug}):
-      repo = dbi.create(Repo, {
-        'team': team,
-        'name': repo_name
-      })
-
-      # Also create new RepoProviderUser when creating new Repo
-      # his/her role will depend on
-      if repo.owner.login == provider_user.username:
-        role = RepoProviderUser.roles.OWNER
-      elif repo.permissions.admin:
-        role = RepoProviderUser.roles.ADMIN
-      else:
-        # TODO: ideally, you shouldn't be able to create a TensorCI repo from a Github repo if
-        # you're neither the owner or an admin...
-        role = RepoProviderUser.roles.MEMBER
-
-      dbi.create(RepoProviderUser, {
-        'repo': repo,
-        'provider_user': provider_user,
-        'role': role
-      })
-
+    # TODO: get this set up as a CLI endpoint
     return REPO_CREATION_SUCCESS
 
 
@@ -202,11 +164,14 @@ class GetAvailableRepos(Resource):
 
         for repo_slug in sorted_team_repos:
           repo = team_repos_map[repo_slug]
+          permissions = repo.permissions
 
           formatted_repo = {
             'repo_name': repo.name,
             'team_name': team_name,
             'full_name': repo.full_name,
+            'has_push_access': permissions.push,
+            'is_admin': permissions.admin,
             'icon': team_icon,
             'in_use': repo.full_name in existing_repos_map
             # TODO: if in_use is True, return the endpoint to the repo's dashboard as well
