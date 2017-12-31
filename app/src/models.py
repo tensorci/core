@@ -260,6 +260,11 @@ class Repo(db.Model):
   def full_name(self):
     return '{}/{}'.format(self.team.name, self.name)
 
+  def url(self):
+    team = self.team
+    provider = team.provider
+    return '{}/{}/{}'.format(provider.url(), team.slug, self.slug)
+
 
 class User(db.Model):
   id = db.Column(db.Integer, primary_key=True)

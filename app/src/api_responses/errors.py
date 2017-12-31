@@ -8,17 +8,16 @@ INVALID_INPUT_PAYLOAD = {'ok': False, 'code': 400, 'error': 'invalid_input_paylo
 TEAM_NAME_TAKEN = {'ok': False, 'code': 1100, 'error': 'team_name_taken'}, 500
 TEAM_NOT_FOUND = {'ok': False, 'code': 1101, 'error': 'team_not_found'}, 404
 
-# Prediction Errors
-PREDICTION_NAME_TAKEN = {'ok': False, 'code': 1200, 'error': 'prediction_name_taken'}, 500
-PREDICTION_NOT_FOUND = {'ok': False, 'code': 1201, 'error': 'prediction_not_found'}, 404
-PREDICTION_CREATION_FAILED = {'ok': False, 'code': 1202, 'error': 'prediction_creation_failed'}, 500
-NO_COMMITS_IN_REPO = {'ok': False, 'code': 1203, 'error': 'no_commits_found_in_repo'}, 500
-ERROR_FETCHING_REPO = {'ok': False, 'code': 1204, 'error': 'error_fetching_repo'}, 500
-ERROR_PARSING_COMMITS_FOR_REPO = {'ok': False, 'code': 1205, 'error': 'error_parsing_repo_commits'}, 500
-ERROR_PULLING_MODEL_FILE = {'ok': False, 'code': 1206, 'error': 'error_pulling_model_file'}, 500
-NO_MODEL_FILE_FOUND = {'ok': False, 'code': 1207, 'error': 'no_model_file_found', 'log': 'No model file found.'}, 404
+# Repo Errors
+NO_COMMITS_IN_REPO = {'ok': False, 'code': 1200, 'error': 'no_commits_found_in_repo'}, 500
+ERROR_FETCHING_REPO = {'ok': False, 'code': 1201, 'error': 'error_fetching_repo'}, 500
+ERROR_PARSING_COMMITS_FOR_REPO = {'ok': False, 'code': 1202, 'error': 'error_parsing_repo_commits'}, 500
+ERROR_PULLING_MODEL_FILE = {'ok': False, 'code': 1203, 'error': 'error_pulling_model_file'}, 500
+NO_MODEL_FILE_FOUND = {'ok': False, 'code': 1204, 'error': 'no_model_file_found', 'log': 'No model file found.'}, 404
+INVALID_REPO_PERMISSIONS = {'ok': False, 'code': 1205, 'error': 'action_requires_higher_permissions'}, 401
+REPO_NOT_REGISTERED = {'ok': False, 'code': 1206, 'error': 'repo_not_registered'}, 404
 
-# User Errors
+# ProviderUser Errors
 AUTHENTICATION_FAILED = {'ok': False, 'code': 1300, 'error': 'authentication_failed'}, 401
 
 # Deployment Errors
@@ -38,15 +37,8 @@ INVALID_OAUTH_TEMP_CODE = {'ok': False, 'code': 1701, 'error': 'invalid_oauth_te
 INVALID_OAUTH_STATE_VALUE = {'ok': False, 'code': 1702, 'error': 'invalid_oauth_state_value'}, 500
 INVALID_BETA_ACCESS_CODE = {'ok': False, 'code': 1703, 'error': 'invalid_beta_access_code'}, 500
 
-# PredictionIntegration Errors
-PREDICTION_INTEGRATION_UPSERT_FAILED = {'ok': False, 'code': 1800, 'error': 'prediction_integration_upsert_failed'}, 500
-
 # Provider Errors
-PROVIDER_NOT_FOUND = {'ok': False, 'code': 1900, 'error': 'provider_not_found'}, 404
-GITHUB_API_USER_ERROR = {'ok': False, 'code': 1901, 'error': 'github_api_user_error'}, 500
-GITHUB_API_EMAIL_ERROR = {'ok': False, 'code': 1902, 'error': 'github_api_email_error'}, 500
-PROVIDER_MISMATCH = {'ok': False, 'code': 1903, 'error': 'provider_mismatch'}, 500
-
-# Repo Errors
-INVALID_REPO_PERMISSIONS = {'ok': False, 'code': 2000, 'error': 'action_requires_higher_permissions'}, 401
-REPO_NOT_REGISTERED = {'ok': False, 'code': 2001, 'error': 'repo_not_registered'}, 404
+PROVIDER_NOT_FOUND = {'ok': False, 'code': 1800, 'error': 'provider_not_found'}, 404
+GITHUB_API_USER_ERROR = {'ok': False, 'code': 1801, 'error': 'github_api_user_error'}, 500
+GITHUB_API_EMAIL_ERROR = {'ok': False, 'code': 1802, 'error': 'github_api_email_error'}, 500
+PROVIDER_MISMATCH = {'ok': False, 'code': 1803, 'error': 'provider_mismatch'}, 500

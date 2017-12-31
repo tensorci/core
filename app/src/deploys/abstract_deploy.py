@@ -8,7 +8,7 @@ class AbstractDeploy(object):
   def __init__(self, deployment_uid=None):
     self.deployment_uid = deployment_uid
     self.deployment = None
-    self.prediction = None
+    self.repo = None
     self.team = None
     self.cluster = None
     self.bucket = None
@@ -164,19 +164,19 @@ class AbstractDeploy(object):
 
   def set_db_reliant_attrs(self):
     self.deployment = dbi.find_one(Deployment, {'uid': self.deployment_uid})
-    self.prediction = self.deployment.prediction
-    self.team = self.prediction.team
+    self.repo = self.deployment.repo
+    self.team = self.repo.team
     self.cluster = self.team.cluster
     self.bucket = self.cluster.bucket
 
-    datasets = self.prediction.datasets
+    datasets = self.repo.datasets
 
     if datasets:
       self.dataset = datasets[0]
 
   def update_deployment_status(self, status):
-    logger.info('Updating Deployment(sha={}) of Prediction(slug={}) to status: {}.'.format(
-      self.deployment.sha, self.prediction.slug, status))
+    logger.info('Updating Deployment(sha={}) of Repo(slug={}) to status: {}.'.format(
+      self.deployment.sha, self.repo.slug, status))
 
     self.deployment = dbi.update(self.deployment, {'status': status})
 

@@ -16,8 +16,8 @@ class ApiDeploy(AbstractDeploy):
 
   def deploy(self):
     self.set_db_reliant_attrs()
-    self.container_name = '{}-{}'.format(self.prediction.slug, clusters.API)
-    self.image = '{}/{}:{}'.format(self.prediction.image_repo_owner, self.container_name, self.deployment.sha)
+    self.container_name = '{}-{}'.format(self.repo.slug, clusters.API)
+    self.image = '{}/{}:{}'.format(self.repo.image_repo_owner, self.container_name, self.deployment.sha)
     self.deploy_name = '{}-{}'.format(self.container_name, ms_since_epoch(as_int=True))
     self.cluster_name = self.cluster.name
     self.ports = [80]
@@ -35,16 +35,16 @@ class ApiDeploy(AbstractDeploy):
       'S3_BUCKET_NAME': self.cluster.bucket.name,
       'DATASET_DB_URL': os.environ.get('DATASET_DB_URL'),
       'DATASET_TABLE_NAME': dataset_table,
-      'PREDICTION': self.prediction.slug,
-      'PREDICTION_UID': self.prediction.uid,
-      'CLIENT_ID': self.prediction.client_id,
-      'CLIENT_SECRET': self.prediction.client_secret,
-      'INTERNAL_MSG_TOKEN': self.prediction.internal_msg_token
+      'REPO_SLUG': self.repo.slug,
+      'REPO_UID': self.repo.uid,
+      'CLIENT_ID': self.repo.client_id,
+      'CLIENT_SECRET': self.repo.client_secret,
+      'INTERNAL_MSG_TOKEN': self.repo.internal_msg_token
     }
 
     logger.info('Deploying...', queue=self.deployment_uid, section=True)
 
-    if self.prediction.deploy_name:
+    if self.repo.deploy_name:
       self.update_deploy()
     else:
       super(ApiDeploy, self).deploy()
@@ -69,17 +69,17 @@ class ApiDeploy(AbstractDeploy):
 
     api = client.ExtensionsV1beta1Api(api_client=api_client)
 
-    api.patch_namespaced_deployment(self.prediction.deploy_name,
+    api.patch_namespaced_deployment(self.repo.deploy_name,
                                     namespace=self.namespace,
                                     body=body)
 
     self.on_deploy_success()
 
   def on_deploy_success(self):
-    if not self.prediction.deploy_name:
-      self.prediction = dbi.update(self.prediction, {'deploy_name': self.deploy_name})
+    if not self.repo.deploy_name:
+      self.repo = dbi.update(self.repo, {'deploy_name': self.deploy_name})
 
-    if self.prediction.elb:
+    if self.repo.elb:
       self.update_deployment_status(self.deployment.statuses.PREDICTING)
       logger.info('Successfully deployed to API.', queue=self.deployment_uid, last_entry=True)
     else:

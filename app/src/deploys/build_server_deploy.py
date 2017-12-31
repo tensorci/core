@@ -22,7 +22,7 @@ class BuildServerDeploy(AbstractDeploy):
 
   def deploy(self):
     self.set_db_reliant_attrs()
-    self.container_name = '{}-{}-build'.format(self.prediction.slug, self.build_for)
+    self.container_name = '{}-{}-build'.format(self.repo.slug, self.build_for)
     self.image = '{}/{}'.format(config.IMAGE_REPO_OWNER, image_names.BUILD_SERVER)
     self.deploy_name = '{}-{}'.format(self.container_name, ms_since_epoch(as_int=True))
     self.cluster_name = os.environ.get('BS_CLUSTER_NAME')
@@ -44,10 +44,10 @@ class BuildServerDeploy(AbstractDeploy):
     self.envs = {
       'DOCKER_USERNAME': os.environ.get('DOCKER_USERNAME'),
       'DOCKER_PASSWORD': os.environ.get('DOCKER_PASSWORD'),
-      'PREDICTION': self.prediction.slug,
-      'PREDICTION_UID': self.prediction.uid,
-      'GIT_REPO': self.prediction.git_repo,
-      'IMAGE_OWNER': self.prediction.image_repo_owner,
+      'REPO_SLUG': self.repo.slug,
+      'REPO_UID': self.repo.uid,
+      'GIT_REPO': self.repo.url(),
+      'IMAGE_OWNER': self.repo.image_repo_owner,
       'FOR_CLUSTER': self.build_for,
       'SHA': self.deployment.sha,
       'DEPLOYMENT_UID': self.deployment_uid,
@@ -85,8 +85,8 @@ class BuildServerDeploy(AbstractDeploy):
         logger.info('Job {} started.'.format(self.deploy_name))
 
       if status.get('failed') is not None:
-        logger.error('FAILED JOB, {}, for deployment(sha={}) of prediction(slug={}).'.format(
-          self.deploy_name, self.deployment.sha, self.prediction.slug))
+        logger.error('FAILED JOB, {}, for deployment(sha={}) of repo(slug={}).'.format(
+          self.deploy_name, self.deployment.sha, self.repo.slug))
 
         logger.error('Build job failed.', queue=self.deployment_uid)
         watcher.stop()
