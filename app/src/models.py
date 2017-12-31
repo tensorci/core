@@ -535,8 +535,7 @@ class Dataset(db.Model):
     self.last_train_record_count = last_train_record_count
 
   def table(self):
-    # TODO: This is gonna have to be more unique now
-    return '{}_{}'.format(self.repo.slug, self.slug).replace('-', '_')
+    return '{}_{}'.format(self.slug, self.uid).replace('-', '_')
 
   def __repr__(self):
     return '<Dataset id={}, uid={}, repo_id={}, name={}, slug={}, retrain_step_size={}, ' \
