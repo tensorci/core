@@ -10,6 +10,7 @@ from src import logger, dbi
 from slugify import slugify
 from src.models import Team, Repo, RepoProviderUser, Provider
 from src.helpers.provider_helper import parse_git_url
+from src.services.team_services.create_team import CreateTeam
 
 
 create_repo_model = api.model('Repo', {
@@ -81,7 +82,9 @@ class RestfulRepos(Resource):
       if team:
         team_is_new = False
       else:
-        team = dbi.create(Team, {'name': team_name, 'provider': provider})
+        create_team_svc = CreateTeam(name=team_name, provider=provider)
+        create_team_svc.perform()
+        team = create_team_svc.team
         team_is_new = True
 
       for repo_info in repos:
@@ -196,7 +199,9 @@ class RegisterRepo(Resource):
     # so upsert team, repo, and repo_provider_user for this provider_user.
 
     if not team:
-      team = dbi.create(Team, {'provider': provider, 'name': team_name})
+      create_team_svc = CreateTeam(name=team_name, provider=provider)
+      create_team_svc.perform()
+      team = create_team_svc.team
 
     if not repo:
       repo = dbi.create(Repo, {'team': team, 'name': repo_name})
