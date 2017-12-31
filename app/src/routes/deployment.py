@@ -3,7 +3,7 @@ from slugify import slugify
 from flask_restplus import Resource, fields
 from flask import request, Response, stream_with_context
 from src.routes import namespace, api
-from src.models import Provider, Deployment, Team, Repo
+from src.models import Provider, Deployment, Team, Repo, RepoProviderUser
 from src import logger, dbi
 from src.helpers.provider_user_helper import current_provider_user
 from src.api_responses.errors import *
@@ -143,6 +143,17 @@ class ApiDeployment(Resource):
 
     if not repo:
       return REPO_NOT_REGISTERED
+
+    repo_provider_user = dbi.find_one(RepoProviderUser, {
+      'repo': repo,
+      'provider_user': provider_user
+    })
+
+    if not repo_provider_user:
+      return NOT_ASSOCIATED_WITH_REPO
+
+    if repo_provider_user.role < RepoProviderUser.roles.MEMBER_WRITE:
+      return INVALID_REPO_PERMISSIONS
 
     # Get all deployments for this repo, ordered by most recently created
     deployments = repo.ordered_deployments()
@@ -287,6 +298,17 @@ def perform_train_deploy(with_api_deploy=False):
 
   if not repo:
     return REPO_NOT_REGISTERED
+
+  repo_provider_user = dbi.find_one(RepoProviderUser, {
+    'repo': repo,
+    'provider_user': provider_user
+  })
+
+  if not repo_provider_user:
+    return NOT_ASSOCIATED_WITH_REPO
+
+  if repo_provider_user.role < RepoProviderUser.roles.MEMBER_WRITE:
+    return INVALID_REPO_PERMISSIONS
 
   # Always update the repo's model extension
   repo = dbi.update(repo, {'model_ext': model_ext})

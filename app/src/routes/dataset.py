@@ -1,7 +1,7 @@
 from flask import request
 from flask_restplus import Resource
 from src.routes import namespace, api
-from src.models import Provider, Dataset, Team, Repo
+from src.models import Provider, Dataset, Team, Repo, RepoProviderUser
 from src import logger, dbi
 from src.helpers.provider_user_helper import current_provider_user
 from src.api_responses.errors import *
@@ -59,6 +59,17 @@ class RestfulDataset(Resource):
     # Must register repo as a TensorCI repo before adding a dataset to it.
     if not repo:
       return REPO_NOT_REGISTERED
+
+    repo_provider_user = dbi.find_one(RepoProviderUser, {
+      'repo': repo,
+      'provider_user': provider_user
+    })
+
+    if not repo_provider_user:
+      return NOT_ASSOCIATED_WITH_REPO
+
+    if repo_provider_user.role < RepoProviderUser.roles.MEMBER_WRITE:
+      return INVALID_REPO_PERMISSIONS
 
     if not dataset_slug:
       dataset_slug = repo_slug

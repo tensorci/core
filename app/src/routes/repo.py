@@ -168,7 +168,7 @@ class RegisterRepo(Resource):
     if repo_provider_user:
       role = repo_provider_user.role
 
-    # If role couldn't be fetched by DB records, get it via the provider api.
+    # If role couldn't be fetched via existing DB records, get it via the provider api.
     if role is None:
       provider_client = provider.client()(provider_user.access_token)
       repo_full_name = '{}/{}'.format(team_name, repo_name)

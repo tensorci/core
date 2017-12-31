@@ -42,3 +42,6 @@ PROVIDER_NOT_FOUND = {'ok': False, 'code': 1800, 'error': 'provider_not_found'},
 GITHUB_API_USER_ERROR = {'ok': False, 'code': 1801, 'error': 'github_api_user_error'}, 500
 GITHUB_API_EMAIL_ERROR = {'ok': False, 'code': 1802, 'error': 'github_api_email_error'}, 500
 PROVIDER_MISMATCH = {'ok': False, 'code': 1803, 'error': 'provider_mismatch'}, 500
+
+# RepoProviderUser Errors
+NOT_ASSOCIATED_WITH_REPO = {'ok': False, 'code': 1900, 'error': 'not_yet_associated_with_repo'}, 403

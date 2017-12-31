@@ -22,7 +22,7 @@ class ProviderUserLogin(Resource):
   @namespace.expect(provider_user_login_model, validate=True)
   def post(self):
     # Get important info from payload
-    username = api.payload['username'].lower()
+    username = api.payload['username']
     pw = api.payload['password']
     provider_slug = api.payload['provider']
 
