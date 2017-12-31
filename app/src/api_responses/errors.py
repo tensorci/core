@@ -49,3 +49,4 @@ PROVIDER_MISMATCH = {'ok': False, 'code': 1903, 'error': 'provider_mismatch'}, 5
 
 # Repo Errors
 INVALID_REPO_PERMISSIONS = {'ok': False, 'code': 2000, 'error': 'action_requires_higher_permissions'}, 401
+REPO_NOT_REGISTERED = {'ok': False, 'code': 2001, 'error': 'repo_not_registered'}, 404
