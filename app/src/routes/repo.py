@@ -5,7 +5,9 @@ from src.api_responses.success import *
 from src.helpers.provider_user_helper import current_provider_user
 from src import logger, dbi
 from slugify import slugify
-from src.models import Team, Repo, RepoProviderUser
+from src.models import Team, Repo, RepoProviderUser, Provider
+from src.helpers.provider_helper import parse_git_url
+
 
 create_repo_model = api.model('Repo', {
   'repo_name': fields.String(required=True),
@@ -14,6 +16,10 @@ create_repo_model = api.model('Repo', {
 
 create_repos_model = api.model('Repos', {
   'repos': fields.List(fields.Nested(create_repo_model), required=True)
+})
+
+register_tensorci_repo = api.model('Repo', {
+  'git_url': fields.String(required=True)
 })
 
 
@@ -111,10 +117,94 @@ class RegisterRepo(Resource):
   Register repo from a provider as a TensorCI repo
   """
 
-  @namespace.doc('create_tensorci_repo')
-  @namespace.expect(create_repo_model, validate=True)
+  @namespace.doc('register_tensorci_repo')
+  @namespace.expect(register_tensorci_repo, validate=True)
   def post(self):
-    # TODO: get this set up as a CLI endpoint
+    provider_user = current_provider_user()
+
+    if not provider_user:
+      return UNAUTHORIZED
+
+    # Parse provided git url into components (domain, team, repo)
+    git_url = api.payload['git_url']
+    provider_domain, team_name, repo_name = parse_git_url(git_url)
+
+    # Find the provider by the passed domain
+    provider = dbi.find_one(Provider, {'domain': provider_domain})
+
+    if not provider:
+      return PROVIDER_NOT_FOUND
+
+    if provider != provider_user.provider:
+      return PROVIDER_MISMATCH
+
+    # Check if team/repo/repo_provider_user already exists -- need to get
+    # permissions for the repo_provider_user.
+    team_slug = slugify(team_name, separator='-', to_lower=True)
+    team = dbi.find_one(Team, {'slug': team_slug, 'provider': provider})
+    repo = None
+    repo_provider_user = None
+    role = None
+
+    # If the team already exists, check to see if the repo exists, too.
+    if team:
+      repo_slug = slugify(repo_name, separator='-', to_lower=True)
+      repo = dbi.find_one(Repo, {'team': team, 'slug': repo_slug})
+
+    # If the repo already exists, check to see if the repo_provider_user exists, too.
+    if repo:
+      repo_provider_user = dbi.find_one(RepoProviderUser, {
+        'repo': repo,
+        'provider_user': provider_user
+      })
+
+    # If repo_provider_user already exists, get his role.
+    if repo_provider_user:
+      role = repo_provider_user.role
+
+    # If role couldn't be fetched by DB records, get it via the provider api.
+    if role is None:
+      provider_client = provider.client()(provider_user.access_token)
+      repo_full_name = '{}/{}'.format(team_name, repo_name)
+
+      try:
+        external_repo = provider_client.get_repo(repo_full_name)
+      except BaseException as e:
+        logger.error('Error fetching external repo -- username={}, provider={}, repo_full_name={}'.format(
+          provider_user.username, provider.name, repo_full_name))
+        return INVALID_REPO_PERMISSIONS
+
+      permissions = external_repo.permissions
+
+      if team_name == provider_user.username:
+        role = RepoProviderUser.roles.OWNER
+      elif permissions.admin:
+        role = RepoProviderUser.roles.ADMIN
+      elif permissions.push:
+        role = RepoProviderUser.roles.MEMBER_WRITE
+      else:
+        role = RepoProviderUser.roles.MEMBER_READ
+
+    # Respond with invalid permissions if provider_user doesn't have write access to this repo.
+    if role < RepoProviderUser.roles.MEMBER_WRITE:
+      return INVALID_REPO_PERMISSIONS
+
+    # At this point, we know the provider_user has (or will have) write to this TensorCI repo,
+    # so upsert team, repo, and repo_provider_user for this provider_user.
+
+    if not team:
+      team = dbi.create(Team, {'provider': provider, 'name': team_name})
+
+    if not repo:
+      repo = dbi.create(Repo, {'team': team, 'name': repo_name})
+
+    if not repo_provider_user:
+      dbi.create(RepoProviderUser, {
+        'repo': repo,
+        'provider_user': provider_user,
+        'role': role
+      })
+
     return REPO_CREATION_SUCCESS
 
 

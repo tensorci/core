@@ -339,6 +339,8 @@ class ProviderUser(db.Model):
       .filter(Repo.id.in_(repo_ids)) \
       .filter_by(is_destroyed=False).all()
 
+    return [rpu.repo for rpu in repo_provider_users]
+
   def available_repos(self):
     """
     Get all available repos for a provider user through the external provider service

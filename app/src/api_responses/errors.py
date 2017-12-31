@@ -45,3 +45,7 @@ PREDICTION_INTEGRATION_UPSERT_FAILED = {'ok': False, 'code': 1800, 'error': 'pre
 PROVIDER_NOT_FOUND = {'ok': False, 'code': 1900, 'error': 'provider_not_found'}, 404
 GITHUB_API_USER_ERROR = {'ok': False, 'code': 1901, 'error': 'github_api_user_error'}, 500
 GITHUB_API_EMAIL_ERROR = {'ok': False, 'code': 1902, 'error': 'github_api_email_error'}, 500
+PROVIDER_MISMATCH = {'ok': False, 'code': 1903, 'error': 'provider_mismatch'}, 500
+
+# Repo Errors
+INVALID_REPO_PERMISSIONS = {'ok': False, 'code': 2000, 'error': 'action_requires_higher_permissions'}, 401
