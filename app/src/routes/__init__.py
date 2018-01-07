@@ -9,3 +9,4 @@ from deployment import *
 from gh import *
 from provider_user import *
 from repo import *
+from user import *

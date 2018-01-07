@@ -45,3 +45,6 @@ PROVIDER_MISMATCH = {'ok': False, 'code': 1803, 'error': 'provider_mismatch'}, 5
 
 # RepoProviderUser Errors
 NOT_ASSOCIATED_WITH_REPO = {'ok': False, 'code': 1900, 'error': 'not_yet_associated_with_repo'}, 403
+
+# User Errors
+USER_NOT_FOUND = {'ok': False, 'code': 2000, 'error': 'user_not_found'}, 404
