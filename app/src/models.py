@@ -110,10 +110,11 @@ class Team(db.Model):
   provider_id = db.Column(db.Integer, db.ForeignKey('provider.id'), index=True, nullable=False)
   provider = db.relationship('Provider', backref='teams')
   cluster = db.relationship('Cluster', uselist=False, back_populates='team')
+  icon = db.Column(db.String)
   is_destroyed = db.Column(db.Boolean, server_default='f')
   created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
-  def __init__(self, name=None, provider=None, provider_id=None):
+  def __init__(self, name=None, provider=None, provider_id=None, icon=None):
     self.uid = uuid4().hex
     self.name = name
     self.slug = slugify(name, separator='-', to_lower=True)
@@ -123,9 +124,11 @@ class Team(db.Model):
     else:
       self.provider = provider
 
+    self.icon = None
+
   def __repr__(self):
-    return '<Team id={}, uid={}, name={}, slug={}, provider_id={}, is_destroyed={}, created_at={}>'.format(
-      self.id, self.uid, self.name, self.slug, self.provider_id, self.is_destroyed, self.created_at)
+    return '<Team id={}, uid={}, name={}, slug={}, provider_id={}, icon={}, is_destroyed={}, created_at={}>'.format(
+      self.id, self.uid, self.name, self.slug, self.provider_id, self.icon, self.is_destroyed, self.created_at)
 
 
 class Cluster(db.Model):
@@ -303,10 +306,11 @@ class ProviderUser(db.Model):
   user = db.relationship('User', backref='provider_users')
   username = db.Column(db.String(120), index=True, unique=True)
   access_token = db.Column(db.String(240))
+  icon = db.Column(db.String)
   is_destroyed = db.Column(db.Boolean, server_default='f')
   created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
-  def __init__(self, provider=None, provider_id=None, user=None, user_id=None, username=None, access_token=None):
+  def __init__(self, provider=None, provider_id=None, user=None, user_id=None, username=None, access_token=None, icon=None):
     self.uid = uuid4().hex
 
     if provider_id:
@@ -321,10 +325,11 @@ class ProviderUser(db.Model):
 
     self.username = username
     self.access_token = access_token
+    self.icon = icon
 
   def __repr__(self):
-    return '<ProviderUser id={}, uid={}, provider_id={}, user_id={}, username={}, is_destroyed={}, created_at={}>'.format(
-      self.id, self.uid, self.provider_id, self.user_id, self.username, self.is_destroyed, self.created_at)
+    return '<ProviderUser id={}, uid={}, provider_id={}, user_id={}, username={}, icon={}, is_destroyed={}, created_at={}>'.format(
+      self.id, self.uid, self.provider_id, self.user_id, self.username, self.icon, self.is_destroyed, self.created_at)
 
   def create_session(self):
     return dbi.create(Session, {'provider_user': self})
