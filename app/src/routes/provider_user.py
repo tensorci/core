@@ -4,8 +4,9 @@ from src.api_responses.errors import *
 from src.api_responses.success import *
 from src.helpers.definitions import auth_header_name
 from src import logger, dbi
-from src.models import ProviderUser, Provider
+from src.models import ProviderUser, Provider, TeamProviderUser
 from src.helpers import auth_util
+from src.helpers.provider_user_helper import current_provider_user
 
 provider_user_login_model = api.model('User', {
   'username': fields.String(required=True),
@@ -53,3 +54,39 @@ class ProviderUserLogin(Resource):
     token = auth_util.serialize_token(session.id, session.token)
 
     return {'ok': True, 'message': 'Login Successful'}, 200, {auth_header_name: token}
+
+
+@namespace.route('/provider_user/storage_info')
+class GetLocalStorageInfo(Resource):
+  """Get local storage info for provider user"""
+
+  @namespace.doc('get_local_storage_info')
+  def get(self):
+    provider_user = current_provider_user()
+
+    if not provider_user:
+      return UNAUTHORIZED
+
+    user = provider_user.user
+
+    if not user:
+      return USER_NOT_FOUND
+
+    resp = {
+      'user': {
+        'icon': provider_user.icon
+      }
+    }
+
+    provider = provider_user.provider
+    teams = [tpu.team for tpu in dbi.find_all(TeamProviderUser, {'provider_user': provider_user})]
+
+    resp['teams'] = [
+      {
+        'name': t.name,
+        'slug': t.slug,
+        'icon': t.icon,
+        'provider': provider.slug
+      } for t in teams]
+
+    return resp

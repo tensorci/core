@@ -8,6 +8,7 @@ from src import logger, dbi, db
 from src.models import Provider, ProviderUser, User
 from github import Github
 from src.helpers import url_encode_str, auth_util
+from src.services.team_services.upsert_teams_from_orgs import UpsertTeamsFromOrgs
 
 
 @namespace.route('/github/oauth_url')
@@ -92,8 +93,18 @@ class OAuthCallback(Resource):
         'username': username
       })
 
-    # Update access token
-    provider_user = dbi.update(provider_user, {'access_token': access_token})
+    # Update access token and icon
+    provider_user = dbi.update(provider_user, {
+      'access_token': access_token,
+      'icon': gh_user.avatar_url
+    })
+
+    try:
+      # Create teams for provider_user
+      UpsertTeamsFromOrgs(provider_user=provider_user).perform()
+    except BaseException as e:
+      logger.error('Error creating teams from github orgs for provider_user(id={}): {}'.format(provider_user.id, e))
+      return ORG_TO_TEAM_CONVERSION_FAILED
 
     # Create new Session for provider_user
     session = provider_user.create_session()

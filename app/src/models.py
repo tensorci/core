@@ -24,6 +24,9 @@ Relationships:
   Cluster --> has_one --> Team
   Cluster --> has_one --> Bucket
   Bucket --> has_one --> Cluster
+  Team --> has_many --> team_provider_users
+  TeamProviderUser --> belongs_to --> Team
+  TeamProviderUser --> belongs_to --> ProviderUser
   Team --> has_many --> repos
   Repo --> belongs_to --> Team
   Repo --> has_many --> repo_provider_users
@@ -114,17 +117,17 @@ class Team(db.Model):
   is_destroyed = db.Column(db.Boolean, server_default='f')
   created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
-  def __init__(self, name=None, provider=None, provider_id=None, icon=None):
+  def __init__(self, name=None, slug=None, provider=None, provider_id=None, icon=None):
     self.uid = uuid4().hex
     self.name = name
-    self.slug = slugify(name, separator='-', to_lower=True)
+    self.slug = slug or slugify(name, separator='-', to_lower=True)
 
     if provider_id:
       self.provider_id = provider_id
     else:
       self.provider = provider
 
-    self.icon = None
+    self.icon = icon
 
   def __repr__(self):
     return '<Team id={}, uid={}, name={}, slug={}, provider_id={}, icon={}, is_destroyed={}, created_at={}>'.format(
@@ -199,6 +202,31 @@ class Bucket(db.Model):
       return 's3://' + self.name
 
     return None
+
+
+class TeamProviderUser(db.Model):
+  id = db.Column(db.Integer, primary_key=True)
+  team_id = db.Column(db.Integer, db.ForeignKey('team.id'), index=True, nullable=False)
+  team = db.relationship('Team', backref='team_provider_users')
+  provider_user_id = db.Column(db.Integer, db.ForeignKey('provider_user.id'), index=True, nullable=False)
+  provider_user = db.relationship('ProviderUser', backref='team_provider_users')
+  is_destroyed = db.Column(db.Boolean, server_default='f')
+  created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+
+  def __init__(self, team=None, team_id=None, provider_user=None, provider_user_id=None):
+    if team_id:
+      self.team_id = team_id
+    else:
+      self.team = team
+
+    if provider_user_id:
+      self.provider_user_id = provider_user_id
+    else:
+      self.provider_user = provider_user
+
+  def __repr__(self):
+    return '<TeamProviderUser id={}, team_id={}, provider_user_id={}, is_destroyed={}, created_at={}>'.format(
+      self.id, self.team_id, self.provider_user_id, self.is_destroyed, self.created_at)
 
 
 class Repo(db.Model):

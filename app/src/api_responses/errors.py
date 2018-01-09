@@ -7,6 +7,7 @@ INVALID_INPUT_PAYLOAD = {'ok': False, 'code': 400, 'error': 'invalid_input_paylo
 # Team Errors
 TEAM_NAME_TAKEN = {'ok': False, 'code': 1100, 'error': 'team_name_taken'}, 500
 TEAM_NOT_FOUND = {'ok': False, 'code': 1101, 'error': 'team_not_found'}, 404
+ORG_TO_TEAM_CONVERSION_FAILED = {'ok': False, 'code': 1102, 'error': 'team_creation_from_org_failed'}, 500
 
 # Repo Errors
 NO_COMMITS_IN_REPO = {'ok': False, 'code': 1200, 'error': 'no_commits_found_in_repo'}, 500
