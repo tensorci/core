@@ -7,6 +7,7 @@ from src import logger, dbi
 from src.models import ProviderUser, Provider, TeamProviderUser
 from src.helpers import auth_util
 from src.helpers.provider_user_helper import current_provider_user
+from operator import attrgetter
 
 provider_user_login_model = api.model('User', {
   'username': fields.String(required=True),
@@ -74,19 +75,31 @@ class GetLocalStorageInfo(Resource):
 
     resp = {
       'user': {
+        'username': provider_user.username,
         'icon': provider_user.icon
       }
     }
 
     provider = provider_user.provider
-    teams = [tpu.team for tpu in dbi.find_all(TeamProviderUser, {'provider_user': provider_user})]
+    teams = sorted([tpu.team for tpu in dbi.find_all(TeamProviderUser, {'provider_user': provider_user})], key=attrgetter('slug'))
 
-    resp['teams'] = [
-      {
+    # "team" equal to the provider_user's username (i.e. whittlbc)
+    username_team = None
+    formatted_teams = []
+
+    for t in teams:
+      formatted_team = {
         'name': t.name,
         'slug': t.slug,
         'icon': t.icon,
         'provider': provider.slug
-      } for t in teams]
+      }
+
+      if t.slug == provider_user.username:
+        username_team = formatted_team
+      else:
+        formatted_teams.append(formatted_team)
+
+    resp['teams'] = [username_team] + formatted_teams
 
     return resp

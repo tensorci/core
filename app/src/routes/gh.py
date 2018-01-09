@@ -111,4 +111,6 @@ class OAuthCallback(Resource):
 
     # Create redirect response with session token
     token = auth_util.serialize_token(session.id, session.token)
-    return redirect('http://localhost:3000/oauth_redirect?auth={}'.format(url_encode_str(token)))
+
+    return redirect('http://localhost:3000/oauth_redirect?auth={}&username={}'.format(
+      url_encode_str(token), provider_user.username))
