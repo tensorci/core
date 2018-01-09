@@ -16,6 +16,7 @@ class ProdConfig(Config):
   def __init__(self):
     self.SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
     self.CORE_URL = os.environ.get('CORE_URL') or 'https://app.{}/api'.format(self.DOMAIN)
+    self.MARKETING_URL = os.environ.get('MARKETING_URL') or 'https://www.{}'.format(self.DOMAIN)
 
 
 class StagingConfig(Config):
@@ -26,6 +27,7 @@ class StagingConfig(Config):
   def __init__(self):
     self.SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
     self.CORE_URL = os.environ.get('CORE_URL') or 'https://app.{}/api'.format(self.DOMAIN)
+    self.MARKETING_URL = os.environ.get('MARKETING_URL') or 'https://www.{}'.format(self.DOMAIN)
 
 
 class DevConfig(Config):
@@ -35,6 +37,7 @@ class DevConfig(Config):
   def __init__(self):
     self.SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
     self.CORE_URL = os.environ.get('CORE_URL') or 'https://app.{}/api'.format(self.DOMAIN)
+    self.MARKETING_URL = os.environ.get('MARKETING_URL') or 'https://www.{}'.format(self.DOMAIN)
 
 
 class TestConfig(Config):

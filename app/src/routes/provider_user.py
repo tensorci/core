@@ -8,6 +8,7 @@ from src.models import ProviderUser, Provider, TeamProviderUser
 from src.helpers import auth_util
 from src.helpers.provider_user_helper import current_provider_user
 from operator import attrgetter
+from src.config import config
 
 provider_user_login_model = api.model('User', {
   'username': fields.String(required=True),
@@ -81,7 +82,7 @@ class GetLocalStorageInfo(Resource):
     }
 
     provider = provider_user.provider
-    teams = sorted([tpu.team for tpu in dbi.find_all(TeamProviderUser, {'provider_user': provider_user})], key=attrgetter('slug'))
+    teams = sorted([tpu.team for tpu in provider_user.team_provider_users], key=attrgetter('slug'))
 
     # "team" equal to the provider_user's username (i.e. whittlbc)
     username_team = None
@@ -102,4 +103,13 @@ class GetLocalStorageInfo(Resource):
 
     resp['teams'] = [username_team] + formatted_teams
 
-    return resp
+    return resp, 200
+
+
+@namespace.route('/provider_user/logout_url')
+class GetLogoutUrl(Resource):
+  """Get logout url"""
+
+  @namespace.doc('get_logout_url')
+  def get(self):
+    return {'url': config.MARKETING_URL}
