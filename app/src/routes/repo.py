@@ -8,7 +8,7 @@ from src.api_responses.success import *
 from src.helpers.provider_user_helper import current_provider_user
 from src import logger, dbi
 from slugify import slugify
-from src.models import Team, Repo, RepoProviderUser, Provider
+from src.models import Team, Repo, RepoProviderUser, Provider, TeamProviderUser
 from src.helpers.provider_helper import parse_git_url
 from src.services.team_services.create_team import CreateTeam
 
@@ -222,12 +222,31 @@ class GetAvailableRepos(Resource):
   Get all available repos for the provider_user through the provider
   (e.g. get all Github repos for a Github user)
   """
-
   @namespace.doc('get_available_provider_repos')
   def get(self):
     provider_user = current_provider_user()
 
     if not provider_user:
+      return UNAUTHORIZED
+
+    args = dict(request.args.items())
+    team_slug = args.get('team').lower()
+
+    if not team_slug:
+      logger.error('No team provided during request for available repos')
+      return INVALID_INPUT_PAYLOAD
+
+    team = dbi.find_one(Team, {'slug': team_slug})
+
+    if not team:
+      return TEAM_NOT_FOUND
+
+    team_provider_user = dbi.find_one(TeamProviderUser, {
+      'team': team,
+      'provider_user': provider_user
+    })
+
+    if not team_provider_user:
       return UNAUTHORIZED
 
     try:
@@ -238,44 +257,27 @@ class GetAvailableRepos(Resource):
 
     resp = {'repos': []}
 
-    if available_repos:
-      existing_repos = provider_user.repos()
-      existing_repos_map = {r.full_name().lower(): True for r in existing_repos}
+    if not available_repos:
+      return resp, 200
 
-      available_teams_map = {}
-      for r in available_repos:
-        team_slug = r.owner.login.lower()
+    avail_team_repos = [r for r in available_repos if r.owner.login.lower() == team_slug]
 
-        if team_slug not in available_teams_map:
-          available_teams_map[team_slug] = {}
+    if not avail_team_repos:
+      return resp, 200
 
-        available_teams_map[team_slug][r.name] = r
+    existing_repos_map = {r.slug: True for r in team.repos}
 
-      sorted_available_teams = sorted(available_teams_map.keys())
+    for r in avail_team_repos:
+      permissions = r.permissions
 
-      for team_slug in sorted_available_teams:
-        team_repos_map = available_teams_map[team_slug]
-        owner = team_repos_map.values()[0].owner
-        team_name = owner.login
-        team_icon = owner.avatar_url
-        sorted_team_repos = sorted(team_repos_map.keys())
+      formatted_repo = {
+        'name': r.name,
+        'slug': r.name.lower(),
+        'creatable': permissions.admin or permissions.push,
+        'exists': r.name.lower() in existing_repos_map
+      }
 
-        for repo_slug in sorted_team_repos:
-          repo = team_repos_map[repo_slug]
-          permissions = repo.permissions
-
-          formatted_repo = {
-            'repo_name': repo.name,
-            'team_name': team_name,
-            'full_name': repo.full_name,
-            'has_push_access': permissions.push,
-            'is_admin': permissions.admin,
-            'icon': team_icon,
-            'in_use': repo.full_name in existing_repos_map
-            # TODO: if in_use is True, return the endpoint to the repo's dashboard as well
-          }
-
-          resp['repos'].append(formatted_repo)
+      resp['repos'].append(formatted_repo)
 
     return resp, 200
 
