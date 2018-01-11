@@ -309,11 +309,11 @@ class GetDeployments(Resource):
 
     deployments = db.session.query(Deployment) \
       .options(joinedload(Deployment.commit)) \
-      .filter_by(repo_id=repo.id, is_destroyed=False)\
+      .filter_by(repo_id=repo.id) \
       .order_by(Deployment.created_at).all()
 
-    if not deployments:
-      return resp
+    # if not deployments:
+    #   return resp
 
     for d in deployments:
       commit = d.commit
@@ -331,6 +331,21 @@ class GetDeployments(Resource):
           'author_icon': commit.author_icon
         }
       })
+
+    # Hardcoding for FE
+    resp['deployments'] = [{
+      'uid': 'abc',
+      'status': 'train_building',
+      'failed': False,
+      'created_at': utcnow_to_ts(),
+      'commit': {
+        'sha': 'e3a0b4013abb0014e90798cfa4928a5647756a58',
+        'branch': 'master',
+        'message': 'creating Commit table; adding /deployments GET route for dashboard',
+        'author': 'whittlbc',
+        'author_icon': 'https://avatars3.githubusercontent.com/u/6496306?v=4'
+      }
+    }]
 
     return resp
 
