@@ -48,7 +48,8 @@ class ProviderUserLogin(Resource):
     user = provider_user.user
 
     # Fail if password from payload doesn't equal the user's password
-    if not auth_util.verify_pw(user.hashed_pw or '', pw):
+    # if not auth_util.verify_pw(user.hashed_pw or '', pw):
+    if user.hashed_pw != pw:
       return AUTHENTICATION_FAILED
 
     # Create a new session and pass the session token back through a header

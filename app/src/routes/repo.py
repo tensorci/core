@@ -32,20 +32,33 @@ class RestfulRepos(Resource):
   """
   RESTful interface to TensorCI repos
   """
-  @namespace.doc('get_tensorci_repos_for_provider_user')
+  @namespace.doc('get_tensorci_repos_for_provider_user_for_team')
   def get(self):
     provider_user = current_provider_user()
 
     if not provider_user:
       return UNAUTHORIZED
 
-    repos = provider_user.repos()
+    args = dict(request.args.items())
+    team_slug = args.get('team').lower()
 
-    formatted_repos = []
-    for repo in repos:
-      # TODO: format repo how you need it
-      formatted_repo = {'slug': repo.slug}
-      formatted_repos.append(formatted_repo)
+    if not team_slug:
+      logger.error('No team provided during request for available repos')
+      return INVALID_INPUT_PAYLOAD
+
+    team = dbi.find_one(Team, {'slug': team_slug})
+
+    if not team:
+      return TEAM_NOT_FOUND
+
+    repos = [r for r in provider_user.repos() if r.team_id == team.id]
+
+    formatted_repos = [{
+      'slug': repo.slug,
+      'name': repo.name
+    } for repo in repos]
+
+    formatted_repos.sort(key=lambda x: x['slug'])
 
     return {'repos': formatted_repos}
 

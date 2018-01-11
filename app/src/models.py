@@ -374,7 +374,7 @@ class ProviderUser(db.Model):
     :has_many: repos through RepoProviderUser
     """
 
-    repo_ids = [r.repo_id for r in dbi.find_all(RepoProviderUser, {'id': self.id})]
+    repo_ids = [r.repo_id for r in dbi.find_all(RepoProviderUser, {'provider_user_id': self.id})]
 
     return db.session.query(Repo) \
       .options(joinedload(Repo.team)) \
