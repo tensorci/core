@@ -89,3 +89,60 @@ class RestfulDataset(Resource):
       return DATASET_CREATION_FAILED
 
     return DATASET_CREATION_SUCCESS
+
+
+@namespace.route('/datasets')
+class RestfulDataset(Resource):
+  """Restful interface for the Dataset model, continued"""
+
+  @namespace.doc('get_datasets_for_repo')
+  def get(self):
+    provider_user = current_provider_user()
+
+    if not provider_user:
+      return UNAUTHORIZED
+
+    args = dict(request.args.items())
+    team_slug = args.get('team')
+    repo_slug = args.get('repo')
+
+    if not team_slug:
+      logger.error('No team provided during request for project datasets')
+      return INVALID_INPUT_PAYLOAD
+
+    if not repo_slug:
+      logger.error('No repo provided during request for project datasets')
+      return INVALID_INPUT_PAYLOAD
+
+    team_slug = team_slug.lower()
+    team = dbi.find_one(Team, {'slug': team_slug})
+
+    if not team:
+      return TEAM_NOT_FOUND
+
+    repo_slug = repo_slug.lower()
+
+    repo = [r for r in provider_user.repos() if r.team_id == team.id and r.slug == repo_slug]
+
+    if not repo:
+      return REPO_NOT_FOUND
+
+    repo = repo[0]
+
+    # datasets = [{
+    #   'name': d.name,
+    #   'retrain_step_size': d.retrain_step_size,
+    #   'last_train_record_count': d.last_train_record_count,
+    #   'created_at': d.created_at
+    # } for d in repo.datasets]
+
+    import datetime
+    datasets = [{
+      'name': 'tensorci-customer',
+      'num_records': 85065,
+      'retrain_step_size': 100,
+      'last_train_record_count': 85000,
+      'created_at': datetime.datetime.utcnow().strftime('%B %d, %Y - %H:%M:%S')
+    }]
+
+    return {'datasets': datasets}

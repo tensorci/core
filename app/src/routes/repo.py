@@ -40,12 +40,13 @@ class RestfulRepos(Resource):
       return UNAUTHORIZED
 
     args = dict(request.args.items())
-    team_slug = args.get('team').lower()
+    team_slug = args.get('team')
 
     if not team_slug:
-      logger.error('No team provided during request for available repos')
+      logger.error('No team provided during request for team repos')
       return INVALID_INPUT_PAYLOAD
 
+    team_slug = team_slug.lower()
     team = dbi.find_one(Team, {'slug': team_slug})
 
     if not team:
@@ -243,12 +244,13 @@ class GetAvailableRepos(Resource):
       return UNAUTHORIZED
 
     args = dict(request.args.items())
-    team_slug = args.get('team').lower()
+    team_slug = args.get('team')
 
     if not team_slug:
       logger.error('No team provided during request for available repos')
       return INVALID_INPUT_PAYLOAD
 
+    team_slug = team_slug.lower()
     team = dbi.find_one(Team, {'slug': team_slug})
 
     if not team:

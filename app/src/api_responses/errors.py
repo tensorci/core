@@ -17,6 +17,7 @@ ERROR_PULLING_MODEL_FILE = {'ok': False, 'code': 1203, 'error': 'error_pulling_m
 NO_MODEL_FILE_FOUND = {'ok': False, 'code': 1204, 'error': 'no_model_file_found', 'log': 'No model file found.'}, 404
 INVALID_REPO_PERMISSIONS = {'ok': False, 'code': 1205, 'error': 'action_requires_higher_permissions'}, 401
 REPO_NOT_REGISTERED = {'ok': False, 'code': 1206, 'error': 'repo_not_registered'}, 404
+REPO_NOT_FOUND = {'ok': False, 'code': 1207, 'error': 'repo_not_found'}, 404
 
 # ProviderUser Errors
 AUTHENTICATION_FAILED = {'ok': False, 'code': 1300, 'error': 'authentication_failed'}, 401
