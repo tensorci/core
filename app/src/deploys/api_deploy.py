@@ -17,7 +17,7 @@ class ApiDeploy(AbstractDeploy):
   def deploy(self):
     self.set_db_reliant_attrs()
     self.container_name = '{}-{}-{}'.format(self.repo.slug, self.repo.uid, clusters.API)
-    self.image = '{}/{}:{}'.format(self.repo.image_repo_owner, self.container_name, self.deployment.sha)
+    self.image = '{}/{}:{}'.format(self.repo.image_repo_owner, self.container_name, self.commit.sha)
     self.deploy_name = '{}-{}'.format(self.container_name, ms_since_epoch(as_int=True))
     self.cluster_name = self.cluster.name
     self.ports = [80]

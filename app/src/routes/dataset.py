@@ -9,6 +9,7 @@ from src.api_responses.success import *
 from src.services.dataset_services.create_dataset import CreateDataset
 from src.helpers.provider_helper import parse_git_url
 from slugify import slugify
+from src.helpers import utcnow_to_ts
 
 
 @namespace.route('/dataset')
@@ -133,7 +134,7 @@ class RestfulDataset(Resource):
     #   'name': d.name,
     #   'retrain_step_size': d.retrain_step_size,
     #   'last_train_record_count': d.last_train_record_count,
-    #   'created_at': d.created_at
+    #   'created_at': utcnow_to_ts(d.created_at)
     # } for d in repo.datasets]
 
     import datetime

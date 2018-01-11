@@ -27,4 +27,4 @@ def handle_job_failure(job, exc_type, exc_value, traceback):
 
     if deployment:
       dbi.update(deployment, {'failed': True})
-      logger.error('Deployment (sha={}) failed unexpectedly.'.format(deployment.sha), queue=deployment_uid)
+      logger.error('Deployment (sha={}) failed unexpectedly.'.format(deployment.commit.sha), queue=deployment_uid)

@@ -49,7 +49,7 @@ class BuildServerDeploy(AbstractDeploy):
       'GIT_REPO': self.repo.url(),
       'IMAGE_OWNER': self.repo.image_repo_owner,
       'FOR_CLUSTER': self.build_for,
-      'SHA': self.deployment.sha,
+      'SHA': self.commit.sha,
       'DEPLOYMENT_UID': self.deployment_uid,
       'REDIS_URL': os.environ.get('REDIS_URL')
     }
@@ -86,7 +86,7 @@ class BuildServerDeploy(AbstractDeploy):
 
       if status.get('failed') is not None:
         logger.error('FAILED JOB, {}, for deployment(sha={}) of repo(slug={}).'.format(
-          self.deploy_name, self.deployment.sha, self.repo.slug))
+          self.deploy_name, self.commit.sha, self.repo.slug))
 
         logger.error('Build job failed.', queue=self.deployment_uid)
         watcher.stop()

@@ -2,9 +2,10 @@ import os
 from slugify import slugify
 from flask_restplus import Resource, fields
 from flask import request, Response, stream_with_context
+from src.helpers import utcnow_to_ts
 from src.routes import namespace, api
-from src.models import Provider, Deployment, Team, Repo, RepoProviderUser
-from src import logger, dbi
+from src.models import Provider, Deployment, Team, Repo, RepoProviderUser, Commit
+from src import logger, dbi, db
 from src.helpers.provider_user_helper import current_provider_user
 from src.api_responses.errors import *
 from src.api_responses.success import *
@@ -17,6 +18,7 @@ from src.utils.pred_messenger import PredMessenger
 from src.helpers.deployment_statuses import ds
 from src.utils.log_formatter import training_log
 from src.helpers.provider_helper import parse_git_url
+from sqlalchemy.orm import joinedload
 
 train_deployment_model = api.model('Deployment', {
   'git_url': fields.String(required=True),
@@ -178,7 +180,7 @@ class ApiDeployment(Resource):
     if latest_deployment_status_idx > done_training_idx and not latest_deployment.failed:
       return DEPLOYMENT_UP_TO_DATE
 
-    logger.info('New deployment detected to serve: {}'.format(latest_deployment.sha),
+    logger.info('New deployment detected to serve: {}'.format(latest_deployment.commit.sha),
                 queue=latest_deployment.uid,
                 section=True)
 
@@ -265,6 +267,74 @@ class TrainDeployment(Resource):
       return {'logs': log_messages}
 
 
+@namespace.route('/deployments')
+class GetDeployments(Resource):
+  """Fetch deployments for a repo"""
+
+  @namespace.doc('get_deployments_for_repo')
+  def get(self):
+    provider_user = current_provider_user()
+
+    if not provider_user:
+      return UNAUTHORIZED
+
+    args = dict(request.args.items())
+    team_slug = args.get('team')
+    repo_slug = args.get('repo')
+
+    if not team_slug:
+      logger.error('No team provided during request for project datasets')
+      return INVALID_INPUT_PAYLOAD
+
+    if not repo_slug:
+      logger.error('No repo provided during request for project datasets')
+      return INVALID_INPUT_PAYLOAD
+
+    team_slug = team_slug.lower()
+    team = dbi.find_one(Team, {'slug': team_slug})
+
+    if not team:
+      return TEAM_NOT_FOUND
+
+    repo_slug = repo_slug.lower()
+
+    repo = [r for r in provider_user.repos() if r.team_id == team.id and r.slug == repo_slug]
+
+    if not repo:
+      return REPO_NOT_FOUND
+
+    repo = repo[0]
+
+    resp = {'deployments': []}
+
+    deployments = db.session.query(Deployment) \
+      .options(joinedload(Deployment.commit)) \
+      .filter_by(repo_id=repo.id, is_destroyed=False)\
+      .order_by(Deployment.created_at).all()
+
+    if not deployments:
+      return resp
+
+    for d in deployments:
+      commit = d.commit
+
+      resp['deployments'].append({
+        'uid': d.uid,
+        'status': d.status,
+        'failed': d.failed,
+        'created_at': utcnow_to_ts(d.created_at),
+        'commit': {
+          'sha': commit.sha,
+          'branch': commit.branch,
+          'message': commit.message,
+          'author': commit.author,
+          'author_icon': commit.author_icon
+        }
+      })
+
+    return resp
+
+
 def perform_train_deploy(with_api_deploy=False):
   provider_user = current_provider_user()
 
@@ -322,7 +392,7 @@ def perform_train_deploy(with_api_deploy=False):
     return ERROR_FETCHING_REPO
 
   try:
-    latest_sha = commits[0].sha  # get sha of latest commit
+    latest_ext_commit = commits[0]  # get latest external commit
   except IndexError:
     return NO_COMMITS_IN_REPO
   except BaseException as e:
@@ -334,16 +404,29 @@ def perform_train_deploy(with_api_deploy=False):
 
   # Tell user everything is up-to-date if latest deploy has same sha
   # as latest commit and hasn't failed.
-  if deployments and deployments[0].sha == latest_sha and not deployments[0].failed:
+  if deployments and deployments[0].commit.sha == latest_ext_commit.sha and not deployments[0].failed:
     return DEPLOYMENT_UP_TO_DATE
+
+  # Upsert the commit
+  commit = dbi.find_one(Commit, {'sha': latest_ext_commit.sha})
+
+  if not commit:
+    author = latest_ext_commit.author
+
+    commit = dbi.create(Commit, {
+      'sha': latest_ext_commit.sha,
+      'message': latest_ext_commit.commit.message,
+      'author': author.login,
+      'author_icon': author.avatar_url
+    })
 
   # Create new deployment for repo
   deployment = dbi.create(Deployment, {
     'repo': repo,
-    'sha': latest_sha
+    'commit': commit
   })
 
-  logger.info('New SHA detected: {}'.format(latest_sha), queue=deployment.uid, section=True)
+  logger.info('New SHA detected: {}'.format(commit.sha), queue=deployment.uid, section=True)
 
   logger.info('Scheduling training build...', queue=deployment.uid, section=True)
 

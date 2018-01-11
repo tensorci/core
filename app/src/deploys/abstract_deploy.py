@@ -165,6 +165,7 @@ class AbstractDeploy(object):
 
   def set_db_reliant_attrs(self):
     self.deployment = dbi.find_one(Deployment, {'uid': self.deployment_uid})
+    self.commit = self.deployment.commit
     self.repo = self.deployment.repo
     self.team = self.repo.team
     self.provider = self.team.provider
@@ -178,7 +179,7 @@ class AbstractDeploy(object):
 
   def update_deployment_status(self, status):
     logger.info('Updating Deployment(sha={}) of Repo(slug={}) to status: {}.'.format(
-      self.deployment.sha, self.repo.slug, status))
+      self.commit.sha, self.repo.slug, status))
 
     self.deployment = dbi.update(self.deployment, {'status': status})
 

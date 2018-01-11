@@ -47,6 +47,8 @@ Relationships:
   Deployment --> belongs_to --> Repo
   Deployment --> has_one --> TrainJob
   TrainJob --> has_one --> Deployment
+  Deployment --> belongs_to --> Commit
+  Commit --> has_many --> deployments
   Repo --> has_many --> datasets
   Dataset --> belongs_to --> Repo
 """
@@ -54,6 +56,7 @@ import datetime
 import importlib
 from slugify import slugify
 from sqlalchemy.dialects.postgresql import JSON
+from sqlalchemy.types import Text
 from src import db, dbi, logger
 from sqlalchemy.orm import joinedload
 from helpers import auth_util, repo_user_roles, instance_types, user_verification_statuses, providers
@@ -497,15 +500,16 @@ class Deployment(db.Model):
   uid = db.Column(db.String, index=True, unique=True, nullable=False)
   repo_id = db.Column(db.Integer, db.ForeignKey('repo.id'), index=True, nullable=False)
   repo = db.relationship('Repo', backref='deployments')
-  sha = db.Column(db.String(360))
   status = db.Column(db.String(60))
   train_job = db.relationship('TrainJob', uselist=False, back_populates='deployment')
+  commit_id = db.Column(db.Integer, db.ForeignKey('commit.id'), index=True, nullable=False)
+  commit = db.relationship('Commit', backref='deployments')
   failed = db.Column(db.Boolean, server_default='f')
   created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
   statuses = ds
 
-  def __init__(self, repo=None, repo_id=None, sha=None, status=ds.CREATED, failed=False):
+  def __init__(self, repo=None, repo_id=None, commit=None, commit_id=None, status=ds.CREATED, failed=False):
     self.uid = uuid4().hex
 
     if repo_id:
@@ -513,13 +517,17 @@ class Deployment(db.Model):
     else:
       self.repo = repo
 
-    self.sha = sha
+    if commit_id:
+      self.commit_id = commit_id
+    else:
+      self.commit = commit
+
     self.status = status
     self.failed = failed
 
   def __repr__(self):
-    return '<Deployment id={}, uid={}, repo_id={}, sha={}, status={}, failed={}, created_at={}>'.format(
-      self.id, self.uid, self.repo_id, self.sha, self.status, self.failed, self.created_at)
+    return '<Deployment id={}, uid={}, repo_id={}, commit_id={}, status={}, failed={}, created_at={}>'.format(
+      self.id, self.uid, self.repo_id, self.commit_id, self.status, self.failed, self.created_at)
 
 
 class TrainJob(db.Model):
@@ -540,6 +548,10 @@ class TrainJob(db.Model):
 
   def duration(self):
     return self.ended_at - self.started_at
+
+  def __repr__(self):
+    return '<TrainJob id={}, deployment_id={}, started_at={}, ended_at={}>'.format(
+      self.id, self.deployment_id, self.started_at, self.ended_at)
 
 
 class Dataset(db.Model):
@@ -575,3 +587,23 @@ class Dataset(db.Model):
            'last_train_record_count={}, created_at={}, is_destroyed={}>'.format(
       self.id, self.uid, self.repo_id, self.name, self.slug, self.retrain_step_size,
       self.last_train_record_count, self.created_at, self.is_destroyed)
+
+
+class Commit(db.Model):
+  id = db.Column(db.Integer, primary_key=True)
+  sha = db.Column(db.String(360), unique=True, nullable=False, index=True)
+  message = db.Column(Text)
+  author = db.Column(db.String(240))
+  author_icon = db.Column(db.String(240))
+  branch = db.Column(db.String(120))
+
+  def __init__(self, sha=None, message=None, author=None, author_icon=None, branch='master'):
+    self.sha = sha
+    self.message = message
+    self.author = author
+    self.author_icon = author_icon
+    self.branch = branch
+
+  def __repr__(self):
+    return '<Commit id={}, sha={}, message={}, author={}, author_icon={}, branch={}>'.format(
+      self.id, self.sha, self.message, self.author, self.author_icon, self.branch)
