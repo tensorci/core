@@ -4,9 +4,10 @@ from flask_restplus import Resource
 from src.routes import namespace, api
 from src.api_responses.errors import *
 from src.api_responses.success import *
-from src import logger, dbi, db
+from src import logger, dbi
 from src.models import Provider, ProviderUser, User
 from github import Github
+from src.config import config
 from src.helpers import url_encode_str, auth_util
 from src.services.team_services.upsert_teams_from_orgs import UpsertTeamsFromOrgs
 
@@ -112,5 +113,5 @@ class OAuthCallback(Resource):
     # Create redirect response with session token
     token = auth_util.serialize_token(session.id, session.token)
 
-    return redirect('http://localhost:3000/oauth_redirect?auth={}&username={}'.format(
-      url_encode_str(token), provider_user.username))
+    return redirect('{}/oauth_redirect?auth={}&username={}'.format(
+      config.DASH_URL, url_encode_str(token), provider_user.username))
