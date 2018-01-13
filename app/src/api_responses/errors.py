@@ -50,3 +50,6 @@ NOT_ASSOCIATED_WITH_REPO = {'ok': False, 'code': 1900, 'error': 'not_yet_associa
 
 # User Errors
 USER_NOT_FOUND = {'ok': False, 'code': 2000, 'error': 'user_not_found'}, 404
+
+# Deployment Errors
+DEPLOYMENT_NOT_FOUND = {'ok': False, 'code': 2100, 'error': 'deployment_not_found'}, 404

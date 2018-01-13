@@ -235,16 +235,22 @@ class TrainDeployment(Resource):
     if not repo:
       return REPO_NOT_REGISTERED
 
-    # Get all deployments for this repo, ordered by most recently created
-    deployments = repo.ordered_deployments()
+    if args.get('uid'):
+      deployment = dbi.find_one(Deployment, {'uid': args.get('uid')})
 
-    if not deployments:
-      return NO_DEPLOYMENT_TO_SERVE
+      if not deployment:
+        return DEPLOYMENT_NOT_FOUND
+    else:
+      # Get all deployments for this repo, ordered by most recently created
+      deployments = repo.ordered_deployments()
 
-    # Get latest deployment for repo
-    latest_deployment = deployments[0]
+      if not deployments:
+        return NO_DEPLOYMENT_TO_SERVE
 
-    log_stream_key = 'train-{}'.format(latest_deployment.uid)  # redis key for the log stream
+      # Get latest deployment for repo
+      deployment = deployments[0]
+
+    log_stream_key = 'train-{}'.format(deployment.uid)  # redis key for the log stream
     follow_logs = args.get('follow') == 'true'  # Do they want to follow the real-time logs or no?
 
     if follow_logs:
@@ -265,6 +271,23 @@ class TrainDeployment(Resource):
       log_messages = [training_log(data).rstrip() for ts, data in current_logs]
 
       return {'logs': log_messages}
+
+
+@namespace.route('/logtest')
+class LogTest(Resource):
+  def get(self):
+    from time import sleep
+
+    def func():
+      i = 0
+
+      while True:
+        i += 1
+        sleep(2)
+        yield 'a'*1024 + 'Line {}\n'.format(i)
+
+    return Response(stream_with_context(func()),
+                    headers={'X-Accel-Buffering': 'no'})
 
 
 @namespace.route('/deployments')
@@ -322,6 +345,7 @@ class GetDeployments(Resource):
         'uid': d.uid,
         'status': d.status,
         'failed': d.failed,
+        'canceled': False,
         'created_at': utcnow_to_ts(d.created_at),
         'commit': {
           'sha': commit.sha,
@@ -334,9 +358,10 @@ class GetDeployments(Resource):
 
     # Hardcoding for FE
     resp['deployments'] = [{
-      'uid': 'abc',
+      'uid': 'decaca96f81c4e928424281d903c2cbd',
       'status': 'train_building',
       'failed': False,
+      'canceled': False,
       'created_at': utcnow_to_ts(),
       'commit': {
         'sha': 'e3a0b4013abb0014e90798cfa4928a5647756a58',
@@ -346,6 +371,65 @@ class GetDeployments(Resource):
         'author_icon': 'https://avatars3.githubusercontent.com/u/6496306?v=4'
       }
     }]
+
+    return resp
+
+
+@namespace.route('/deployment')
+class GetDeployment(Resource):
+  """Fetch deployment"""
+
+  @namespace.doc('get_deployment')
+  def get(self):
+    # provider_user = current_provider_user()
+    #
+    # if not provider_user:
+    #   return UNAUTHORIZED
+    #
+    # args = dict(request.args.items())
+    # deployment_uid = args.get('uid')
+    #
+    # if not deployment_uid:
+    #   return INVALID_INPUT_PAYLOAD
+    #
+    # # TODO: Validate that deployment is accessible by provider_user
+    #
+    # deployment = dbi.find_one(Deployment, {'uid': deployment_uid})
+    #
+    # if not deployment:
+    #   return DEPLOYMENT_NOT_FOUND
+    #
+    # commit = deployment.commit
+
+    # resp = {
+    #   'uid': deployment.uid,
+    #   'status': deployment.status,
+    #   'failed': deployment.failed,
+    #   'canceled': False,
+    #   'created_at': utcnow_to_ts(deployment.created_at),
+    #   'commit': {
+    #     'sha': commit.sha,
+    #     'branch': commit.branch,
+    #     'message': commit.message,
+    #     'author': commit.author,
+    #     'author_icon': commit.author_icon
+    #   }
+    # }
+
+    resp = {
+      'uid': 'decaca96f81c4e928424281d903c2cbd',
+      'status': 'predicting',
+      'failed': False,
+      'canceled': False,
+      'created_at': utcnow_to_ts(),
+      'commit': {
+        'sha': '6f93f80b58665db236d8bf1e6f4e05061410c2c5',
+        'branch': 'master',
+        'message': 'hardcoding BE for /deployments response',
+        'author': 'whittlbc',
+        'author_icon': 'https://avatars3.githubusercontent.com/u/6496306?v=4'
+      }
+    }
 
     return resp
 
