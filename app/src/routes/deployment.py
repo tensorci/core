@@ -335,8 +335,8 @@ class GetDeployments(Resource):
       .filter_by(repo_id=repo.id) \
       .order_by(Deployment.created_at).all()
 
-    # if not deployments:
-    #   return resp
+    if not deployments:
+      return resp
 
     for d in deployments:
       commit = d.commit
@@ -356,22 +356,6 @@ class GetDeployments(Resource):
         }
       })
 
-    # Hardcoding for FE
-    resp['deployments'] = [{
-      'uid': 'decaca96f81c4e928424281d903c2cbd',
-      'status': 'train_building',
-      'failed': False,
-      'canceled': False,
-      'created_at': utcnow_to_ts(),
-      'commit': {
-        'sha': 'e3a0b4013abb0014e90798cfa4928a5647756a58',
-        'branch': 'master',
-        'message': 'creating Commit table; adding /deployments GET route for dashboard',
-        'author': 'whittlbc',
-        'author_icon': 'https://avatars3.githubusercontent.com/u/6496306?v=4'
-      }
-    }]
-
     return resp
 
 
@@ -381,53 +365,38 @@ class GetDeployment(Resource):
 
   @namespace.doc('get_deployment')
   def get(self):
-    # provider_user = current_provider_user()
-    #
-    # if not provider_user:
-    #   return UNAUTHORIZED
-    #
-    # args = dict(request.args.items())
-    # deployment_uid = args.get('uid')
-    #
-    # if not deployment_uid:
-    #   return INVALID_INPUT_PAYLOAD
-    #
-    # # TODO: Validate that deployment is accessible by provider_user
-    #
-    # deployment = dbi.find_one(Deployment, {'uid': deployment_uid})
-    #
-    # if not deployment:
-    #   return DEPLOYMENT_NOT_FOUND
-    #
-    # commit = deployment.commit
+    provider_user = current_provider_user()
 
-    # resp = {
-    #   'uid': deployment.uid,
-    #   'status': deployment.status,
-    #   'failed': deployment.failed,
-    #   'canceled': False,
-    #   'created_at': utcnow_to_ts(deployment.created_at),
-    #   'commit': {
-    #     'sha': commit.sha,
-    #     'branch': commit.branch,
-    #     'message': commit.message,
-    #     'author': commit.author,
-    #     'author_icon': commit.author_icon
-    #   }
-    # }
+    if not provider_user:
+      return UNAUTHORIZED
+
+    args = dict(request.args.items())
+    deployment_uid = args.get('uid')
+
+    if not deployment_uid:
+      return INVALID_INPUT_PAYLOAD
+
+    # TODO: Validate that deployment is accessible by provider_user
+
+    deployment = dbi.find_one(Deployment, {'uid': deployment_uid})
+
+    if not deployment:
+      return DEPLOYMENT_NOT_FOUND
+
+    commit = deployment.commit
 
     resp = {
-      'uid': 'decaca96f81c4e928424281d903c2cbd',
-      'status': 'predicting',
-      'failed': False,
+      'uid': deployment.uid,
+      'status': deployment.status,
+      'failed': deployment.failed,
       'canceled': False,
-      'created_at': utcnow_to_ts(),
+      'created_at': utcnow_to_ts(deployment.created_at),
       'commit': {
-        'sha': '6f93f80b58665db236d8bf1e6f4e05061410c2c5',
-        'branch': 'master',
-        'message': 'hardcoding BE for /deployments response',
-        'author': 'whittlbc',
-        'author_icon': 'https://avatars3.githubusercontent.com/u/6496306?v=4'
+        'sha': commit.sha,
+        'branch': commit.branch,
+        'message': commit.message,
+        'author': commit.author,
+        'author_icon': commit.author_icon
       }
     }
 

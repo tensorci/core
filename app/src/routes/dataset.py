@@ -130,20 +130,12 @@ class RestfulDataset(Resource):
 
     repo = repo[0]
 
-    # datasets = [{
-    #   'name': d.name,
-    #   'retrain_step_size': d.retrain_step_size,
-    #   'last_train_record_count': d.last_train_record_count,
-    #   'created_at': utcnow_to_ts(d.created_at)
-    # } for d in repo.datasets]
-
-    import datetime
     datasets = [{
-      'name': 'tensorci-customer',
-      'num_records': 85065,
-      'retrain_step_size': 100,
-      'last_train_record_count': 85000,
-      'created_at': datetime.datetime.utcnow().strftime('%B %d, %Y - %H:%M:%S')
-    }]
+      'name': d.name,
+      'num_records': 100,  # Hardcoding for now
+      'retrain_step_size': d.retrain_step_size,
+      'last_train_record_count': d.last_train_record_count,
+      'created_at': utcnow_to_ts(d.created_at)
+    } for d in repo.datasets]
 
     return {'datasets': datasets}
