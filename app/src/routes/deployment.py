@@ -338,6 +338,8 @@ class GetDeployments(Resource):
     if not deployments:
       return resp
 
+    deployments.reverse()
+
     for d in deployments:
       commit = d.commit
 
