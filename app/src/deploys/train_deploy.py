@@ -15,8 +15,8 @@ class TrainDeploy(AbstractDeploy):
     self.update_prediction_model = update_prediction_model
 
   def deploy(self):
-    self.set_db_reliant_attrs()  # TODO: turn into decorator
-    self.container_name = '{}-{}-{}'.format(self.repo.slug, self.repo.uid, clusters.TRAIN)
+    self.set_db_reliant_attrs()
+    self.container_name = '{}-{}'.format(self.repo.slug, clusters.TRAIN)
     self.image = '{}/{}:{}'.format(self.repo.image_repo_owner, self.container_name, self.commit.sha)
     self.deploy_name = '{}-{}'.format(self.container_name, ms_since_epoch(as_int=True))
     self.cluster = self.team.cluster
