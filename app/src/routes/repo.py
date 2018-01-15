@@ -309,9 +309,9 @@ class FetchModel(Resource):
     if not provider_user:
       return UNAUTHORIZED
 
-    # Get refs to payload info
-    payload = dict(request.form.items())
-    git_url = payload.get('git_url')
+    # Get refs to args info
+    args = dict(request.args.items())
+    git_url = args.get('git_url')
 
     provider_domain, team_name, repo_name = parse_git_url(git_url)
 
