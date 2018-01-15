@@ -168,6 +168,15 @@ class RestfulDataset(Resource):
 
     repo = repo[0]
 
+    # Make sure this provider_user is associated with this dataset (through repo)
+    repo_provider_user = dbi.find_one(RepoProviderUser, {
+      'repo': repo,
+      'provider_user': provider_user
+    })
+
+    if not repo_provider_user:
+      return REPO_PROVIDER_USER_NOT_FOUND
+
     datasets = [{
       'name': d.name,
       'uid': d.uid,
@@ -175,8 +184,18 @@ class RestfulDataset(Resource):
       'retrain_step_size': d.retrain_step_size,
       'last_train_record_count': d.last_train_record_count,
       'created_at': utcnow_to_ts(d.created_at),
-      'has_write_access': provider_user.has_write_access()
+      'has_write_access': repo_provider_user.has_write_access()
     } for d in repo.datasets]
+
+    # datasets = [{
+    #   'name': 'tensorci-customer',
+    #   'uid': 'abc',
+    #   'num_records': 142,
+    #   'retrain_step_size': None,
+    #   'last_train_record_count': 0,
+    #   'created_at': utcnow_to_ts(),
+    #   'has_write_access': True
+    # }]
 
     return {'datasets': datasets}
 
@@ -213,6 +232,21 @@ class RestfulDataset(Resource):
     if not repo_provider_user:
       return REPO_PROVIDER_USER_NOT_FOUND
 
-    preview_records = dataset_db.sample(table=dataset.table(), limit=3)
+    preview_records = dataset_db.sample(table=dataset.table(), limit=10)
+
+    # preview_records = [
+    #   {
+    #     'name': 'Ben Whittle',
+    #     'email': 'ben@gmail.com'
+    #   },
+    #   {
+    #     'name': 'Gab Maher',
+    #     'email': 'gab@gmail.com'
+    #   },
+    #   {
+    #     'name': 'Gary Peters',
+    #     'email': 'gary@gmail.com'
+    #   }
+    # ]
 
     return {'preview': preview_records}
