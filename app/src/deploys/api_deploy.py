@@ -85,7 +85,10 @@ class ApiDeploy(AbstractDeploy):
 
     if self.repo.elb:
       self.update_deployment_status(self.deployment.statuses.PREDICTING)
-      logger.info('Successfully deployed to API.', queue=self.deployment_uid, last_entry=True)
+      logger.info('Successfully deployed to API.', queue=self.deployment_uid)
+      logger.info('Prediction live at https://{}/api/predict'.format(self.repo.domain),
+                  queue=self.deployment_uid,
+                  last_entry=True)
     else:
       logger.info('Successfully deployed to API.', queue=self.deployment_uid)
       logger.info('Scheduling prediction for publication...', queue=self.deployment_uid, section=True)
