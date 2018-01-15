@@ -2,6 +2,7 @@ import os
 from src import dbi, logger
 from src.models import Deployment
 from src.utils.aws import add_dns_records
+from src.services.cluster_services.export_cluster import ExportCluster
 from time import sleep
 import requests
 from kubernetes import client, config
@@ -27,6 +28,9 @@ class PublicizePrediction(object):
 
     logger.info('Publicizing prediction...', queue=self.deployment_uid, section=True)
     logger.info('Exposing deployment...', queue=self.deployment_uid)
+
+    # Ensure cluster/context exists in KUBECONFIG
+    ExportCluster(cluster=self.cluster).perform()
 
     # Expose deployment with a LoadBalancer service
     exposed = kubectl.expose(resource='deployment/{}'.format(self.deploy_name),

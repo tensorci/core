@@ -4,6 +4,7 @@ from abstract_deploy import AbstractDeploy
 from src import dbi, logger
 from src.utils import clusters
 from src.services.prediction_services.publicize_prediction import PublicizePrediction
+from src.services.cluster_services.export_cluster import ExportCluster
 from src.utils.job_queue import job_queue
 from src.helpers import ms_since_epoch
 from kubernetes import client, config
@@ -41,6 +42,9 @@ class ApiDeploy(AbstractDeploy):
       'CLIENT_SECRET': self.repo.client_secret,
       'INTERNAL_MSG_TOKEN': self.repo.internal_msg_token
     }
+
+    # Ensure cluster/context exists in KUBECONFIG
+    ExportCluster(cluster=self.cluster).perform()
 
     logger.info('Deploying...', queue=self.deployment_uid, section=True)
 
