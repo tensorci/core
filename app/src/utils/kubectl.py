@@ -14,7 +14,7 @@ def expose(resource=None, type='LoadBalancer', port=80, target_port=80, name=Non
 
 def annotate(resource=None, resource_name=None, labels=None, context=None, cluster=None):
   labels = labels or {}
-  formatted_labels = ['='.join([k, v]) for k, v in labels.items()]
+  formatted_labels = ['='.join([str(k), str(v)]) for k, v in labels.items()]
 
   command = ['kubectl', 'annotate', resource, resource_name] + \
             formatted_labels + \
