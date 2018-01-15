@@ -18,7 +18,7 @@ class TrainDeploy(AbstractDeploy):
     self.set_db_reliant_attrs()
     self.container_name = '{}-{}'.format(clusters.TRAIN, self.repo.uid)
     self.image = '{}/{}:{}'.format(self.repo.image_repo_owner, self.container_name, self.commit.sha)
-    self.deploy_name = '{}-{}-{}'.format(self.repo.uid, clusters.TRAIN, ms_since_epoch(as_int=True))
+    self.deploy_name = '{}-{}-{}'.format(clusters.TRAIN, self.repo.uid, ms_since_epoch(as_int=True))
     self.cluster = self.team.cluster
     self.cluster_name = os.environ.get('TRAIN_CLUSTER_NAME')
     self.job = True
