@@ -26,7 +26,7 @@ class PublicizePrediction(object):
   def perform(self):
     self.set_db_reliant_attrs()
 
-    logger.info('Publicizing prediction...', queue=self.deployment_uid, section=True)
+    logger.info('Publicizing prediction (this only has to happen once)...', queue=self.deployment_uid, section=True)
     logger.info('Exposing deployment...', queue=self.deployment_uid)
 
     # Ensure cluster/context exists in KUBECONFIG
