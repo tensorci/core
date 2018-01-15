@@ -354,6 +354,12 @@ class GetDeployments(Resource):
 
     for d in deployments:
       commit = d.commit
+      train_job = d.train_job
+
+      if train_job:
+        train_duration_sec = train_job.duration().seconds
+      else:
+        train_duration_sec = 0
 
       resp['deployments'].append({
         'uid': d.uid,
@@ -361,6 +367,7 @@ class GetDeployments(Resource):
         'failed': d.failed,
         'canceled': False,
         'created_at': utcnow_to_ts(d.created_at),
+        'train_duration_sec': train_duration_sec,
         'commit': {
           'sha': commit.sha,
           'branch': commit.branch,
