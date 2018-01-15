@@ -3,15 +3,13 @@ from abstract_deploy import AbstractDeploy
 from train_deploy import TrainDeploy
 from api_deploy import ApiDeploy
 from src.utils import image_names, clusters
-from src.config import get_config
+from src.config import config
 from src.helpers import ms_since_epoch
 from kubernetes import watch
 from src.utils.aws import create_s3_bucket
 from src import dbi, logger
 from src.utils.job_queue import job_queue
 from src.services.cluster_services.create_cluster import CreateCluster
-
-config = get_config()
 
 
 class BuildServerDeploy(AbstractDeploy):
@@ -24,7 +22,7 @@ class BuildServerDeploy(AbstractDeploy):
 
   def deploy(self):
     self.set_db_reliant_attrs()
-    self.container_name = '{}-{}-build'.format(self.prediction.slug, self.build_for)
+    self.container_name = '{}-{}-build'.format(self.repo.slug, self.build_for)
     self.image = '{}/{}'.format(config.IMAGE_REPO_OWNER, image_names.BUILD_SERVER)
     self.deploy_name = '{}-{}'.format(self.container_name, ms_since_epoch(as_int=True))
     self.cluster_name = os.environ.get('BS_CLUSTER_NAME')
@@ -46,12 +44,12 @@ class BuildServerDeploy(AbstractDeploy):
     self.envs = {
       'DOCKER_USERNAME': os.environ.get('DOCKER_USERNAME'),
       'DOCKER_PASSWORD': os.environ.get('DOCKER_PASSWORD'),
-      'PREDICTION': self.prediction.slug,
-      'PREDICTION_UID': self.prediction.uid,
-      'GIT_REPO': self.prediction.git_repo,
-      'IMAGE_OWNER': self.prediction.image_repo_owner,
+      'REPO_SLUG': self.repo.slug,
+      'REPO_UID': self.repo.uid,
+      'GIT_REPO': self.repo.url(),
+      'IMAGE_OWNER': self.repo.image_repo_owner,
       'FOR_CLUSTER': self.build_for,
-      'SHA': self.deployment.sha,
+      'SHA': self.commit.sha,
       'DEPLOYMENT_UID': self.deployment_uid,
       'REDIS_URL': os.environ.get('REDIS_URL')
     }
@@ -87,8 +85,8 @@ class BuildServerDeploy(AbstractDeploy):
         logger.info('Job {} started.'.format(self.deploy_name))
 
       if status.get('failed') is not None:
-        logger.error('FAILED JOB, {}, for deployment(sha={}) of prediction(slug={}).'.format(
-          self.deploy_name, self.deployment.sha, self.prediction.slug))
+        logger.error('FAILED JOB, {}, for deployment(sha={}) of repo(slug={}).'.format(
+          self.deploy_name, self.commit.sha, self.repo.slug))
 
         logger.error('Build job failed.', queue=self.deployment_uid)
         watcher.stop()

@@ -1,167 +1,146 @@
 """
 Tables:
 
+  Provider
   Team
-  User
-  Token
-  TeamUser
   Cluster
-  Prediction
+  Bucket
+  Repo
+  User
+  ProviderUser
+  Session
+  RepoProviderUser
+  Integration
+  IntegrationSetting
+  Deployment
+  TrainJob
+  Dataset
 
 Relationships:
 
-  Team --> has_many --> team_users
-  User --> has_many --> team_users
-  User --> has_many --> tokens
-  Token --> belongs_to --> User
-  TeamUser --> belongs_to --> Team
-  TeamUser --> belongs_to --> User
+  Provider --> has_many --> teams
+  Team --> belongs_to --> Provider
   Team --> has_one --> Cluster
   Cluster --> has_one --> Team
   Cluster --> has_one --> Bucket
   Bucket --> has_one --> Cluster
-  Team --> has_many --> predictions
-  Prediction --> belongs_to --> Team
-  Prediction --> has_many --> deployments
-  Deployment --> belongs_to --> Prediction
+  Team --> has_many --> team_provider_users
+  TeamProviderUser --> belongs_to --> Team
+  TeamProviderUser --> belongs_to --> ProviderUser
+  Team --> has_many --> repos
+  Repo --> belongs_to --> Team
+  Repo --> has_many --> repo_provider_users
+  ProviderUser --> has_many --> repo_provider_users
+  RepoProviderUser -- belongs_to --> Repo
+  RepoProviderUser -- belongs_to --> ProviderUser
+  Provider --> has_many --> provider_users
+  User --> has_many --> provider_users
+  ProviderUser --> belongs_to --> Provider
+  ProviderUser --> belongs_to --> User
+  ProviderUser --> has_many --> sessions
+  Session --> belongs_to --> ProviderUser
+  Repo --> has_one --> Integration
+  Integration --> has_one --> Repo
+  Integration --> has_one --> IntegrationSetting
+  IntegrationSetting --> has_one --> Integration
+  Repo --> has_many --> deployments
+  Deployment --> belongs_to --> Repo
   Deployment --> has_one --> TrainJob
   TrainJob --> has_one --> Deployment
-  Prediction --> has_many --> datasets
-  Dataset --> belongs_to --> Prediction
-  Prediction --> has_one --> PredictionSetting
-  PredictionSetting --> has_one --> Prediction
-  PredictionIntegration --> belongs_to --> Prediction
-  PredictionIntegration --> belongs_to --> Integration
-  Prediction --> has_many --> prediction_integrations
-  Integration --> has_many --> prediction_integrations
+  Deployment --> belongs_to --> Commit
+  Commit --> has_many --> deployments
+  Repo --> has_many --> datasets
+  Dataset --> belongs_to --> Repo
 """
 import datetime
+import importlib
 from slugify import slugify
 from sqlalchemy.dialects.postgresql import JSON
+from sqlalchemy.types import Text
 from src import db, dbi, logger
-from helpers import auth_util, team_user_roles, user_verification_statuses, instance_types
+from sqlalchemy.orm import joinedload
+from helpers import auth_util, repo_user_roles, instance_types, user_verification_statuses, providers
 from helpers.deployment_statuses import ds
 from uuid import uuid4
 from operator import attrgetter
-from config import get_config
+from config import config
+from github import Github
 
-config = get_config()
+
+class Provider(db.Model):
+  id = db.Column(db.Integer, primary_key=True)
+  uid = db.Column(db.String, index=True, unique=True, nullable=False)
+  name = db.Column(db.String(240), nullable=False)
+  slug = db.Column(db.String(240), index=True, unique=True, nullable=False)
+  domain = db.Column(db.String(240))
+  created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+  is_destroyed = db.Column(db.Boolean, server_default='f')
+
+  providers = providers
+
+  def __init__(self, name=None, domain=None):
+    self.uid = uuid4().hex
+    self.name = name
+    self.slug = slugify(name, separator='-', to_lower=True)
+    self.domain = domain
+
+  def __repr__(self):
+    return '<Provider id={}, uid={}, name={}, slug={}, domain={}, created_at={}, is_destroyed={}>'.format(
+      self.id, self.uid, self.name, self.slug, self.domain, self.created_at, self.is_destroyed)
+
+  def oauth(self):
+    oauth_mod = importlib.import_module('src.services.provider_services.oauth.{}_oauth'.format(self.slug))
+    klass = getattr(oauth_mod, '{}OAuth'.format(self.name))
+    return klass(provider=self)
+
+  def url(self):
+    return 'https://' + self.domain
+
+  def client(self):
+    clients = {
+      providers.GITHUB: Github
+    }
+
+    return clients.get(self.slug)
+
+  @staticmethod
+  def github():
+    return dbi.find_one(Provider, {'slug': providers.GITHUB})
 
 
 class Team(db.Model):
   id = db.Column(db.Integer, primary_key=True)
-  uid = db.Column(db.String, index=True, unique=True)
+  uid = db.Column(db.String, index=True, unique=True, nullable=False)
   name = db.Column(db.String(240), nullable=False)
-  slug = db.Column(db.String(240), index=True, unique=True)
+  slug = db.Column(db.String(240), index=True, unique=True, nullable=False)
+  provider_id = db.Column(db.Integer, db.ForeignKey('provider.id'), index=True, nullable=False)
+  provider = db.relationship('Provider', backref='teams')
   cluster = db.relationship('Cluster', uselist=False, back_populates='team')
+  icon = db.Column(db.String)
   is_destroyed = db.Column(db.Boolean, server_default='f')
   created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
-  def __init__(self, name=None):
+  def __init__(self, name=None, slug=None, provider=None, provider_id=None, icon=None):
     self.uid = uuid4().hex
     self.name = name
-    self.slug = slugify(name, separator='-', to_lower=True)
+    self.slug = slug or slugify(name, separator='-', to_lower=True)
 
-  def __repr__(self):
-    return '<Team id={}, uid={}, name={}, slug={}, is_destroyed={}, created_at={}>'.format(
-      self.id, self.uid, self.name, self.slug, self.is_destroyed, self.created_at)
-
-
-class User(db.Model):
-  ver_statuses = user_verification_statuses
-  id = db.Column(db.Integer, primary_key=True)
-  uid = db.Column(db.String, index=True, unique=True)
-  email = db.Column(db.String(120), index=True, unique=True)
-  name = db.Column(db.String(120), nullable=True)
-  hashed_pw = db.Column(db.String(120), nullable=True)
-  verification_status = db.Column(db.Integer)
-  verification_secret = db.Column(db.String(64))
-  reset_pw_secret = db.Column(db.String(64))
-  is_destroyed = db.Column(db.Boolean, server_default='f')
-  created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
-
-  def __init__(self, email=None, name=None, hashed_pw=None, verification_status=user_verification_statuses.NOT_CONTACTED):
-    self.uid = uuid4().hex
-    self.email = email
-    self.name = name
-    self.hashed_pw = hashed_pw
-    self.verification_status = verification_status
-    self.verification_secret = auth_util.fresh_secret()
-
-  def __repr__(self):
-    return '<User id={}, uid={}, email={}, name={}, verification_status={}, is_destroyed={}, created_at={}>'.format(
-      self.id, self.uid, self.email, self.name, self.verification_status, self.is_destroyed, self.created_at)
-
-  # return teams through team_user
-  def teams(self):
-    team_ids = [tu.team_id for tu in self.team_users]
-
-    if not team_ids:
-      return []
-
-    return dbi.find_all(Team, {'id': team_ids})
-
-  def team_for_slug(self, slug):
-    team_ids = [tu.team_id for tu in self.team_users]
-
-    if not team_ids:
-      return None
-
-    team = dbi.find_all(Team, {'id': team_ids, 'slug': slug})
-
-    if not team:
-      return None
-
-    return team[0]
-
-
-class Token(db.Model):
-  id = db.Column(db.Integer, primary_key=True)
-  user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True, nullable=False)
-  user = db.relationship('User', backref='tokens')
-  secret = db.Column(db.String(64))
-
-  def __init__(self, user=None, secret=None):
-    self.user = user
-    self.secret = secret or auth_util.fresh_secret()
-
-  def __repr__(self):
-    return '<Token id={}, user_id={}>'.format(self.id, self.user_id)
-
-
-class TeamUser(db.Model):
-  roles = team_user_roles
-  id = db.Column(db.Integer, primary_key=True)
-  team_id = db.Column(db.Integer, db.ForeignKey('team.id'), index=True, nullable=False)
-  team = db.relationship('Team', backref='team_users')
-  user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True, nullable=False)
-  user = db.relationship('User', backref='team_users')
-  role = db.Column(db.Integer)
-  is_destroyed = db.Column(db.Boolean, server_default='f')
-  created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
-
-  def __init__(self, team=None, user=None, team_id=None, user_id=None, role=team_user_roles.MEMBER):
-    if team_id:
-      self.team_id = team_id
+    if provider_id:
+      self.provider_id = provider_id
     else:
-      self.team = team
+      self.provider = provider
 
-    if user_id:
-      self.user_id = user_id
-    else:
-      self.user = user
-
-    self.role = role
+    self.icon = icon
 
   def __repr__(self):
-    return '<TeamUser id={}, team_id={}, user_id={}, role={}, is_destroyed={}, created_at={}>'.format(
-      self.id, self.team_id, self.user_id, self.role, self.is_destroyed, self.created_at)
+    return '<Team id={}, uid={}, name={}, slug={}, provider_id={}, icon={}, is_destroyed={}, created_at={}>'.format(
+      self.id, self.uid, self.name, self.slug, self.provider_id, self.icon, self.is_destroyed, self.created_at)
 
 
 class Cluster(db.Model):
   id = db.Column(db.Integer, primary_key=True)
-  uid = db.Column(db.String, index=True, unique=True)
-  team_id = db.Column(db.Integer, db.ForeignKey('team.id'), index=True)
+  uid = db.Column(db.String, index=True, unique=True, nullable=False)
+  team_id = db.Column(db.Integer, db.ForeignKey('team.id'), index=True, nullable=False)
   team = db.relationship('Team', back_populates='cluster')
   bucket = db.relationship('Bucket', uselist=False, back_populates='cluster')
   name = db.Column(db.String(360), nullable=False)
@@ -175,9 +154,15 @@ class Cluster(db.Model):
   is_destroyed = db.Column(db.Boolean, server_default='f')
   created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
-  def __init__(self, team=None, ns_addresses=None, hosted_zone_id=None, zones=None,
-               master_type=instance_types.MICRO, node_type=instance_types.MICRO, image='ubuntu-16.04'):
+  def __init__(self, team=None, team_id=None, ns_addresses=None, hosted_zone_id=None, zones=None,
+               master_type=instance_types.MICRO, node_type=instance_types.MICRO, image='ubuntu-16.04', validated=False):
     self.uid = uuid4().hex
+
+    if team_id:
+      self.team_id = team_id
+    else:
+      self.team = team
+
     self.team = team
     self.name = '{}-cluster.{}'.format(team.slug, config.DOMAIN)
     self.ns_addresses = ns_addresses or []
@@ -186,6 +171,7 @@ class Cluster(db.Model):
     self.master_type = master_type
     self.node_type = node_type
     self.image = image
+    self.validated = validated
 
   def __repr__(self):
     return '<Cluster id={}, uid={}, team_id={}, name={}, ns_addresses={}, hosted_zone_id={}, zones={}, master_type={}, ' \
@@ -194,71 +180,9 @@ class Cluster(db.Model):
       self.node_type, self.image, self.validated, self.is_destroyed, self.created_at)
 
 
-class Prediction(db.Model):
-  id = db.Column(db.Integer, primary_key=True)
-  uid = db.Column(db.String, index=True, unique=True)
-  team_id = db.Column(db.Integer, db.ForeignKey('team.id'), index=True, nullable=False)
-  team = db.relationship('Team', backref='predictions')
-  name = db.Column(db.String(240), nullable=False)
-  slug = db.Column(db.String(240), index=True, unique=True)
-  elb = db.Column(db.String(240))
-  domain = db.Column(db.String(360))
-  git_repo = db.Column(db.String(240), index=True)
-  image_repo_owner = db.Column(db.String(120))
-  deploy_name = db.Column(db.String(360))
-  client_id = db.Column(db.String(240))
-  client_secret = db.Column(db.String(240))
-  model_ext = db.Column(db.String(60))
-  internal_msg_token = db.Column(db.String(240))
-  prediction_setting = db.relationship('PredictionSetting', uselist=False, back_populates='prediction')
-  is_destroyed = db.Column(db.Boolean, server_default='f')
-  created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
-
-  def __init__(self, team=None, team_id=None, name=None, elb=None, domain=None, git_repo=None,
-               image_repo_owner=None, deploy_name=None, client_id=None, client_secret=None,
-               model_ext=None, internal_msg_token=None):
-
-    self.uid = uuid4().hex
-
-    if team_id:
-      self.team_id = team_id
-    else:
-      self.team = team
-
-    self.name = name
-    self.slug = slugify(name, separator='-', to_lower=True)
-    self.elb = elb
-    self.domain = domain or '{}.{}'.format(self.slug, config.DOMAIN)
-    self.git_repo = git_repo
-    self.image_repo_owner = image_repo_owner or config.IMAGE_REPO_OWNER
-    self.deploy_name = deploy_name
-    self.client_id = client_id or uuid4().hex
-    self.client_secret = client_secret or auth_util.fresh_secret()
-    self.model_ext = model_ext
-    self.internal_msg_token = internal_msg_token or auth_util.fresh_secret()
-
-  def __repr__(self):
-    return '<Prediction id={}, uid={}, team_id={}, name={}, slug={}, elb={}, domain={}, ' \
-           'git_repo={}, image_repo_owner={}, deploy_name={}, model_ext={}, is_destroyed={}, created_at={}>'.format(
-      self.id, self.uid, self.team_id, self.name, self.slug, self.elb, self.domain,
-      self.git_repo, self.image_repo_owner, self.deploy_name, self.model_ext, self.is_destroyed, self.created_at)
-
-  def ordered_deployments(self):
-    return sorted(self.deployments, key=attrgetter('created_at'), reverse=True)
-
-  def model_file(self):
-    if not self.model_ext:
-      return None
-
-    return '{}.{}'.format(self.slug, self.model_ext)
-
-  def api_url(self):
-    return 'https://{}/api'.format(self.domain)
-
-
 class Bucket(db.Model):
   id = db.Column(db.Integer, primary_key=True)
-  cluster_id = db.Column(db.Integer, db.ForeignKey('cluster.id'), index=True)
+  cluster_id = db.Column(db.Integer, db.ForeignKey('cluster.id'), index=True, nullable=False)
   cluster = db.relationship('Cluster', back_populates='bucket')
   name = db.Column(db.String(240))
   is_destroyed = db.Column(db.Boolean, server_default='f')
@@ -283,67 +207,327 @@ class Bucket(db.Model):
     return None
 
 
-class Deployment(db.Model):
+class TeamProviderUser(db.Model):
   id = db.Column(db.Integer, primary_key=True)
-  uid = db.Column(db.String, index=True, unique=True)
-  prediction_id = db.Column(db.Integer, db.ForeignKey('prediction.id'), index=True, nullable=False)
-  prediction = db.relationship('Prediction', backref='deployments')
-  sha = db.Column(db.String(360))
-  status = db.Column(db.String(60))
-  train_job = db.relationship('TrainJob', uselist=False, back_populates='deployment')
+  team_id = db.Column(db.Integer, db.ForeignKey('team.id'), index=True, nullable=False)
+  team = db.relationship('Team', backref='team_provider_users')
+  provider_user_id = db.Column(db.Integer, db.ForeignKey('provider_user.id'), index=True, nullable=False)
+  provider_user = db.relationship('ProviderUser', backref='team_provider_users')
+  is_destroyed = db.Column(db.Boolean, server_default='f')
   created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
-  failed = db.Column(db.Boolean, server_default='f')
-  statuses = ds
 
-  def __init__(self, prediction=None, prediction_id=None, sha=None, status=ds.CREATED):
-    self.uid = uuid4().hex
-
-    if prediction_id:
-      self.prediction_id = prediction_id
+  def __init__(self, team=None, team_id=None, provider_user=None, provider_user_id=None):
+    if team_id:
+      self.team_id = team_id
     else:
-      self.prediction = prediction
+      self.team = team
 
-    self.sha = sha
-    self.status = status
+    if provider_user_id:
+      self.provider_user_id = provider_user_id
+    else:
+      self.provider_user = provider_user
 
   def __repr__(self):
-    return '<Deployment id={}, uid={}, prediction_id={}, sha={}, status={}, created_at={}, failed={}>'.format(
-      self.id, self.uid, self.prediction_id, self.sha, self.status, self.created_at, self.failed)
+    return '<TeamProviderUser id={}, team_id={}, provider_user_id={}, is_destroyed={}, created_at={}>'.format(
+      self.id, self.team_id, self.provider_user_id, self.is_destroyed, self.created_at)
 
 
-class Dataset(db.Model):
+class Repo(db.Model):
   id = db.Column(db.Integer, primary_key=True)
-  uid = db.Column(db.String, index=True, unique=True)
-  prediction_id = db.Column(db.Integer, db.ForeignKey('prediction.id'), index=True, nullable=False)
-  prediction = db.relationship('Prediction', backref='datasets')
-  name = db.Column(db.String(240), nullable=False)
-  slug = db.Column(db.String(240), index=True, nullable=False)
-  retrain_step_size = db.Column(db.Integer)
-  last_train_record_count = db.Column(db.Integer)
-  created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+  uid = db.Column(db.String, index=True, unique=True, nullable=False)
+  team_id = db.Column(db.Integer, db.ForeignKey('team.id'), index=True, nullable=False)
+  team = db.relationship('Team', backref='repos')
+  name = db.Column(db.String(240))
+  slug = db.Column(db.String(240), index=True)
+  elb = db.Column(db.String(240))
+  domain = db.Column(db.String(360))
+  image_repo_owner = db.Column(db.String(120))
+  deploy_name = db.Column(db.String(360))
+  client_id = db.Column(db.String(240))
+  client_secret = db.Column(db.String(240))
+  model_ext = db.Column(db.String(60))
+  internal_msg_token = db.Column(db.String(240))
+  integration = db.relationship('Integration', uselist=False, back_populates='repo')
   is_destroyed = db.Column(db.Boolean, server_default='f')
+  created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
-  def __init__(self, prediction=None, prediction_id=None, name=None,
-               retrain_step_size=None, last_train_record_count=0):
+  def __init__(self, team=None, team_id=None, name=None, slug=None, elb=None, domain=None, image_repo_owner=None,
+               deploy_name=None, client_id=None, client_secret=None, model_ext=None, internal_msg_token=None):
     self.uid = uuid4().hex
 
-    if prediction_id:
-      self.prediction_id = prediction_id
+    if team_id:
+      self.team_id = team_id
     else:
-      self.prediction = prediction
+      self.team = team
 
     self.name = name
-    self.slug = slugify(name, separator='-', to_lower=True)
-    self.retrain_step_size = retrain_step_size
-    self.last_train_record_count = last_train_record_count
+    self.slug = slug or slugify(self.name, separator='-', to_lower=True)
+    self.elb = elb
 
-  def table(self):
-    return '{}_{}'.format(self.prediction.slug, self.slug).replace('-', '_')
+    if not domain:
+      # TODO: Incorporate provider slug when you start using multiple providers.
+      domain = '{}-{}.{}'.format(self.team.slug, self.slug, config.DOMAIN)
+
+    self.domain = domain
+    self.image_repo_owner = image_repo_owner or config.IMAGE_REPO_OWNER
+    self.deploy_name = deploy_name
+    self.client_id = client_id or uuid4().hex
+    self.client_secret = client_secret or auth_util.fresh_secret()
+    self.model_ext = model_ext
+    self.internal_msg_token = internal_msg_token or auth_util.fresh_secret()
 
   def __repr__(self):
-    return '<Dataset id={}, uid={}, prediction_id={}, name={}, slug={}, created_at={}, is_destroyed={}>'.format(
-      self.id, self.uid, self.prediction_id, self.name, self.slug, self.retrain_step_size,
-      self.last_train_record_count, self.created_at, self.is_destroyed)
+    return '<Repo id={}, uid={}, team_id={}, name={}, slug={}, elb={}, domain={}, ' \
+           'image_repo_owner={}, deploy_name={}, model_ext={}, is_destroyed={}, created_at={}>'.format(
+      self.id, self.uid, self.team_id, self.name, self.slug, self.elb, self.domain,
+      self.image_repo_owner, self.deploy_name, self.model_ext, self.is_destroyed, self.created_at)
+
+  def ordered_deployments(self):
+    # TODO: optimize this by order-ing in the actual query
+    return sorted(self.deployments, key=attrgetter('created_at'), reverse=True)
+
+  def model_file(self):
+    if not self.model_ext:
+      return None
+
+    return '{}.{}'.format(self.slug, self.model_ext)
+
+  def api_url(self):
+    return 'https://{}/api'.format(self.domain)
+
+  def full_name(self):
+    return '{}/{}'.format(self.team.name, self.name)
+
+  def url(self):
+    team = self.team
+    provider = team.provider
+    return '{}/{}/{}'.format(provider.url(), team.slug, self.slug)
+
+
+class User(db.Model):
+  id = db.Column(db.Integer, primary_key=True)
+  uid = db.Column(db.String, index=True, unique=True, nullable=False)
+  email = db.Column(db.String(120), index=True, unique=True)
+  hashed_pw = db.Column(db.String(240))
+  verification_status = db.Column(db.Integer, nullable=False)
+  verification_secret = db.Column(db.String(64))
+  is_destroyed = db.Column(db.Boolean, server_default='f')
+  created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+
+  ver_statuses = user_verification_statuses
+
+  def __init__(self, email=None, hashed_pw=None, verification_status=user_verification_statuses.NOT_CONTACTED):
+    self.uid = uuid4().hex
+    self.email = email
+    self.hashed_pw = hashed_pw
+    self.verification_status = verification_status
+    self.verification_secret = auth_util.fresh_secret()
+
+  def __repr__(self):
+    return '<User id={}, uid={}, email={}, hashed_pw={}, verification_status={}, is_destroyed={}, created_at={}>'.format(
+      self.id, self.uid, self.email, self.hashed_pw, self.verification_status, self.is_destroyed, self.created_at)
+
+
+class ProviderUser(db.Model):
+  id = db.Column(db.Integer, primary_key=True)
+  uid = db.Column(db.String, index=True, unique=True, nullable=False)
+  provider_id = db.Column(db.Integer, db.ForeignKey('provider.id'), index=True, nullable=False)
+  provider = db.relationship('Provider', backref='provider_users')
+  user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True, nullable=False)
+  user = db.relationship('User', backref='provider_users')
+  username = db.Column(db.String(120), index=True, unique=True)
+  access_token = db.Column(db.String(240))
+  icon = db.Column(db.String)
+  is_destroyed = db.Column(db.Boolean, server_default='f')
+  created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+
+  def __init__(self, provider=None, provider_id=None, user=None, user_id=None, username=None, access_token=None, icon=None):
+    self.uid = uuid4().hex
+
+    if provider_id:
+      self.provider_id = provider_id
+    else:
+      self.provider = provider
+
+    if user_id:
+      self.user_id = user_id
+    else:
+      self.user = user
+
+    self.username = username
+    self.access_token = access_token
+    self.icon = icon
+
+  def __repr__(self):
+    return '<ProviderUser id={}, uid={}, provider_id={}, user_id={}, username={}, icon={}, is_destroyed={}, created_at={}>'.format(
+      self.id, self.uid, self.provider_id, self.user_id, self.username, self.icon, self.is_destroyed, self.created_at)
+
+  def create_session(self):
+    return dbi.create(Session, {'provider_user': self})
+
+  def authed_instance(self):
+    provider = self.provider
+    provider_client = provider.client()
+
+    if provider.slug == providers.GITHUB:
+      return provider_client(self.access_token, per_page=100).get_user()
+
+  def repos(self):
+    """
+    :has_many: repos through RepoProviderUser
+    """
+
+    repo_ids = [r.repo_id for r in dbi.find_all(RepoProviderUser, {'provider_user_id': self.id})]
+
+    return db.session.query(Repo) \
+      .options(joinedload(Repo.team)) \
+      .filter(Repo.id.in_(repo_ids)) \
+      .filter_by(is_destroyed=False).all()
+
+    return [rpu.repo for rpu in repo_provider_users]
+
+  def available_repos(self):
+    """
+    Get all available repos for a provider user through the external provider service
+    (e.g. Get all Github repos for a Github user)
+    """
+    authed_provider_user = self.authed_instance()
+    return [r for r in authed_provider_user.get_repos()]
+
+
+class Session(db.Model):
+  id = db.Column(db.Integer, primary_key=True)
+  provider_user_id = db.Column(db.Integer, db.ForeignKey('provider_user.id'), index=True, nullable=False)
+  provider_user = db.relationship('ProviderUser', backref='sessions')
+  token = db.Column(db.String(64))
+
+  def __init__(self, provider_user=None, provider_user_id=None, token=None):
+    if provider_user_id:
+      self.provider_user_id = provider_user_id
+    else:
+      self.provider_user = provider_user
+
+    self.token = token or auth_util.fresh_secret()
+
+  def __repr__(self):
+    return '<Session id={}, provider_user_id={}>'.format(self.id, self.provider_user_id)
+
+
+class RepoProviderUser(db.Model):
+  id = db.Column(db.Integer, primary_key=True)
+  uid = db.Column(db.String, index=True, unique=True, nullable=False)
+  repo_id = db.Column(db.Integer, db.ForeignKey('repo.id'), index=True, nullable=False)
+  repo = db.relationship('Repo', backref='repo_provider_users')
+  provider_user_id = db.Column(db.Integer, db.ForeignKey('provider_user.id'), index=True, nullable=False)
+  provider_user = db.relationship('ProviderUser', backref='repo_provider_users')
+  role = db.Column(db.Integer, nullable=False)
+  is_destroyed = db.Column(db.Boolean, server_default='f')
+  created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+
+  roles = repo_user_roles
+
+  def __init__(self, repo=None, repo_id=None, provider_user=None, provider_user_id=None, role=repo_user_roles.MEMBER_READ):
+    self.uid = uuid4().hex
+
+    if repo_id:
+      self.repo_id = repo_id
+    else:
+      self.repo = repo
+
+    if provider_user_id:
+      self.provider_user_id = provider_user_id
+    else:
+      self.provider_user = provider_user
+
+    self.role = role
+
+  def __repr__(self):
+    return '<RepoProviderUser id={}, uid={}, repo_id={}, provider_user_id={}, role={}, is_destroyed={}, created_at={}>'.format(
+      self.id, self.uid, self.repo_id, self.provider_user_id, self.role, self.is_destroyed, self.created_at)
+
+
+class Integration(db.Model):
+  id = db.Column(db.Integer, primary_key=True)
+  uid = db.Column(db.String, index=True, unique=True, nullable=False)
+  repo_id = db.Column(db.Integer, db.ForeignKey('repo.id'), index=True, nullable=False)
+  repo = db.relationship('Repo', back_populates='integration')
+  access_token = db.Column(db.String(240))
+  meta = db.Column(JSON)
+  integration_setting = db.relationship('IntegrationSetting', uselist=False, back_populates='integration')
+  is_destroyed = db.Column(db.Boolean, server_default='f')
+  created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+
+  def __init__(self, repo=None, repo_id=None, access_token=None, meta=None):
+    self.uid = uuid4().hex
+
+    if repo_id:
+      self.repo_id = repo_id
+    else:
+      self.repo = repo
+
+    self.access_token = access_token
+    self.meta = meta or {}
+
+  def __repr__(self):
+    return '<Integration id={}, uid={}, repo_id={}, meta={}, created_at={}, is_destroyed={}>'.format(
+      self.id, self.uid, self.repo_id, self.meta, self.created_at, self.is_destroyed)
+
+
+class IntegrationSetting(db.Model):
+  id = db.Column(db.Integer, primary_key=True)
+  uid = db.Column(db.String, index=True, unique=True, nullable=False)
+  integration_id = db.Column(db.Integer, db.ForeignKey('integration.id'), index=True, nullable=False)
+  integration = db.relationship('Integration', back_populates='integration_setting')
+  retrain_on_merge = db.Column(db.Boolean, server_default='f')
+
+  def __init__(self, integration=None, integration_id=None, retrain_on_merge=False):
+    self.uid = uuid4().hex
+
+    if integration_id:
+      self.integration_id = integration_id
+    else:
+      self.integration = integration
+
+    self.retrain_on_merge = retrain_on_merge
+
+  def __repr__(self):
+    return '<IntegrationSetting id={}, uid={}, integration_id={}, retrain_on_merge={}>'.format(
+      self.id, self.uid, self.integration_id, self.retrain_on_merge)
+
+
+class Deployment(db.Model):
+  id = db.Column(db.Integer, primary_key=True)
+  uid = db.Column(db.String, index=True, unique=True, nullable=False)
+  repo_id = db.Column(db.Integer, db.ForeignKey('repo.id'), index=True, nullable=False)
+  repo = db.relationship('Repo', backref='deployments')
+  status = db.Column(db.String(60))
+  train_job = db.relationship('TrainJob', uselist=False, back_populates='deployment')
+  commit_id = db.Column(db.Integer, db.ForeignKey('commit.id'), index=True, nullable=False)
+  commit = db.relationship('Commit', backref='deployments')
+  failed = db.Column(db.Boolean, server_default='f')
+  created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+
+  statuses = ds
+
+  def __init__(self, repo=None, repo_id=None, commit=None, commit_id=None, status=ds.CREATED, failed=False):
+    self.uid = uuid4().hex
+
+    if repo_id:
+      self.repo_id = repo_id
+    else:
+      self.repo = repo
+
+    if commit_id:
+      self.commit_id = commit_id
+    else:
+      self.commit = commit
+
+    self.status = status
+    self.failed = failed
+
+  def __repr__(self):
+    return '<Deployment id={}, uid={}, repo_id={}, commit_id={}, status={}, failed={}, created_at={}>'.format(
+      self.id, self.uid, self.repo_id, self.commit_id, self.status, self.failed, self.created_at)
 
 
 class TrainJob(db.Model):
@@ -365,73 +549,61 @@ class TrainJob(db.Model):
   def duration(self):
     return self.ended_at - self.started_at
 
-
-class PredictionSetting(db.Model):
-  id = db.Column(db.Integer, primary_key=True)
-  prediction_id = db.Column(db.Integer, db.ForeignKey('prediction.id'), index=True, nullable=False)
-  prediction = db.relationship('Prediction', back_populates='prediction_setting')
-  retrain_on_merge = db.Column(db.Boolean, server_default='f')
-
-  def __init__(self, prediction=None, prediction_id=None, retrain_on_merge=False):
-    if prediction_id:
-      self.prediction_id = prediction_id
-    else:
-      self.prediction = prediction
-
-    self.retrain_on_merge = retrain_on_merge
-
   def __repr__(self):
-    return '<PredictionSetting id={}, prediction_id={}, retrain_on_merge={}>'.format(
-      self.id, self.prediction_id, self.retrain_on_merge)
+    return '<TrainJob id={}, deployment_id={}, started_at={}, ended_at={}>'.format(
+      self.id, self.deployment_id, self.started_at, self.ended_at)
 
 
-class Integration(db.Model):
+class Dataset(db.Model):
   id = db.Column(db.Integer, primary_key=True)
-  uid = db.Column(db.String, index=True, unique=True)
+  uid = db.Column(db.String, index=True, unique=True, nullable=False)
+  repo_id = db.Column(db.Integer, db.ForeignKey('repo.id'), index=True, nullable=False)
+  repo = db.relationship('Repo', backref='datasets')
   name = db.Column(db.String(240), nullable=False)
-  slug = db.Column(db.String(240), index=True, unique=True)
+  slug = db.Column(db.String(240), index=True, nullable=False)
+  retrain_step_size = db.Column(db.Integer)
+  last_train_record_count = db.Column(db.Integer)
   created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
   is_destroyed = db.Column(db.Boolean, server_default='f')
 
-  def __init__(self, name=None):
+  def __init__(self, repo=None, repo_id=None, name=None, retrain_step_size=None, last_train_record_count=0):
     self.uid = uuid4().hex
+
+    if repo_id:
+      self.repo_id = repo_id
+    else:
+      self.repo = repo
+
     self.name = name
-    self.slug = slugify(name, separator='_', to_lower=True)
+    self.slug = slugify(name, separator='-', to_lower=True)
+    self.retrain_step_size = retrain_step_size
+    self.last_train_record_count = last_train_record_count
+
+  def table(self):
+    return '{}_{}'.format(self.slug, self.uid).replace('-', '_')
 
   def __repr__(self):
-    return '<Integration id={}, uid={}, name={}, slug={}, created_at={}, is_destroyed={}>'.format(
-      self.id, self.uid, self.name, self.slug, self.created_at, self.is_destroyed)
+    return '<Dataset id={}, uid={}, repo_id={}, name={}, slug={}, retrain_step_size={}, ' \
+           'last_train_record_count={}, created_at={}, is_destroyed={}>'.format(
+      self.id, self.uid, self.repo_id, self.name, self.slug, self.retrain_step_size,
+      self.last_train_record_count, self.created_at, self.is_destroyed)
 
 
-class PredictionIntegration(db.Model):
+class Commit(db.Model):
   id = db.Column(db.Integer, primary_key=True)
-  uid = db.Column(db.String, index=True, unique=True)
-  prediction_id = db.Column(db.Integer, db.ForeignKey('prediction.id'), index=True, nullable=False)
-  prediction = db.relationship('Prediction', backref='prediction_integrations')
-  integration_id = db.Column(db.Integer, db.ForeignKey('integration.id'), index=True, nullable=False)
-  integration = db.relationship('Integration', backref='prediction_integrations')
-  api_key = db.Column(db.String(360))
-  meta = db.Column(JSON)
-  is_destroyed = db.Column(db.Boolean, server_default='f')
-  created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+  sha = db.Column(db.String(360), unique=True, nullable=False, index=True)
+  message = db.Column(Text)
+  author = db.Column(db.String(240))
+  author_icon = db.Column(db.String(240))
+  branch = db.Column(db.String(120))
 
-  def __init__(self, prediction=None, prediction_id=None, integration=None,
-               integration_id=None, api_key=None, meta=None):
-    self.uid = uuid4().hex
-
-    if prediction_id:
-      self.prediction_id = prediction_id
-    else:
-      self.prediction = prediction
-
-    if integration_id:
-      self.integration_id = integration_id
-    else:
-      self.integration = integration
-
-    self.api_key = api_key
-    self.meta = meta or {}
+  def __init__(self, sha=None, message=None, author=None, author_icon=None, branch='master'):
+    self.sha = sha
+    self.message = message
+    self.author = author
+    self.author_icon = author_icon
+    self.branch = branch
 
   def __repr__(self):
-    return '<PredictionIntegration id={}, uid={}, prediction_id={}, integration_id={}, api_key={}, meta={}, created_at={}, is_destroyed={}>'.format(
-      self.id, self.uid, self.prediction_id, self.integration_id, self.api_key, self.meta, self.created_at, self.is_destroyed)
+    return '<Commit id={}, sha={}, message={}, author={}, author_icon={}, branch={}>'.format(
+      self.id, self.sha, self.message, self.author, self.author_icon, self.branch)

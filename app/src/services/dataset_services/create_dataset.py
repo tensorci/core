@@ -6,22 +6,22 @@ from src.utils import dataset_db
 
 class CreateDataset(object):
 
-  def __init__(self, name, prediction=None, fileobj=None):
+  def __init__(self, name, repo=None, fileobj=None):
     self.name = name
-    self.prediction = prediction
+    self.repo = repo
     self.fileobj = fileobj
 
   def perform(self):
     # Create Dataset record in core DB
     dataset = dbi.create(Dataset, {
-      'prediction': self.prediction,
+      'repo': self.repo,
       'name': self.name
     })
 
     # Parse the JSON file
     data = json.loads(self.fileobj.read())
 
-    # Blow up if data isn't an array -- the required format
+    # Ensure data is a list
     if type(data) != list:
       raise BaseException('Data is not a JSON array')
 

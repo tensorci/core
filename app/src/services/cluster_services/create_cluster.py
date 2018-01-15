@@ -6,9 +6,7 @@ from src.utils.aws import create_route53_hosted_zone, add_dns_records, os_map
 from src.utils import kops
 from src.utils.job_queue import job_queue
 from time import sleep
-from src.config import get_config
-
-config = get_config()
+from src.config import config
 
 
 class CreateCluster(object):

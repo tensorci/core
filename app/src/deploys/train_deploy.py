@@ -3,10 +3,8 @@ from abstract_deploy import AbstractDeploy
 from src import logger, dbi
 from src.models import TrainJob
 from src.utils import clusters
-from src.config import get_config
+from src.config import config
 from src.helpers import ms_since_epoch
-
-config = get_config()
 
 
 class TrainDeploy(AbstractDeploy):
@@ -17,9 +15,9 @@ class TrainDeploy(AbstractDeploy):
     self.update_prediction_model = update_prediction_model
 
   def deploy(self):
-    self.set_db_reliant_attrs()  # TODO: turn into decorator
-    self.container_name = '{}-{}'.format(self.prediction.slug, clusters.TRAIN)
-    self.image = '{}/{}:{}'.format(self.prediction.image_repo_owner, self.container_name, self.deployment.sha)
+    self.set_db_reliant_attrs()
+    self.container_name = '{}-{}'.format(self.repo.slug, clusters.TRAIN)
+    self.image = '{}/{}:{}'.format(self.repo.image_repo_owner, self.container_name, self.commit.sha)
     self.deploy_name = '{}-{}'.format(self.container_name, ms_since_epoch(as_int=True))
     self.cluster = self.team.cluster
     self.cluster_name = os.environ.get('TRAIN_CLUSTER_NAME')
@@ -40,8 +38,8 @@ class TrainDeploy(AbstractDeploy):
       'DATASET_TABLE_NAME': dataset_table,
       'CORE_URL': config.CORE_URL,
       'CORE_API_TOKEN': os.environ.get('CORE_API_TOKEN'),
-      'PREDICTION': self.prediction.slug,
-      'PREDICTION_UID': self.prediction.uid,
+      'REPO_SLUG': self.repo.slug,
+      'REPO_UID': self.repo.uid,
       'DEPLOYMENT_UID': self.deployment_uid,
       'REDIS_URL': os.environ.get('REDIS_URL'),
       'WITH_API_DEPLOY': str(self.with_api_deploy).lower(),

@@ -1,6 +1,8 @@
 import urllib
 import sys
 import time
+import calendar
+from datetime import datetime
 
 if sys.version_info[0] < 3:
   unquote = urllib.unquote
@@ -25,3 +27,8 @@ def ms_since_epoch(as_int=False):
     return int(round(ms))
 
   return ms
+
+
+def utcnow_to_ts(now=None):
+  now = now or datetime.utcnow()
+  return calendar.timegm(now.utctimetuple())

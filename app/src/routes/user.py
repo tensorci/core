@@ -1,47 +1,53 @@
 from flask_restplus import Resource, fields
 from src.routes import namespace, api
+from src import dbi, logger
+from src.helpers import auth_util
 from src.api_responses.errors import *
 from src.api_responses.success import *
-from src.helpers.definitions import auth_header_name
-from src import logger, dbi
-from src.models import User, Token
-from src.helpers import auth_util
+from src.helpers.provider_user_helper import current_provider_user
 
-user_login_model = api.model('User', {
-  'email': fields.String(required=True),
+set_password_model = api.model('User', {
   'password': fields.String(required=True)
 })
 
 
-# TODO: Make this for both CLI usage as well as web app. Right now it's only for CLI
-@namespace.route('/user/login')
-class UserLogin(Resource):
-  """Login as a user"""
+@namespace.route('/user/password')
+class UserPassword(Resource):
+  """Restful interface for a user's basic auth password"""
 
-  @namespace.doc('user_login')
-  @namespace.expect(user_login_model, validate=True)
-  def post(self):
-    # Get email, password from payload
-    email = api.payload['email'].lower()
-    pw = api.payload['password']
+  @namespace.doc('set_user_password')
+  @namespace.expect(set_password_model, validate=True)
+  def put(self):
+    provider_user = current_provider_user()
 
-    # Attempt to find user by email
-    user = dbi.find_one(User, {'email': email})
+    if not provider_user:
+      return UNAUTHORIZED
 
-    # Fail if user not found
+    user = provider_user.user
+
     if not user:
-      return AUTHENTICATION_FAILED
+      return USER_NOT_FOUND
 
-    # Fail if password doesn't equal their hashed password
-    if not auth_util.verify_pw(user.hashed_pw or '', pw):
-      return AUTHENTICATION_FAILED
+    try:
+      # update the user's hashed_pw
+      # dbi.update(user, {'hashed_pw': auth_util.hash_pw(api.payload['password'])})
+      dbi.update(user, {'hashed_pw': api.payload['password']})
+    except BaseException as e:
+      logger.error('Error updating hashed password for User(id={}): {}'.format(user.id, e))
+      return UNKNOWN_ERROR
 
-    # Create a new secret and a new token
-    secret = auth_util.fresh_secret()
-    token = dbi.create(Token, {'user': user, 'secret': secret})
+    return UPDATE_USER_PW_SUCCESS
 
-    header_token = auth_util.serialize_token(token.id, secret)
-    response_headers = {auth_header_name: header_token}
+  @namespace.doc('get_user_password')
+  def get(self):
+    provider_user = current_provider_user()
 
-    # Respond with success and pass the token secret back inside a header
-    return {'ok': True, 'message': 'Login Successful'}, 200, response_headers
+    if not provider_user:
+      return UNAUTHORIZED
+
+    user = provider_user.user
+
+    if not user:
+      return USER_NOT_FOUND
+
+    return {'pw': user.hashed_pw}

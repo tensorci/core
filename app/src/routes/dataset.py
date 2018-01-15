@@ -1,12 +1,16 @@
 from flask import request
 from flask_restplus import Resource
 from src.routes import namespace, api
-from src.models import Prediction, Dataset
+from src.models import Provider, Dataset, Team, Repo, RepoProviderUser
 from src import logger, dbi
-from src.helpers.user_helper import current_user
+from src.helpers.provider_user_helper import current_provider_user
 from src.api_responses.errors import *
 from src.api_responses.success import *
 from src.services.dataset_services.create_dataset import CreateDataset
+from src.helpers.provider_helper import parse_git_url
+from slugify import slugify
+from src.utils import dataset_db
+from src.helpers import utcnow_to_ts
 
 
 @namespace.route('/dataset')
@@ -15,21 +19,26 @@ class RestfulDataset(Resource):
 
   @namespace.doc('create_dataset')
   def post(self):
-    # Get current user
-    user = current_user()
+    provider_user = current_provider_user()
 
-    if not user:
+    if not provider_user:
       return UNAUTHORIZED
 
     # Get refs to payload info
     payload = dict(request.form.items())
-    team_slug = payload.get('team_slug')
-    prediction_slug = payload.get('prediction_slug')
+    git_url = payload.get('git_url')
     dataset_slug = payload.get('dataset_slug')
 
-    # Validate payload
-    if not team_slug or not prediction_slug or not dataset_slug:
-      return INVALID_INPUT_PAYLOAD
+    provider_domain, team_name, repo_name = parse_git_url(git_url)
+
+    # Find the provider by the passed domain
+    provider = dbi.find_one(Provider, {'domain': provider_domain})
+
+    if not provider:
+      return PROVIDER_NOT_FOUND
+
+    if provider != provider_user.provider:
+      return PROVIDER_MISMATCH
 
     # Get dataset file
     files = dict(request.files.items()) or {}
@@ -38,43 +47,96 @@ class RestfulDataset(Resource):
     if not f:
       return NO_FILE_PROVIDED
 
-    # Find a team for the provided team_slug that belongs to this user
-    team = user.team_for_slug(team_slug)
+    # Find repo for this team through provider
+    team_slug = slugify(team_name, separator='-', to_lower=True)
+    team = dbi.find_one(Team, {'slug': team_slug, 'provider': provider})
 
-    if not team:
-      return TEAM_NOT_FOUND
+    if team:
+      repo_slug = slugify(repo_name, separator='-', to_lower=True)
+      repo = dbi.find_one(Repo, {'team': team, 'slug': repo_slug})
+    else:
+      repo_slug = None
+      repo = None
 
-    # Conditionally upsert prediction:
+    # Must register repo as a TensorCI repo before adding a dataset to it.
+    if not repo:
+      return REPO_NOT_REGISTERED
 
-    # Find prediction for slug
-    prediction = dbi.find_one(Prediction, {'slug': prediction_slug})
+    repo_provider_user = dbi.find_one(RepoProviderUser, {
+      'repo': repo,
+      'provider_user': provider_user
+    })
 
-    # If prediction already belongs to another team, respond saying the name is not available.
-    if prediction and prediction.team != team:
-      return PREDICTION_NAME_TAKEN
+    if not repo_provider_user:
+      return NOT_ASSOCIATED_WITH_REPO
 
-    if not prediction:
-      try:
-        prediction = dbi.create(Prediction, {
-          'team': team,
-          'name': prediction_slug
-        })
-      except BaseException as e:
-        logger.error('Error creating Prediction(name={}, team={}): {}'.format(prediction_slug, team, e))
-        return PREDICTION_CREATION_FAILED
+    if repo_provider_user.role < RepoProviderUser.roles.MEMBER_WRITE:
+      return INVALID_REPO_PERMISSIONS
 
-    # Check to see if a dataset already exists for this slug within this prediction
-    dataset = dbi.find_one(Dataset, {'slug': dataset_slug, 'prediction': prediction})
+    if not dataset_slug:
+      dataset_slug = repo_slug
+
+    # Check to see if a dataset already exists for this slug for this repo
+    dataset = dbi.find_one(Dataset, {'repo': repo, 'slug': dataset_slug})
 
     if dataset:
       return DATASET_NAME_TAKEN
 
     try:
       # Create the dataset
-      svc = CreateDataset(dataset_slug, prediction=prediction, fileobj=f)
+      svc = CreateDataset(dataset_slug, repo=repo, fileobj=f)
       svc.perform()
     except BaseException as e:
-      logger.error('Error creating Dataset(name={}, prediction={}): {}'.format(dataset_slug, prediction, e))
+      logger.error('Error creating Dataset(name={}, repo={}): {}'.format(dataset_slug, repo.slug, e))
       return DATASET_CREATION_FAILED
 
     return DATASET_CREATION_SUCCESS
+
+
+@namespace.route('/datasets')
+class RestfulDataset(Resource):
+  """Restful interface for the Dataset model, continued"""
+
+  @namespace.doc('get_datasets_for_repo')
+  def get(self):
+    provider_user = current_provider_user()
+
+    if not provider_user:
+      return UNAUTHORIZED
+
+    args = dict(request.args.items())
+    team_slug = args.get('team')
+    repo_slug = args.get('repo')
+
+    if not team_slug:
+      logger.error('No team provided during request for project datasets')
+      return INVALID_INPUT_PAYLOAD
+
+    if not repo_slug:
+      logger.error('No repo provided during request for project datasets')
+      return INVALID_INPUT_PAYLOAD
+
+    team_slug = team_slug.lower()
+    team = dbi.find_one(Team, {'slug': team_slug})
+
+    if not team:
+      return TEAM_NOT_FOUND
+
+    repo_slug = repo_slug.lower()
+
+    repo = [r for r in provider_user.repos() if r.team_id == team.id and r.slug == repo_slug]
+
+    if not repo:
+      return REPO_NOT_FOUND
+
+    repo = repo[0]
+
+    datasets = [{
+      'name': d.name,
+      'num_records': dataset_db.record_count(table=d.table()),
+      'retrain_step_size': d.retrain_step_size,
+      'last_train_record_count': d.last_train_record_count,
+      'created_at': utcnow_to_ts(d.created_at)
+    } for d in repo.datasets]
+
+    return {'datasets': datasets}

@@ -1,14 +1,15 @@
 import os
+from slugify import slugify
 from flask_restplus import Resource, fields
 from flask import request, Response, stream_with_context
+from src.helpers import utcnow_to_ts
 from src.routes import namespace, api
-from src.models import Prediction, Deployment
-from src import logger, dbi
-from src.helpers.user_helper import current_user
+from src.models import Provider, Deployment, Team, Repo, RepoProviderUser, Commit
+from src import logger, dbi, db
+from src.helpers.provider_user_helper import current_provider_user
 from src.api_responses.errors import *
 from src.api_responses.success import *
 from src.utils import clusters, log_streamer
-from src.utils.gh import fetch_git_repo
 from src.helpers.definitions import core_header_name
 from src.deploys.build_server_deploy import BuildServerDeploy
 from src.utils.job_queue import job_queue
@@ -16,11 +17,11 @@ from src.utils.pyredis import redis
 from src.utils.pred_messenger import PredMessenger
 from src.helpers.deployment_statuses import ds
 from src.utils.log_formatter import training_log
+from src.helpers.provider_helper import parse_git_url
+from sqlalchemy.orm import joinedload
 
 train_deployment_model = api.model('Deployment', {
-  'team_slug': fields.String(required=True),
-  'prediction_slug': fields.String(required=True),
-  'git_repo': fields.String(required=True),
+  'git_url': fields.String(required=True),
   'model_ext': fields.String(required=True)
 })
 
@@ -30,8 +31,7 @@ deployment_trained_model = api.model('Deployment', {
 })
 
 api_deployment_model = api.model('Deployment', {
-  'team_slug': fields.String(required=True),
-  'prediction_slug': fields.String(required=True)
+  'git_url': fields.String(required=True)
 })
 
 
@@ -101,7 +101,7 @@ class DeploymentTrained(Resource):
       deployer = BuildServerDeploy(deployment_uid=deployment.uid, build_for=clusters.API)
       job_queue.add(deployer.deploy, meta={'deployment': deployment.uid})
     elif update_prediction_model:  # tell the API cluster to pull the latest model
-      pred_messenger = PredMessenger(prediction_uid=deployment.prediction.uid)
+      pred_messenger = PredMessenger(repo_uid=deployment.repo.uid)
       job_queue.add(pred_messenger.update_model)
 
     return '', 200
@@ -114,37 +114,57 @@ class ApiDeployment(Resource):
   @namespace.doc('api_deployment')
   @namespace.expect(api_deployment_model, validate=True)
   def post(self):
-    # Get current user
-    user = current_user()
+    provider_user = current_provider_user()
 
-    if not user:
+    if not provider_user:
       return UNAUTHORIZED
 
     # Get refs to payload info
-    team_slug = api.payload['team_slug']
-    prediction_slug = api.payload['prediction_slug']
+    git_url = api.payload['git_url']
 
-    # Find a team for the provided team_slug that belongs to this user
-    team = user.team_for_slug(team_slug)
+    provider_domain, team_name, repo_name = parse_git_url(git_url)
 
-    if not team:
-      return TEAM_NOT_FOUND
+    # Find the provider by the passed domain
+    provider = dbi.find_one(Provider, {'domain': provider_domain})
 
-    # Find prediction for provided slug and team
-    prediction = dbi.find_one(Prediction, {'slug': prediction_slug, 'team': team})
+    if not provider:
+      return PROVIDER_NOT_FOUND
 
-    # Prediction required to already exist for API deploy
-    if not prediction:
-      return PREDICTION_NOT_FOUND
+    if provider != provider_user.provider:
+      return PROVIDER_MISMATCH
 
-    # Get all deployments for this prediction, ordered by most recently created
-    deployments = prediction.ordered_deployments()
+    # Find repo for this team through provider
+    team_slug = slugify(team_name, separator='-', to_lower=True)
+    team = dbi.find_one(Team, {'slug': team_slug, 'provider': provider})
+
+    if team:
+      repo_slug = slugify(repo_name, separator='-', to_lower=True)
+      repo = dbi.find_one(Repo, {'team': team, 'slug': repo_slug})
+    else:
+      repo = None
+
+    if not repo:
+      return REPO_NOT_REGISTERED
+
+    repo_provider_user = dbi.find_one(RepoProviderUser, {
+      'repo': repo,
+      'provider_user': provider_user
+    })
+
+    if not repo_provider_user:
+      return NOT_ASSOCIATED_WITH_REPO
+
+    if repo_provider_user.role < RepoProviderUser.roles.MEMBER_WRITE:
+      return INVALID_REPO_PERMISSIONS
+
+    # Get all deployments for this repo, ordered by most recently created
+    deployments = repo.ordered_deployments()
 
     # We can only make an API deploy on an existing deploy...
     if not deployments:
       return NO_DEPLOYMENT_TO_SERVE
 
-    # Get latest deployment for prediction
+    # Get latest deployment for repo
     latest_deployment = deployments[0]
 
     # Get the index of the latest deployment's status
@@ -160,7 +180,7 @@ class ApiDeployment(Resource):
     if latest_deployment_status_idx > done_training_idx and not latest_deployment.failed:
       return DEPLOYMENT_UP_TO_DATE
 
-    logger.info('New deployment detected to serve: {}'.format(latest_deployment.sha),
+    logger.info('New deployment detected to serve: {}'.format(latest_deployment.commit.sha),
                 queue=latest_deployment.uid,
                 section=True)
 
@@ -179,42 +199,58 @@ class TrainDeployment(Resource):
 
   @namespace.doc('get_training_logs')
   def get(self):
-    # Get current user
-    user = current_user()
+    provider_user = current_provider_user()
 
-    if not user:
+    if not provider_user:
       return UNAUTHORIZED
 
-    # Parse input args
+    # Get refs to payload info
     args = dict(request.args.items())
-    team_slug = args.get('team_slug')
-    prediction_slug = args.get('prediction_slug')
-
-    if not team_slug or not prediction_slug:
+    git_url = args.get('git_url')
+    
+    if not git_url:
       return INVALID_INPUT_PAYLOAD
 
-    # Find a team for the provided team_slug that belongs to this user
-    team = user.team_for_slug(team_slug)
+    provider_domain, team_name, repo_name = parse_git_url(git_url)
 
-    if not team:
-      return TEAM_NOT_FOUND
+    # Find the provider by the passed domain
+    provider = dbi.find_one(Provider, {'domain': provider_domain})
 
-    # Find prediction for provided slug and team
-    prediction = dbi.find_one(Prediction, {'slug': prediction_slug, 'team': team})
+    if not provider:
+      return PROVIDER_NOT_FOUND
 
-    if not prediction:
-      return PREDICTION_NOT_FOUND
+    if provider != provider_user.provider:
+      return PROVIDER_MISMATCH
 
-    # Get all deployments for this prediction, ordered by most recently created
-    deployments = prediction.ordered_deployments()
+    # Find repo for this team through provider
+    team_slug = slugify(team_name, separator='-', to_lower=True)
+    team = dbi.find_one(Team, {'slug': team_slug, 'provider': provider})
 
-    if not deployments:
-      return NO_DEPLOYMENT_TO_SERVE
+    if team:
+      repo_slug = slugify(repo_name, separator='-', to_lower=True)
+      repo = dbi.find_one(Repo, {'team': team, 'slug': repo_slug})
+    else:
+      repo = None
 
-    # Get latest deployment for prediction
-    latest_deployment = deployments[0]
+    if not repo:
+      return REPO_NOT_REGISTERED
 
-    log_stream_key = 'train-{}'.format(latest_deployment.uid)  # redis key for the log stream
+    if args.get('uid'):
+      deployment = dbi.find_one(Deployment, {'uid': args.get('uid')})
+
+      if not deployment:
+        return DEPLOYMENT_NOT_FOUND
+    else:
+      # Get all deployments for this repo, ordered by most recently created
+      deployments = repo.ordered_deployments()
+
+      if not deployments:
+        return NO_DEPLOYMENT_TO_SERVE
+
+      # Get latest deployment for repo
+      deployment = deployments[0]
+
+    log_stream_key = 'train-{}'.format(deployment.uid)  # redis key for the log stream
     follow_logs = args.get('follow') == 'true'  # Do they want to follow the real-time logs or no?
 
     if follow_logs:
@@ -237,88 +273,230 @@ class TrainDeployment(Resource):
       return {'logs': log_messages}
 
 
-def perform_train_deploy(with_api_deploy=False):
-  # Get current user
-  user = current_user()
+@namespace.route('/logtest')
+class LogTest(Resource):
+  def get(self):
+    from time import sleep
 
-  if not user:
+    def func():
+      i = 0
+
+      while True:
+        i += 1
+        sleep(2)
+        yield 'a'*1024 + 'Line {}\n'.format(i)
+
+    return Response(stream_with_context(func()),
+                    headers={'X-Accel-Buffering': 'no'})
+
+
+@namespace.route('/deployments')
+class GetDeployments(Resource):
+  """Fetch deployments for a repo"""
+
+  @namespace.doc('get_deployments_for_repo')
+  def get(self):
+    provider_user = current_provider_user()
+
+    if not provider_user:
+      return UNAUTHORIZED
+
+    args = dict(request.args.items())
+    team_slug = args.get('team')
+    repo_slug = args.get('repo')
+
+    if not team_slug:
+      logger.error('No team provided during request for project datasets')
+      return INVALID_INPUT_PAYLOAD
+
+    if not repo_slug:
+      logger.error('No repo provided during request for project datasets')
+      return INVALID_INPUT_PAYLOAD
+
+    team_slug = team_slug.lower()
+    team = dbi.find_one(Team, {'slug': team_slug})
+
+    if not team:
+      return TEAM_NOT_FOUND
+
+    repo_slug = repo_slug.lower()
+
+    repo = [r for r in provider_user.repos() if r.team_id == team.id and r.slug == repo_slug]
+
+    if not repo:
+      return REPO_NOT_FOUND
+
+    repo = repo[0]
+
+    resp = {'deployments': []}
+
+    deployments = db.session.query(Deployment) \
+      .options(joinedload(Deployment.commit)) \
+      .filter_by(repo_id=repo.id) \
+      .order_by(Deployment.created_at).all()
+
+    if not deployments:
+      return resp
+
+    deployments.reverse()
+
+    for d in deployments:
+      commit = d.commit
+
+      resp['deployments'].append({
+        'uid': d.uid,
+        'status': d.status,
+        'failed': d.failed,
+        'canceled': False,
+        'created_at': utcnow_to_ts(d.created_at),
+        'commit': {
+          'sha': commit.sha,
+          'branch': commit.branch,
+          'message': commit.message,
+          'author': commit.author,
+          'author_icon': commit.author_icon
+        }
+      })
+
+    return resp
+
+
+@namespace.route('/deployment')
+class GetDeployment(Resource):
+  """Fetch deployment"""
+
+  @namespace.doc('get_deployment')
+  def get(self):
+    provider_user = current_provider_user()
+
+    if not provider_user:
+      return UNAUTHORIZED
+
+    args = dict(request.args.items())
+    deployment_uid = args.get('uid')
+
+    if not deployment_uid:
+      return INVALID_INPUT_PAYLOAD
+
+    # TODO: Validate that deployment is accessible by provider_user
+
+    deployment = dbi.find_one(Deployment, {'uid': deployment_uid})
+
+    if not deployment:
+      return DEPLOYMENT_NOT_FOUND
+
+    commit = deployment.commit
+
+    resp = {
+      'uid': deployment.uid,
+      'status': deployment.status,
+      'failed': deployment.failed,
+      'canceled': False,
+      'created_at': utcnow_to_ts(deployment.created_at),
+      'commit': {
+        'sha': commit.sha,
+        'branch': commit.branch,
+        'message': commit.message,
+        'author': commit.author,
+        'author_icon': commit.author_icon
+      }
+    }
+
+    return resp
+
+
+def perform_train_deploy(with_api_deploy=False):
+  provider_user = current_provider_user()
+
+  if not provider_user:
     return UNAUTHORIZED
 
   # Get refs to payload info
-  team_slug = api.payload['team_slug']
-  prediction_slug = api.payload['prediction_slug']
-  git_repo = api.payload['git_repo']
+  git_url = api.payload['git_url']
   model_ext = api.payload['model_ext']
 
-  # Find a team for the provided team_slug that belongs to this user
-  team = user.team_for_slug(team_slug)
+  provider_domain, team_name, repo_name = parse_git_url(git_url)
 
-  if not team:
-    return TEAM_NOT_FOUND
+  # Find the provider by the passed domain
+  provider = dbi.find_one(Provider, {'domain': provider_domain})
 
-  # Find prediction for provided slug
-  prediction = dbi.find_one(Prediction, {'slug': prediction_slug})
+  if not provider:
+    return PROVIDER_NOT_FOUND
 
-  # If prediction already belongs to another team, respond saying the name is not available
-  if prediction and prediction.team != team:
-    return PREDICTION_NAME_TAKEN
+  if provider != provider_user.provider:
+    return PROVIDER_MISMATCH
 
-  # Flags we care about for logging purposes
-  is_new_prediction = not prediction
-  updated_git_repo = not is_new_prediction and prediction.git_repo != git_repo
+  # Find repo for this team through provider
+  team_slug = slugify(team_name, separator='-', to_lower=True)
+  team = dbi.find_one(Team, {'slug': team_slug, 'provider': provider})
 
-  if not prediction:
-    try:
-      prediction = dbi.create(Prediction, {
-        'team': team,
-        'name': prediction_slug
-      })
-    except BaseException as e:
-      logger.error('Error creating Prediction(name={}, team={}): {}'.format(prediction_slug, team, e))
-      return PREDICTION_CREATION_FAILED
+  if team:
+    repo_slug = slugify(repo_name, separator='-', to_lower=True)
+    repo = dbi.find_one(Repo, {'team': team, 'slug': repo_slug})
+  else:
+    repo = None
 
-  # Always update the prediction's repo and model extension
-  prediction = dbi.update(prediction, {'git_repo': git_repo, 'model_ext': model_ext})
+  if not repo:
+    return REPO_NOT_REGISTERED
+
+  repo_provider_user = dbi.find_one(RepoProviderUser, {
+    'repo': repo,
+    'provider_user': provider_user
+  })
+
+  if not repo_provider_user:
+    return NOT_ASSOCIATED_WITH_REPO
+
+  if repo_provider_user.role < RepoProviderUser.roles.MEMBER_WRITE:
+    return INVALID_REPO_PERMISSIONS
+
+  # Always update the repo's model extension
+  repo = dbi.update(repo, {'model_ext': model_ext})
 
   try:
-    repo = fetch_git_repo(git_repo)  # fetch git repo
-    commits = repo.get_commits()  # get first page of commits for repo
+    provider_client = provider.client()(provider_user.access_token)
+    external_repo = provider_client.get_repo(repo.full_name(), lazy=False)
+    commits = external_repo.get_commits()  # get first page of commits for repo
   except BaseException as e:
-    logger.error('Error fetching commits for repo: {} for prediction(slug={}): {}'.format(git_repo, prediction_slug, e))
+    logger.error('Error fetching commits for repo(uid={}): {}'.format(repo.uid, e))
     return ERROR_FETCHING_REPO
 
   try:
-    latest_sha = commits[0].sha  # get sha of latest commit
+    latest_ext_commit = commits[0]  # get latest external commit
   except IndexError:
     return NO_COMMITS_IN_REPO
   except BaseException as e:
-    logger.error('Error parsing commits for repo: {} for prediction(slug={}): {}'.format(git_repo, prediction_slug, e))
+    logger.error('Error parsing commits for repo(uid={}): {}'.format(repo.uid, e))
     return ERROR_PARSING_COMMITS_FOR_REPO
 
-  # Get all deployments for this prediction, ordered by most recently created
-  deployments = prediction.ordered_deployments()
+  # Get all deployments for this repo, ordered by most recently created
+  deployments = repo.ordered_deployments()
 
   # Tell user everything is up-to-date if latest deploy has same sha
   # as latest commit and hasn't failed.
-  if deployments and deployments[0].sha == latest_sha and not deployments[0].failed:
+  if deployments and deployments[0].commit.sha == latest_ext_commit.sha and not deployments[0].failed:
     return DEPLOYMENT_UP_TO_DATE
 
-  # Create new deployment for prediction
+  # Upsert the commit
+  commit = dbi.find_one(Commit, {'sha': latest_ext_commit.sha})
+
+  if not commit:
+    author = latest_ext_commit.author
+
+    commit = dbi.create(Commit, {
+      'sha': latest_ext_commit.sha,
+      'message': latest_ext_commit.commit.message,
+      'author': author.login,
+      'author_icon': author.avatar_url
+    })
+
+  # Create new deployment for repo
   deployment = dbi.create(Deployment, {
-    'prediction': prediction,
-    'sha': latest_sha
+    'repo': repo,
+    'commit': commit
   })
 
-  # Start showing logs to the user
-  if is_new_prediction:
-    logger.info('Creating new project'.format(prediction.slug), queue=deployment.uid, section=True)
-    logger.info('Name: {}'.format(prediction.slug), queue=deployment.uid)
-
-  if updated_git_repo:
-    logger.info('Detected new git repository'.format(git_repo), queue=deployment.uid, section=True)
-    logger.info('Repo: '.format(git_repo), queue=deployment.uid)
-
-  logger.info('New SHA detected: {}'.format(latest_sha), queue=deployment.uid, section=True)
+  logger.info('New SHA detected: {}'.format(commit.sha), queue=deployment.uid, section=True)
 
   logger.info('Scheduling training build...', queue=deployment.uid, section=True)
 

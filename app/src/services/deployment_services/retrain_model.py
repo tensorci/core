@@ -9,17 +9,18 @@ from src.helpers.deployment_statuses import ds
 
 class RetrainModel(object):
 
-  def __init__(self, prediction=None, latest_deployment=None, dataset=None, curr_record_count=None):
-    self.prediction = prediction
+  def __init__(self, repo=None, latest_deployment=None, dataset=None, curr_record_count=None):
+    self.repo = repo
     self.latest_deployment = latest_deployment
+    self.commit = self.latest_deployment.commit
     self.dataset = dataset
     self.curr_record_count = curr_record_count
 
   def perform(self):
     # Create new deployment with the same SHA as the latest deployment.
     new_deployment = dbi.create(Deployment, {
-      'prediction': self.prediction,
-      'sha': self.latest_deployment.sha
+      'repo': self.repo,
+      'commit': self.commit
     })
 
     # Get proper deployer class, based on if SHA has already been built.
