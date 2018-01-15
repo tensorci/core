@@ -9,7 +9,7 @@ from src import logger, dbi, db
 from src.helpers.provider_user_helper import current_provider_user
 from src.api_responses.errors import *
 from src.api_responses.success import *
-from src.utils import clusters, log_streamer
+from src.utils import clusters, log_streamer, dataset_db
 from src.helpers.definitions import core_header_name
 from src.deploys.build_server_deploy import BuildServerDeploy
 from src.utils.job_queue import job_queue
@@ -88,6 +88,18 @@ class DeploymentTrained(Resource):
 
     # Update deployment to DONE_TRAINING status
     deployment = dbi.update(deployment, {'status': ds.DONE_TRAINING})
+
+    # Update the Dataset's last_train_record_count
+    # TODO -- this is sloppy and could be inaccurate if records were added in the time it took to train
+    # Cache this value in redis somewhere and only update it at this point since the training succeeded.
+    datasets = deployment.repo.datasets
+
+    if datasets:
+      dataset = datasets[0]
+      record_count = dataset_db.record_count(table=dataset.table())
+      dbi.update(dataset, {'last_train_record_count': record_count})
+    else:
+      logger.warn('Found no datasets for repo, Repo(id={}) -- not updating last_train_record_count.'.format(deployment.repo.id))
 
     # Get the deployment's train_job
     train_job = deployment.train_job
