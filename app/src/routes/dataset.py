@@ -9,6 +9,7 @@ from src.api_responses.success import *
 from src.services.dataset_services.create_dataset import CreateDataset
 from src.helpers.provider_helper import parse_git_url
 from slugify import slugify
+from src.utils import dataset_db
 from src.helpers import utcnow_to_ts
 
 
@@ -132,7 +133,7 @@ class RestfulDataset(Resource):
 
     datasets = [{
       'name': d.name,
-      'num_records': 100,  # Hardcoding for now
+      'num_records': dataset_db.record_count(table=d.table()),
       'retrain_step_size': d.retrain_step_size,
       'last_train_record_count': d.last_train_record_count,
       'created_at': utcnow_to_ts(d.created_at)
