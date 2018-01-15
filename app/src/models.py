@@ -448,6 +448,9 @@ class RepoProviderUser(db.Model):
 
     self.role = role
 
+  def has_write_access(self):
+    return self.role >= self.roles.MEMBER_WRITE
+
   def __repr__(self):
     return '<RepoProviderUser id={}, uid={}, repo_id={}, provider_user_id={}, role={}, is_destroyed={}, created_at={}>'.format(
       self.id, self.uid, self.repo_id, self.provider_user_id, self.role, self.is_destroyed, self.created_at)

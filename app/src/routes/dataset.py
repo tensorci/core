@@ -1,5 +1,5 @@
 from flask import request
-from flask_restplus import Resource
+from flask_restplus import Resource, fields
 from src.routes import namespace, api
 from src.models import Provider, Dataset, Team, Repo, RepoProviderUser
 from src import logger, dbi
@@ -11,6 +11,11 @@ from src.helpers.provider_helper import parse_git_url
 from slugify import slugify
 from src.utils import dataset_db
 from src.helpers import utcnow_to_ts
+
+update_dataset_model = api.model('Dataset', {
+  'uid': fields.String(required=True),
+  'retrainStepSize': fields.Integer(required=True)
+})
 
 
 @namespace.route('/dataset')
@@ -92,6 +97,38 @@ class RestfulDataset(Resource):
 
     return DATASET_CREATION_SUCCESS
 
+  @namespace.doc('update_dataset')
+  @namespace.expect(update_dataset_model, validate=True)
+  def put(self):
+    provider_user = current_provider_user()
+
+    if not provider_user:
+      return UNAUTHORIZED
+
+    # Find dataset for provided uid
+    dataset = dbi.find_one(Dataset, {'uid': api.payload['uid']})
+
+    if not dataset:
+      return DATASET_NOT_FOUND
+
+    # Make sure this provider_user is associated with this dataset (through repo)
+    repo_provider_user = dbi.find_one(RepoProviderUser, {
+      'repo': dataset.repo,
+      'provider_user': provider_user
+    })
+
+    if not repo_provider_user:
+      return REPO_PROVIDER_USER_NOT_FOUND
+
+    # Make sure repo_provider_user has write access to this repo (and therefore, its datasets)
+    if not repo_provider_user.has_write_access():
+      return UNAUTHORIZED
+
+    # Update dataset's retrain_step_size
+    dbi.update(dataset, {'retrain_step_size': api.payload['retrainStepSize']})
+
+    return DATASET_SUCCESSFULLY_UPDATED
+
 
 @namespace.route('/datasets')
 class RestfulDataset(Resource):
@@ -133,10 +170,12 @@ class RestfulDataset(Resource):
 
     datasets = [{
       'name': d.name,
+      'uid': d.uid,
       'num_records': dataset_db.record_count(table=d.table()),
       'retrain_step_size': d.retrain_step_size,
       'last_train_record_count': d.last_train_record_count,
-      'created_at': utcnow_to_ts(d.created_at)
+      'created_at': utcnow_to_ts(d.created_at),
+      'has_write_access': provider_user.has_write_access()
     } for d in repo.datasets]
 
     return {'datasets': datasets}

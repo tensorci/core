@@ -30,6 +30,7 @@ LATEST_DEPLOYMENT_TRAINING = {'ok': False, 'code': 1401, 'error': 'latest_deploy
 DATASET_NAME_TAKEN = {'ok': False, 'code': 1500, 'error': 'dataset_name_taken'}, 500
 DATASET_CREATION_FAILED = {'ok': False, 'code': 1501, 'error': 'dataset_creation_failed'}, 500
 NO_FILE_PROVIDED = {'ok': False, 'code': 1502, 'error': 'no_file_provided'}, 500
+DATASET_NOT_FOUND = {'ok': False, 'code': 1503, 'error': 'dataset_not_found'}, 404
 
 # Bucket Errors
 BUCKET_NOT_FOUND = {'ok': False, 'code': 1600, 'error': 'bucket_not_found'}, 404
@@ -47,6 +48,7 @@ PROVIDER_MISMATCH = {'ok': False, 'code': 1803, 'error': 'provider_mismatch'}, 5
 
 # RepoProviderUser Errors
 NOT_ASSOCIATED_WITH_REPO = {'ok': False, 'code': 1900, 'error': 'not_yet_associated_with_repo'}, 403
+REPO_PROVIDER_USER_NOT_FOUND = {'ok': False, 'code': 1901, 'error': 'repo_provider_user_not_found'}, 404
 
 # User Errors
 USER_NOT_FOUND = {'ok': False, 'code': 2000, 'error': 'user_not_found'}, 404

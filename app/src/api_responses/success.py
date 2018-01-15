@@ -12,6 +12,7 @@ NO_LOGS_TO_SHOW = {'ok': True, 'log': 'No logs to show.'}, 200
 
 # Dataset
 DATASET_CREATION_SUCCESS = {'ok': True, 'message': 'Dataset Successfully Created'}, 201
+DATASET_SUCCESSFULLY_UPDATED = {'ok': True, 'message': 'Dataset Successfully Updated'}, 200
 
 # User
 UPDATE_USER_PW_SUCCESS = {'ok': True, 'message': 'Successfully Updated User Password'}, 200
