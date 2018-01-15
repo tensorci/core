@@ -544,6 +544,14 @@ class Deployment(db.Model):
     return '<Deployment id={}, uid={}, repo_id={}, commit_id={}, status={}, failed={}, train_triggered_by={}, serve_triggered_by={}, created_at={}>'.format(
       self.id, self.uid, self.repo_id, self.commit_id, self.status, self.failed, self.train_triggered_by, self.serve_triggered_by, self.created_at)
 
+  def fail(self):
+    dbi.update(self, {'failed': True})
+
+    train_job = self.train_job
+
+    if train_job and not train_job.ended_at:
+      train_job.end()
+
 
 class TrainJob(db.Model):
   id = db.Column(db.Integer, primary_key=True)

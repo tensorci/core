@@ -29,7 +29,7 @@ def from_list(list_key):
 
         if deployment:
           logger.error('DEPLOYMENT FAILED: {}'.format(list_key))
-          dbi.update(deployment, {'failed': True})
+          deployment.fail()
 
       yield log_formatter.deploy_log(item)
     except:
