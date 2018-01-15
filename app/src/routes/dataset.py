@@ -179,3 +179,40 @@ class RestfulDataset(Resource):
     } for d in repo.datasets]
 
     return {'datasets': datasets}
+
+
+@namespace.route('/dataset/preview')
+class RestfulDataset(Resource):
+  """Fetch preview for dataset"""
+
+  @namespace.doc('fetch_preview_for_dataset')
+  def get(self):
+    provider_user = current_provider_user()
+
+    if not provider_user:
+      return UNAUTHORIZED
+
+    args = dict(request.args.items())
+    dataset_uid = args.get('uid')
+
+    if not dataset_uid:
+      return INVALID_INPUT_PAYLOAD
+
+    # Find dataset for provided uid
+    dataset = dbi.find_one(Dataset, {'uid': dataset_uid})
+
+    if not dataset:
+      return DATASET_NOT_FOUND
+
+    # Make sure this provider_user is associated with this dataset (through repo)
+    repo_provider_user = dbi.find_one(RepoProviderUser, {
+      'repo': dataset.repo,
+      'provider_user': provider_user
+    })
+
+    if not repo_provider_user:
+      return REPO_PROVIDER_USER_NOT_FOUND
+
+    preview_records = dataset_db.sample(table=dataset.table(), limit=3)
+
+    return {'preview': preview_records}

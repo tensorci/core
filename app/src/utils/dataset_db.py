@@ -26,3 +26,21 @@ def record_count(table=None):
     return 0
 
   return int(result[0][0])
+
+
+def sample(table=None, limit=1):
+  """
+  Get 'count' number of records from a table for preview purposes.
+  """
+  num_records = record_count(table)
+
+  # If no records in table, return empty list
+  if not num_records:
+    return []
+
+  result = [r for r in engine.execute('SELECT data FROM {} LIMIT {};'.format(table, limit))]
+
+  if not result:
+    return []
+
+  return [r[0] for r in result]
