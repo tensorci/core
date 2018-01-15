@@ -103,6 +103,13 @@ class Provider(db.Model):
 
     return clients.get(self.slug)
 
+  def abbrev(self):
+    abbrevs = {
+      providers.GITHUB: 'gh'
+    }
+
+    return abbrevs.get(self.slug) or 'unk'
+
   @staticmethod
   def github():
     return dbi.find_one(Provider, {'slug': providers.GITHUB})

@@ -22,9 +22,9 @@ class BuildServerDeploy(AbstractDeploy):
 
   def deploy(self):
     self.set_db_reliant_attrs()
-    self.container_name = '{}-{}-build'.format(self.repo.slug, self.build_for)
+    self.container_name = '{}-{}-{}'.format(self.build_for, clusters.BUILD_SERVER, self.repo.uid)
     self.image = '{}/{}'.format(config.IMAGE_REPO_OWNER, image_names.BUILD_SERVER)
-    self.deploy_name = '{}-{}'.format(self.container_name, ms_since_epoch(as_int=True))
+    self.deploy_name = '{}-{}-{}-{}'.format(self.repo.uid, self.build_for, clusters.BUILD_SERVER, ms_since_epoch(as_int=True))
     self.cluster_name = os.environ.get('BS_CLUSTER_NAME')
     self.job = True
     self.restart_policy = 'Never'
