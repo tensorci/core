@@ -562,7 +562,7 @@ class TrainJob(db.Model):
     return dbi.update(self, {'ended_at': datetime.datetime.utcnow()})
 
   def duration(self):
-    return self.ended_at - self.started_at
+    return (self.ended_at or datetime.datetime.utcnow()) - self.started_at
 
   def __repr__(self):
     return '<TrainJob id={}, deployment_id={}, started_at={}, ended_at={}>'.format(
