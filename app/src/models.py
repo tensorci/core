@@ -514,12 +514,15 @@ class Deployment(db.Model):
   train_job = db.relationship('TrainJob', uselist=False, back_populates='deployment')
   commit_id = db.Column(db.Integer, db.ForeignKey('commit.id'), index=True, nullable=False)
   commit = db.relationship('Commit', backref='deployments')
+  train_triggered_by = db.Column(db.String(120))
+  serve_triggered_by = db.Column(db.String(120))
   failed = db.Column(db.Boolean, server_default='f')
   created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
   statuses = ds
 
-  def __init__(self, repo=None, repo_id=None, commit=None, commit_id=None, status=ds.CREATED, failed=False):
+  def __init__(self, repo=None, repo_id=None, commit=None, commit_id=None, status=ds.CREATED,
+               failed=False, train_triggered_by=None, serve_triggered_by=None):
     self.uid = uuid4().hex
 
     if repo_id:
@@ -534,10 +537,12 @@ class Deployment(db.Model):
 
     self.status = status
     self.failed = failed
+    self.train_triggered_by = train_triggered_by
+    self.serve_triggered_by = serve_triggered_by
 
   def __repr__(self):
-    return '<Deployment id={}, uid={}, repo_id={}, commit_id={}, status={}, failed={}, created_at={}>'.format(
-      self.id, self.uid, self.repo_id, self.commit_id, self.status, self.failed, self.created_at)
+    return '<Deployment id={}, uid={}, repo_id={}, commit_id={}, status={}, failed={}, train_triggered_by={}, serve_triggered_by={}, created_at={}>'.format(
+      self.id, self.uid, self.repo_id, self.commit_id, self.status, self.failed, self.train_triggered_by, self.serve_triggered_by, self.created_at)
 
 
 class TrainJob(db.Model):

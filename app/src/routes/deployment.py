@@ -192,6 +192,11 @@ class ApiDeployment(Resource):
     if latest_deployment_status_idx > done_training_idx and not latest_deployment.failed:
       return DEPLOYMENT_UP_TO_DATE
 
+    # Note who triggered this api deploy
+    dbi.update(latest_deployment, {
+      'serve_triggered_by': provider_user.username
+    })
+
     logger.info('New deployment detected to serve: {}'.format(latest_deployment.commit.sha),
                 queue=latest_deployment.uid,
                 section=True)
@@ -406,12 +411,20 @@ class GetDeployment(Resource):
 
     commit = deployment.commit
 
+    ordered_deploy_statuses = deployment.statuses.statuses
+
+    if ordered_deploy_statuses.index(deployment.status) > ordered_deploy_statuses.index(deployment.statuses.DONE_TRAINING):
+      triggered_by = deployment.serve_triggered_by or deployment.train_triggered_by
+    else:
+      triggered_by = deployment.train_triggered_by
+
     resp = {
       'uid': deployment.uid,
       'status': deployment.status,
       'failed': deployment.failed,
       'canceled': False,
       'created_at': utcnow_to_ts(deployment.created_at),
+      'triggered_by': triggered_by,
       'commit': {
         'sha': commit.sha,
         'branch': commit.branch,
@@ -509,10 +522,18 @@ def perform_train_deploy(with_api_deploy=False):
       'author_icon': author.avatar_url
     })
 
+  train_triggered_by = provider_user.username
+  serve_triggered_by = None
+
+  if with_api_deploy:
+    serve_triggered_by = train_triggered_by
+
   # Create new deployment for repo
   deployment = dbi.create(Deployment, {
     'repo': repo,
-    'commit': commit
+    'commit': commit,
+    'train_triggered_by': train_triggered_by,
+    'serve_triggered_by': serve_triggered_by
   })
 
   logger.info('New SHA detected: {}'.format(commit.sha), queue=deployment.uid, section=True)
