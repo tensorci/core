@@ -1,13 +1,12 @@
 from cmd import bool_response_cmd
 
 
-def expose(resource=None, type='LoadBalancer', port=80,
-                      target_port=80, name=None, context=None, cluster=None):
+def expose(resource=None, type='LoadBalancer', port=80, target_port=80, name=None, context=None, cluster=None):
 
   return bool_response_cmd(['kubectl', 'expose', resource,
                             '--type', type,
-                            '--port', port,
-                            '--target-port', target_port,
+                            '--port', str(port),
+                            '--target-port', str(target_port),
                             '--name', name,
                             '--context', context,
                             '--cluster', cluster])
