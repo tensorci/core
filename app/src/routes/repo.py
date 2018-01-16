@@ -7,6 +7,7 @@ from src.api_responses.errors import *
 from src.api_responses.success import *
 from src.helpers.provider_user_helper import current_provider_user
 from src import logger, dbi
+from src.helpers import auth_util
 from slugify import slugify
 from src.models import Team, Repo, RepoProviderUser, Provider, TeamProviderUser
 from src.helpers.provider_helper import parse_git_url
@@ -24,6 +25,11 @@ create_repos_model = api.model('Repos', {
 
 register_tensorci_repo = api.model('Repo', {
   'git_url': fields.String(required=True)
+})
+
+regen_secret_model = api.model('Repo', {
+  'team': fields.String(required=True),
+  'repo': fields.String(required=True)
 })
 
 
@@ -362,3 +368,94 @@ class FetchModel(Resource):
     resp.headers['Model-File-Type'] = repo.model_ext
 
     return resp
+
+
+@namespace.route('/repo/creds')
+class GetRepoCreds(Resource):
+  """
+  Fetch client_id & client_secret for repo
+  """
+  @namespace.doc('get_repo_creds')
+  def get(self):
+    provider_user = current_provider_user()
+
+    if not provider_user:
+      return UNAUTHORIZED
+
+    args = dict(request.args.items())
+    team_slug = args.get('team')
+    repo_slug = args.get('repo')
+
+    if not team_slug:
+      logger.error('No team provided during request for repo credentials')
+      return INVALID_INPUT_PAYLOAD
+
+    if not repo_slug:
+      logger.error('No repo provided during request for repo credentials')
+      return INVALID_INPUT_PAYLOAD
+
+    team_slug = team_slug.lower()
+    repo_slug = repo_slug.lower()
+
+    team = dbi.find_one(Team, {'slug': team_slug})
+
+    if not team:
+      return TEAM_NOT_FOUND
+
+    repo = [r for r in provider_user.repos() if r.team_id == team.id and r.slug == repo_slug]
+
+    if not repo:
+      return REPO_NOT_FOUND
+
+    repo = repo[0]
+
+    resp = {
+      'client_id': repo.client_id,
+      'client_secret': repo.client_secret
+    }
+
+    return resp
+
+
+@namespace.route('/repo/secret')
+class GetRepoCreds(Resource):
+  """
+  Regenerate client_secret for repo
+  """
+
+  @namespace.doc('regen_client_secret')
+  @namespace.expect(regen_secret_model, validate=True)
+  def put(self):
+    provider_user = current_provider_user()
+
+    if not provider_user:
+      return UNAUTHORIZED
+
+    team_slug = api.payload['team'].lower()
+    repo_slug = api.payload['repo'].lower()
+
+    team = dbi.find_one(Team, {'slug': team_slug})
+
+    if not team:
+      return TEAM_NOT_FOUND
+
+    repo = [r for r in provider_user.repos() if r.team_id == team.id and r.slug == repo_slug]
+
+    if not repo:
+      return REPO_NOT_FOUND
+
+    repo = repo[0]
+
+    # Generate new secret
+    new_secret = auth_util.fresh_secret()
+
+    # Update the repo with the new client_secret
+    dbi.update(repo, {'client_secret': new_secret})
+
+    # Return with the new secret
+    resp = {
+      'client_secret': new_secret
+    }
+
+    return resp
+
