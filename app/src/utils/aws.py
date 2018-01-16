@@ -32,21 +32,24 @@ def create_route53_hosted_zone(name):
 
   try:
     route53 = boto3.client('route53')
+    hosted_zone_id = None
+    hosted_zone = None
 
-    resp = route53.create_hosted_zone(
-      Name=name,
-      CallerReference=uuid4().hex
-    )
+    hosted_zones = [hz for hz in route53.list_hosted_zones().get('HostedZones')]
 
-    hosted_zone_id = resp.get('HostedZone', {}).get('Id')
+    for hz in hosted_zones:
+      # If hosted zone already exists, get name_servers for it
+      if hz.get('Name') == '{}.'.format(name):
+        hosted_zone_id = re.match('/hostedzone/([0-9A-Za-z]+)', hz.get('Id')).groups()[0]
+        hosted_zone = route53.get_hosted_zone(Id=hosted_zone_id)
+        break
 
-    if hosted_zone_id:
-      match = re.match('/hostedzone/([0-9A-Za-z]+)', hosted_zone_id)
+    if not hosted_zone:
+      hosted_zone = route53.create_hosted_zone(Name=name, CallerReference=uuid4().hex)
+      hosted_zone_id = re.match('/hostedzone/([0-9A-Za-z]+)',
+                                hosted_zone.get('HostedZone', {}).get('Id')).groups()[0]
 
-      if match:
-        hosted_zone_id = match.groups()[0]
-
-    name_servers = resp.get('DelegationSet', {}).get('NameServers') or []
+    name_servers = hosted_zone.get('DelegationSet', {}).get('NameServers') or []
   except BaseException as e:
     logger.error('Error Creating Route 53 Hosted Zone (name={}) with error: {}'.format(name, e))
     return None
