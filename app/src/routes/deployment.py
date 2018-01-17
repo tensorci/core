@@ -112,6 +112,7 @@ class DeploymentTrained(Resource):
     if with_api_deploy:  # continue on, deploying to API cluster
       deployer = BuildServerDeploy(deployment_uid=deployment.uid, build_for=clusters.API)
       job_queue.add(deployer.deploy, meta={'deployment': deployment.uid})
+      dbi.update(deployment, {'status': deployment.statuses.API_BUILD_SCHEDULED})
     elif update_prediction_model:  # tell the API cluster to pull the latest model
       pred_messenger = PredMessenger(repo_uid=deployment.repo.uid)
       job_queue.add(pred_messenger.update_model)
@@ -192,11 +193,6 @@ class ApiDeployment(Resource):
     if latest_deployment_status_idx > done_training_idx and not latest_deployment.failed:
       return DEPLOYMENT_UP_TO_DATE
 
-    # Note who triggered this api deploy
-    dbi.update(latest_deployment, {
-      'serve_triggered_by': provider_user.username
-    })
-
     logger.info('New deployment detected to serve: {}'.format(latest_deployment.commit.sha),
                 queue=latest_deployment.uid,
                 section=True)
@@ -204,7 +200,14 @@ class ApiDeployment(Resource):
     logger.info('Scheduling API build...', queue=latest_deployment.uid, section=True)
 
     deployer = BuildServerDeploy(deployment_uid=latest_deployment.uid, build_for=clusters.API)
+
     job_queue.add(deployer.deploy, meta={'deployment': latest_deployment.uid})
+
+    # Note who triggered this api deploy
+    dbi.update(latest_deployment, {
+      'serve_triggered_by': provider_user.username,
+      'status': latest_deployment.statuses.API_BUILD_SCHEDULED
+    })
 
     return Response(stream_with_context(log_streamer.from_list(latest_deployment.uid)),
                     headers={'X-Accel-Buffering': 'no'})
@@ -545,6 +548,9 @@ def perform_train_deploy(with_api_deploy=False):
                                full_push=with_api_deploy)
 
   job_queue.add(deployer.deploy, meta={'deployment': deployment.uid})
+
+  # Update deployment status to TRAIN_BUILD_SCHEDULED
+  deployment = dbi.update(deployment, {'status': deployment.statuses.TRAIN_BUILD_SCHEDULED})
 
   return Response(stream_with_context(log_streamer.from_list(deployment.uid)),
                   headers={'X-Accel-Buffering': 'no'})
