@@ -15,10 +15,10 @@ from src.deploys.build_server_deploy import BuildServerDeploy
 from src.utils.job_queue import job_queue
 from src.utils.pyredis import redis
 from src.utils.pred_messenger import PredMessenger
-from src.helpers.deployment_statuses import ds
 from src.utils.log_formatter import training_log
 from src.helpers.provider_helper import parse_git_url
 from sqlalchemy.orm import joinedload
+from datetime import datetime
 
 train_deployment_model = api.model('Deployment', {
   'git_url': fields.String(required=True),
@@ -27,7 +27,7 @@ train_deployment_model = api.model('Deployment', {
 
 deployment_trained_model = api.model('Deployment', {
   'deployment_uid': fields.String(required=True),
-  'with_api_deploy': fields.Boolean(required=True)
+  'update_prediction_model': fields.Boolean(required=True)
 })
 
 api_deployment_model = api.model('Deployment', {
@@ -42,7 +42,7 @@ class PushDeployment(Resource):
   @namespace.doc('push_deployment')
   @namespace.expect(train_deployment_model, validate=True)
   def post(self):
-    return perform_train_deploy(with_api_deploy=True)
+    return perform_train_deploy(intent=Deployment.intents.SERVE)
 
 
 @namespace.route('/deployment/train')
@@ -52,7 +52,7 @@ class TrainDeployment(Resource):
   @namespace.doc('train_deployment')
   @namespace.expect(train_deployment_model, validate=True)
   def post(self):
-    return perform_train_deploy()
+    return perform_train_deploy(intent=Deployment.intents.TRAIN)
 
 
 @namespace.route('/deployment/trained')
@@ -68,7 +68,6 @@ class DeploymentTrained(Resource):
 
     # Get required params
     deployment_uid = api.payload['deployment_uid']
-    with_api_deploy = api.payload['with_api_deploy']
     update_prediction_model = api.payload['update_prediction_model']
 
     # Get deployment for uid
@@ -81,13 +80,13 @@ class DeploymentTrained(Resource):
       return err, 500
 
     # Ensure deployment status is TRAINING
-    if deployment.status != ds.TRAINING:
-      err = 'Invalid deployment status change: {} --> {}'.format(deployment.status, ds.DONE_TRAINING)
+    if deployment.status != deployment.statuses.TRAINING:
+      err = 'Invalid deployment status change: {} --> {}'.format(deployment.status, deployment.statuses.DONE_TRAINING)
       logger.error(err)
       return err, 500
 
     # Update deployment to DONE_TRAINING status
-    deployment = dbi.update(deployment, {'status': ds.DONE_TRAINING})
+    deployment = dbi.update(deployment, {'status': deployment.statuses.DONE_TRAINING})
 
     # Update the Dataset's last_train_record_count
     # TODO -- this is sloppy and could be inaccurate if records were added in the time it took to train
@@ -109,11 +108,14 @@ class DeploymentTrained(Resource):
     else:
       logger.warn('Deployment(uid={}) has no train_job for some reason...'.format(deployment.uid))
 
-    if with_api_deploy:  # continue on, deploying to API cluster
+    # If deployment is meant for the API cluster, continue on...
+    if deployment.intent_to_serve():
       deployer = BuildServerDeploy(deployment_uid=deployment.uid, build_for=clusters.API)
       job_queue.add(deployer.deploy, meta={'deployment': deployment.uid})
       dbi.update(deployment, {'status': deployment.statuses.API_BUILD_SCHEDULED})
-    elif update_prediction_model:  # tell the API cluster to pull the latest model
+
+    # If the API cluster just needs to pull the latest trained model, tell it to do so.
+    elif update_prediction_model:
       pred_messenger = PredMessenger(repo_uid=deployment.repo.uid)
       job_queue.add(pred_messenger.update_model)
 
@@ -173,43 +175,44 @@ class ApiDeployment(Resource):
     # Get all deployments for this repo, ordered by most recently created
     deployments = repo.ordered_deployments()
 
-    # We can only make an API deploy on an existing deploy...
     if not deployments:
       return NO_DEPLOYMENT_TO_SERVE
 
-    # Get latest deployment for repo
-    latest_deployment = deployments[0]
+    # Find the latest deployment that's either:
+    # (a) A failed api deployment
+    # (b) A succeeded train deployment
+    # which ever one comes first
+    deployment = None
+    for dep in deployments:
+      if (dep.intent_to_serve() and dep.failed) or \
+        (dep.intent_to_train() and not dep.failed and dep.status == dep.statuses.DONE_TRAINING):
+        deployment = dep
+        break
 
-    # Get the index of the latest deployment's status
-    latest_deployment_status_idx = ds.statuses.index(latest_deployment.status)
-    done_training_idx = ds.statuses.index(ds.DONE_TRAINING)
-
-    # If the latest deployment isn't done training yet...
-    if latest_deployment_status_idx < done_training_idx:
-      # TODO: incorporate Deployment.failed here
-      return LATEST_DEPLOYMENT_TRAINING
-
-    # If latest deploy is already in the process of API deploying, say everything's up-to-date
-    if latest_deployment_status_idx > done_training_idx and not latest_deployment.failed:
+    # If no api-deployable deployment was found, everything is up-to-date.
+    if not deployment:
       return DEPLOYMENT_UP_TO_DATE
 
-    logger.info('New deployment detected to serve: {}'.format(latest_deployment.commit.sha),
-                queue=latest_deployment.uid,
+    logger.info('New deployment detected to serve: {}'.format(deployment.commit.sha),
+                queue=deployment.uid,
                 section=True)
 
-    logger.info('Scheduling API build...', queue=latest_deployment.uid, section=True)
+    logger.info('Scheduling API build...', queue=deployment.uid, section=True)
 
-    deployer = BuildServerDeploy(deployment_uid=latest_deployment.uid, build_for=clusters.API)
+    deployer = BuildServerDeploy(deployment_uid=deployment.uid, build_for=clusters.API)
 
-    job_queue.add(deployer.deploy, meta={'deployment': latest_deployment.uid})
+    job_queue.add(deployer.deploy, meta={'deployment': deployment.uid})
 
-    # Note who triggered this api deploy
-    dbi.update(latest_deployment, {
+    dbi.update(deployment, {
       'serve_triggered_by': provider_user.username,
-      'status': latest_deployment.statuses.API_BUILD_SCHEDULED
+      'status': deployment.statuses.API_BUILD_SCHEDULED,
+      'failed': False,  # Unfail the deployment in case we're retrying a failed API deploy
+      'intent': deployment.intents.SERVE,  # Update the intent
+      'intent_updated_at': datetime.utcnow()
     })
 
-    return Response(stream_with_context(log_streamer.from_list(latest_deployment.uid)),
+    # Respond with a stream of the deploy logs
+    return Response(stream_with_context(log_streamer.from_list(deployment.uid)),
                     headers={'X-Accel-Buffering': 'no'})
 
 
@@ -353,7 +356,7 @@ class GetDeployments(Resource):
     deployments = db.session.query(Deployment) \
       .options(joinedload(Deployment.commit)) \
       .filter_by(repo_id=repo.id) \
-      .order_by(Deployment.created_at).all()
+      .order_by(Deployment.intent_updated_at).all()
 
     if not deployments:
       return resp
@@ -374,7 +377,7 @@ class GetDeployments(Resource):
         'status': d.status,
         'failed': d.failed,
         'canceled': False,
-        'created_at': utcnow_to_ts(d.created_at),
+        'date': utcnow_to_ts(d.intent_updated_at),
         'train_duration_sec': train_duration_sec,
         'commit': {
           'sha': commit.sha,
@@ -414,9 +417,7 @@ class GetDeployment(Resource):
 
     commit = deployment.commit
 
-    ordered_deploy_statuses = deployment.statuses.statuses
-
-    if ordered_deploy_statuses.index(deployment.status) > ordered_deploy_statuses.index(deployment.statuses.DONE_TRAINING):
+    if deployment.status_greater_than(deployment.statuses.DONE_TRAINING):
       triggered_by = deployment.serve_triggered_by or deployment.train_triggered_by
     else:
       triggered_by = deployment.train_triggered_by
@@ -426,7 +427,7 @@ class GetDeployment(Resource):
       'status': deployment.status,
       'failed': deployment.failed,
       'canceled': False,
-      'created_at': utcnow_to_ts(deployment.created_at),
+      'date': utcnow_to_ts(deployment.intent_updated_at),
       'triggered_by': triggered_by,
       'commit': {
         'sha': commit.sha,
@@ -440,7 +441,7 @@ class GetDeployment(Resource):
     return resp
 
 
-def perform_train_deploy(with_api_deploy=False):
+def perform_train_deploy(intent=None):
   provider_user = current_provider_user()
 
   if not provider_user:
@@ -489,27 +490,38 @@ def perform_train_deploy(with_api_deploy=False):
   repo = dbi.update(repo, {'model_ext': model_ext})
 
   try:
+    # Fetch the first page of commits for this repo from the provider's API
     provider_client = provider.client()(provider_user.access_token)
     external_repo = provider_client.get_repo(repo.full_name(), lazy=False)
-    commits = external_repo.get_commits()  # get first page of commits for repo
+    commits = external_repo.get_commits()
   except BaseException as e:
     logger.error('Error fetching commits for repo(uid={}): {}'.format(repo.uid, e))
     return ERROR_FETCHING_REPO
 
   try:
-    latest_ext_commit = commits[0]  # get latest external commit
+    # Get the most recent external commit
+    latest_ext_commit = commits[0]
   except IndexError:
     return NO_COMMITS_IN_REPO
   except BaseException as e:
     logger.error('Error parsing commits for repo(uid={}): {}'.format(repo.uid, e))
     return ERROR_PARSING_COMMITS_FOR_REPO
 
-  # Get all deployments for this repo, ordered by most recently created
+  # Get all deployments for this repo, ordered by most recently created.
   deployments = repo.ordered_deployments()
+  latest_deployment = None
 
-  # Tell user everything is up-to-date if latest deploy has same sha
-  # as latest commit and hasn't failed.
-  if deployments and deployments[0].commit.sha == latest_ext_commit.sha and not deployments[0].failed:
+  # Get latest deployment if it exists.
+  if deployments:
+    latest_deployment = deployments[0]
+
+  # Everything is already up-to-date if:
+  # (1) A deployment for this commit already exists
+  # (2) That deployment is on or has already passed the TRAIN_BUILD_SCHEDULED status.
+  # (3) That deployment hasn't failed.
+  if latest_deployment and latest_deployment.commit.sha == latest_ext_commit.sha \
+    and latest_deployment.status_greater_than(latest_deployment.statuses.CREATED) \
+    and not latest_deployment.failed:
     return DEPLOYMENT_UP_TO_DATE
 
   # Upsert the commit
@@ -528,29 +540,29 @@ def perform_train_deploy(with_api_deploy=False):
   train_triggered_by = provider_user.username
   serve_triggered_by = None
 
-  if with_api_deploy:
+  # If a full-push (Train + Serve) is desired, both train and serve are triggered by the same person.
+  if intent == Deployment.intents.SERVE:
     serve_triggered_by = train_triggered_by
 
-  # Create new deployment for repo
+  # Create new deployment for repo & commit
   deployment = dbi.create(Deployment, {
     'repo': repo,
     'commit': commit,
     'train_triggered_by': train_triggered_by,
-    'serve_triggered_by': serve_triggered_by
+    'serve_triggered_by': serve_triggered_by,
+    'intent': intent
   })
 
   logger.info('New SHA detected: {}'.format(commit.sha), queue=deployment.uid, section=True)
-
   logger.info('Scheduling training build...', queue=deployment.uid, section=True)
 
-  deployer = BuildServerDeploy(deployment_uid=deployment.uid,
-                               build_for=clusters.TRAIN,
-                               full_push=with_api_deploy)
-
+  # Schedule a train build
+  deployer = BuildServerDeploy(deployment_uid=deployment.uid, build_for=clusters.TRAIN)
   job_queue.add(deployer.deploy, meta={'deployment': deployment.uid})
 
   # Update deployment status to TRAIN_BUILD_SCHEDULED
   deployment = dbi.update(deployment, {'status': deployment.statuses.TRAIN_BUILD_SCHEDULED})
 
+  # Respond with a stream of the deploy logs
   return Response(stream_with_context(log_streamer.from_list(deployment.uid)),
                   headers={'X-Accel-Buffering': 'no'})

@@ -4,7 +4,6 @@ from src.utils import clusters
 from src.deploys.build_server_deploy import BuildServerDeploy
 from src.deploys.train_deploy import TrainDeploy
 from src.utils.job_queue import job_queue
-from src.helpers.deployment_statuses import ds
 
 
 class RetrainModel(object):
@@ -15,12 +14,15 @@ class RetrainModel(object):
     self.commit = self.latest_deployment.commit
     self.dataset = dataset
     self.curr_record_count = curr_record_count
+    self.triggered_by = 'TensorCI'  # auto-triggered
 
   def perform(self):
-    # Create new deployment with the same SHA as the latest deployment.
+    # Create new deployment with the same commit as the latest deployment.
     new_deployment = dbi.create(Deployment, {
       'repo': self.repo,
-      'commit': self.commit
+      'commit': self.commit,
+      'train_triggered_by': self.triggered_by,
+      'intent': Deployment.intents.TRAIN
     })
 
     # Get proper deployer class, based on if SHA has already been built.
@@ -33,15 +35,24 @@ class RetrainModel(object):
     dbi.update(self.dataset, {'last_train_record_count': self.curr_record_count})
 
   def get_deployer(self, deployment):
-    # Schedule a training build if the latest deployment hasn't already uploaded a build for this SHA.
-    if ds.statuses.index(self.latest_deployment.status) < ds.statuses.index(ds.DONE_BUILDING_FOR_TRAIN):
+    dstatuses = deployment.statuses
+
+    # If the latest deployment hasn't already uploaded a build for this SHA, schedule a training build.
+    if self.latest_deployment.status_less_than(dstatuses.DONE_BUILDING_FOR_TRAIN):
       deployer = BuildServerDeploy(deployment_uid=deployment.uid,
                                    build_for=clusters.TRAIN,
                                    update_prediction_model=True)
-    else:
-      # A build for this SHA has already been uploaded, so just deploy directly to the training cluster
-      # and update this deployment's status to DONE_BUILDING_FOR_TRAIN.
-      deployment = dbi.update(deployment, {'status': ds.DONE_BUILDING_FOR_TRAIN})
-      deployer = TrainDeploy(deployment_uid=deployment.uid, update_prediction_model=True)
 
+      status_update = dstatuses.TRAIN_BUILD_SCHEDULED
+    else:
+      # A build for this SHA has already been uploaded, so just schedule a training cluster deploy.
+      deployer = TrainDeploy(deployment_uid=deployment.uid,
+                             update_prediction_model=True)
+
+      status_update = dstatuses.TRAINING_SCHEDULED
+
+    # Apply the appropriate deployment status
+    dbi.update(deployment, {'status': status_update})
+
+    # Return the deployer class to be scheduled
     return deployer

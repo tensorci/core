@@ -9,9 +9,8 @@ from src.helpers import ms_since_epoch
 
 class TrainDeploy(AbstractDeploy):
 
-  def __init__(self, deployment_uid=None, with_api_deploy=False, update_prediction_model=False):
+  def __init__(self, deployment_uid=None, update_prediction_model=False):
     super(TrainDeploy, self).__init__(deployment_uid)
-    self.with_api_deploy = with_api_deploy
     self.update_prediction_model = update_prediction_model
 
   def deploy(self):
@@ -42,7 +41,6 @@ class TrainDeploy(AbstractDeploy):
       'REPO_UID': self.repo.uid,
       'DEPLOYMENT_UID': self.deployment_uid,
       'REDIS_URL': os.environ.get('REDIS_URL'),
-      'WITH_API_DEPLOY': str(self.with_api_deploy).lower(),
       'UPDATE_PREDICTION_MODEL': str(self.update_prediction_model).lower()
     }
 
