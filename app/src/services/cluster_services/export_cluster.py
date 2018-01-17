@@ -10,7 +10,9 @@ class ExportCluster(object):
   def perform(self):
     # Export cluster if not already exported
     if not self.already_exported():
-      export_cluster(name=self.cluster.name, state=self.cluster.bucket.url())
+      return export_cluster(name=self.cluster.name, state=self.cluster.bucket.url())
+
+    return True
 
   def already_exported(self):
     existing_contexts = config.list_kube_config_contexts()

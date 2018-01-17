@@ -30,7 +30,11 @@ class PublicizePrediction(object):
     logger.info('Exposing deployment...', queue=self.deployment_uid)
 
     # Ensure cluster/context exists in KUBECONFIG
-    ExportCluster(cluster=self.cluster).perform()
+    context_exported = ExportCluster(cluster=self.cluster).perform()
+
+    if not context_exported:
+      logger.error('Failure exporting cluster context.', queue=self.deployment_uid)
+      return
 
     # Expose deployment with a LoadBalancer service
     exposed = kubectl.expose(resource='deployment/{}'.format(self.deploy_name),
@@ -41,6 +45,7 @@ class PublicizePrediction(object):
                              cluster=self.cluster_name)
 
     if not exposed:
+      logger.error('Failure exposing deployment.', queue=self.deployment_uid)
       return
 
     # Annotate service with SSL Cert if port is 443
@@ -59,6 +64,7 @@ class PublicizePrediction(object):
                                    cluster=self.cluster_name)
 
       if not annotated:
+        logger.error('Failure annotating service.', queue=self.deployment_uid)
         return
 
     # We need the CoreV1Api to poll our services
@@ -74,7 +80,11 @@ class PublicizePrediction(object):
     logger.info('Assigning url to prediction...', queue=self.deployment_uid)
 
     # Create a CNAME record for your subdomain with the ELB's url
-    add_dns_records(os.environ.get('TL_HOSTED_ZONE_ID'), self.repo.domain, [elb_url], 'CNAME')
+    cname_record_added = add_dns_records(os.environ.get('TL_HOSTED_ZONE_ID'), self.repo.domain, [elb_url], 'CNAME')
+
+    if not cname_record_added:
+      logger.error('Failure upserting CNAME record for deployment.', queue=self.deployment_uid)
+      return
 
     sleep(60)
 

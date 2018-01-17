@@ -28,6 +28,10 @@ class CreateCluster(object):
     # Create Route53 hosted zone for cluster
     hosted_zone_id, ns_addresses = create_route53_hosted_zone(self.cluster.name)
 
+    if not hosted_zone_id or not ns_addresses:
+      logger.error('Failure upserting hosted zone.', queue=self.deployment_uid)
+      return
+
     # Update the cluster with the Route53 info
     self.cluster = dbi.update(self.cluster, {
       'hosted_zone_id': hosted_zone_id,
@@ -38,6 +42,7 @@ class CreateCluster(object):
     dns_success = add_dns_records(os.environ.get('TL_HOSTED_ZONE_ID'), self.cluster.name, ns_addresses, 'NS')
 
     if not dns_success:
+      logger.error('Failure registering NS records for cluster.', queue=self.deployment_uid)
       return
 
     sleep(60)
@@ -60,6 +65,7 @@ class CreateCluster(object):
     )
 
     if not cluster_created:
+      logger.error('Failed to create cluster.', queue=self.deployment_uid)
       return
 
     logger.info('Validating cluster (this could take awhile)...', queue=self.deployment_uid)

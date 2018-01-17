@@ -44,7 +44,11 @@ class ApiDeploy(AbstractDeploy):
     }
 
     # Ensure cluster/context exists in KUBECONFIG
-    ExportCluster(cluster=self.cluster).perform()
+    context_exported = ExportCluster(cluster=self.cluster).perform()
+
+    if not context_exported:
+      logger.error('Failure exporting cluster context.', queue=self.deployment_uid)
+      return
 
     logger.info('Deploying...', queue=self.deployment_uid, section=True)
 

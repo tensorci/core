@@ -29,12 +29,12 @@ def create_s3_bucket(name):
 
 def create_route53_hosted_zone(name):
   logger.info('Creating Route53 Hosted Zone: {}...'.format(name))
+  hosted_zone_id = None
+  hosted_zone = None
+  name_servers = None
 
   try:
     route53 = boto3.client('route53')
-    hosted_zone_id = None
-    hosted_zone = None
-
     hosted_zones = [hz for hz in route53.list_hosted_zones().get('HostedZones')]
 
     for hz in hosted_zones:
@@ -52,7 +52,6 @@ def create_route53_hosted_zone(name):
     name_servers = hosted_zone.get('DelegationSet', {}).get('NameServers') or []
   except BaseException as e:
     logger.error('Error Creating Route 53 Hosted Zone (name={}) with error: {}'.format(name, e))
-    return None
 
   return hosted_zone_id, name_servers
 
