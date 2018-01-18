@@ -15,6 +15,8 @@ class TrainDeploy(AbstractDeploy):
 
   def deploy(self):
     self.set_db_reliant_attrs()
+    self.log_stream_key = self.deployment.train_deploy_log()
+
     self.container_name = '{}-{}'.format(clusters.TRAIN, self.repo.uid)
     self.image = '{}/{}:{}'.format(self.repo.image_repo_owner, self.container_name, self.commit.sha)
     self.deploy_name = '{}-{}-{}'.format(clusters.TRAIN, self.repo.uid, ms_since_epoch(as_int=True))
@@ -44,7 +46,7 @@ class TrainDeploy(AbstractDeploy):
       'UPDATE_PREDICTION_MODEL': str(self.update_prediction_model).lower()
     }
 
-    logger.info('Deploying...', queue=self.deployment_uid, section=True)
+    logger.info('Deploying...', stream=self.log_stream_key, deploying=True, section=True)
 
     super(TrainDeploy, self).deploy()
 
@@ -56,5 +58,6 @@ class TrainDeploy(AbstractDeploy):
     dbi.create(TrainJob, {'deployment': self.deployment})
 
     logger.info('Successfully deployed to training cluster.',
-                queue=self.deployment_uid,
+                stream=self.log_stream_key,
+                deploying=True,
                 last_entry=True)

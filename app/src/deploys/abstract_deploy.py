@@ -14,6 +14,7 @@ class AbstractDeploy(object):
     self.cluster = None
     self.bucket = None
     self.dataset = None
+    self.log_stream_key = None
 
     self.api_client = None
     self.api = None

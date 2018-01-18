@@ -594,6 +594,15 @@ class Deployment(db.Model):
            ((self.intent_to_train() and self.status == self.statuses.DONE_TRAINING) or \
             (self.intent_to_serve() and self.status == self.statuses.PREDICTING))
 
+  def train_deploy_log(self):
+    return 'train-deploy:{}'.format(self.uid)
+
+  def api_deploy_log(self):
+    return 'api-deploy:{}'.format(self.uid)
+
+  def train_log(self):
+    return 'train-{}'.format(self.uid)
+
 
 class TrainJob(db.Model):
   id = db.Column(db.Integer, primary_key=True)

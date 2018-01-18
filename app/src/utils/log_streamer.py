@@ -20,7 +20,7 @@ def from_list(list_key):
         continue
 
       item = json.loads(item[1])
-      complete = item.get('complete') is True
+      complete = item.get('last_entry') is True
 
       # if logger.error, update the deployment to failed=True
       if item.get('level') == 'error':

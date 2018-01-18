@@ -194,11 +194,11 @@ class ApiDeployment(Resource):
     if not deployment:
       return DEPLOYMENT_UP_TO_DATE
 
-    logger.info('New deployment detected to serve: {}'.format(deployment.commit.sha),
-                queue=deployment.uid,
-                section=True)
+    log_stream_key = deployment.api_deploy_log()
 
-    logger.info('Scheduling API build...', queue=deployment.uid, section=True)
+    logger.info('New deployment detected to serve: {}'.format(deployment.commit.sha), stream=log_stream_key, section=True)
+
+    logger.info('Scheduling API build...', stream=log_stream_key.uid, section=True)
 
     deployer = BuildServerDeploy(deployment_uid=deployment.uid, build_for=clusters.API)
 
@@ -274,7 +274,7 @@ class TrainDeployment(Resource):
       # Get latest deployment for repo
       deployment = deployments[0]
 
-    log_stream_key = 'train-{}'.format(deployment.uid)  # redis key for the log stream
+    log_stream_key = deployment.train_log()  # redis key for the log stream
     follow_logs = args.get('follow') == 'true'  # Do they want to follow the real-time logs or no?
 
     if follow_logs:
@@ -539,8 +539,11 @@ def perform_train_deploy(intent=None):
     'intent': intent
   })
 
-  logger.info('New SHA detected: {}'.format(commit.sha), queue=deployment.uid, section=True)
-  logger.info('Scheduling training build...', queue=deployment.uid, section=True)
+  log_stream_key = deployment.train_deploy_log()
+
+  logger.info('New SHA detected: {}'.format(commit.sha), stream=log_stream_key, section=True)
+
+  logger.info('Scheduling training build...', stream=log_stream_key, section=True)
 
   # Schedule a train build
   deployer = BuildServerDeploy(deployment_uid=deployment.uid, build_for=clusters.TRAIN)

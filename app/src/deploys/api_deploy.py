@@ -17,6 +17,8 @@ class ApiDeploy(AbstractDeploy):
 
   def deploy(self):
     self.set_db_reliant_attrs()
+    self.log_stream_key = self.deployment.api_deploy_log()
+    
     self.container_name = '{}-{}'.format(clusters.API, self.repo.uid)
     self.image = '{}/{}:{}'.format(self.repo.image_repo_owner, self.container_name, self.commit.sha)
     self.deploy_name = '{}-{}-{}'.format(clusters.API, self.repo.uid, ms_since_epoch(as_int=True))
@@ -47,10 +49,10 @@ class ApiDeploy(AbstractDeploy):
     context_exported = ExportCluster(cluster=self.cluster).perform()
 
     if not context_exported:
-      logger.error('Failure exporting cluster context.', queue=self.deployment_uid)
+      logger.error('Failure exporting cluster context.', stream=self.log_stream_key, deploying=True)
       return
 
-    logger.info('Deploying...', queue=self.deployment_uid, section=True)
+    logger.info('Deploying...', stream=self.log_stream_key, deploying=True, section=True)
 
     if self.repo.deploy_name:
       self.update_deploy()
@@ -89,13 +91,20 @@ class ApiDeploy(AbstractDeploy):
 
     if self.repo.elb:
       self.update_deployment_status(self.deployment.statuses.PREDICTING)
-      logger.info('Successfully deployed to API.', queue=self.deployment_uid)
+
+      logger.info('Successfully deployed to API.', stream=self.log_stream_key, deploying=True)
+
       logger.info('Prediction live at https://{}/api/predict'.format(self.repo.domain),
-                  queue=self.deployment_uid,
+                  stream=self.log_stream_key,
+                  deploying=True,
                   last_entry=True)
     else:
-      logger.info('Successfully deployed to API.', queue=self.deployment_uid)
-      logger.info('Scheduling prediction for publication...', queue=self.deployment_uid, section=True)
+      logger.info('Successfully deployed to API.', stream=self.log_stream_key, deploying=True)
+
+      logger.info('Scheduling prediction for publication...',
+                  stream=self.log_stream_key,
+                  deploying=True,
+                  section=True)
 
       sleep(3)  # wait a hot sec for deployment to be absolutely registered
 

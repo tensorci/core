@@ -1,4 +1,3 @@
-import json
 from pyredis import redis
 from src.helpers import ms_since_epoch
 
@@ -18,18 +17,18 @@ class Logger(object):
     self.log(text, 'error', **kwargs)
 
   def log(self, text, level, **kwargs):
+    # Always log to TensorCI internal logs
     if self.base_logger and hasattr(self.base_logger, level):
       getattr(self.base_logger, level)(text)
     else:
       print(text)
 
-    if kwargs.get('queue'):
-      data = {
-        'text': text,
-        'level': level,
-        'complete': kwargs.get('last_entry'),
-        'ts': ms_since_epoch(),
-        'section': kwargs.get('section')
-      }
+    # If redis stream should be piped into, do that as well
+    if kwargs.get('stream'):
+      stream = kwargs.pop('stream')
 
-      redis.rpush(kwargs.get('queue'), json.dumps(data))
+      redis.xadd(stream,
+                 text=text,
+                 level=level,
+                 ts=ms_since_epoch(),
+                 **kwargs)
