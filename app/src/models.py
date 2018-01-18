@@ -573,6 +573,27 @@ class Deployment(db.Model):
   def intent_to_serve(self):
     return self.intent == self.intents.SERVE
 
+  def readable_status(self):
+    return {
+      ds.CREATED: 'Created',
+      ds.TRAIN_BUILD_SCHEDULED: 'Train Image Building',
+      ds.BUILDING_FOR_TRAIN: 'Train Image Building',
+      ds.DONE_BUILDING_FOR_TRAIN: 'Deploying Train Image',
+      ds.TRAINING_SCHEDULED: 'Deploying Train Image',
+      ds.TRAINING: 'Training',
+      ds.DONE_TRAINING: 'Trained',
+      ds.API_BUILD_SCHEDULED: 'API Image Building',
+      ds.BUILDING_FOR_API: 'API Image Building',
+      ds.DONE_BUILDING_FOR_API: 'Deploying API Image',
+      ds.PREDICTING_SCHEDULED: 'Deploying API Image',
+      ds.PREDICTING: 'Predicting'
+    }.get(self.status)
+
+  def succeeded(self):
+    return not self.failed and \
+           ((self.intent_to_train() and self.status == self.statuses.DONE_TRAINING) or \
+            (self.intent_to_serve() and self.status == self.statuses.PREDICTING))
+
 
 class TrainJob(db.Model):
   id = db.Column(db.Integer, primary_key=True)

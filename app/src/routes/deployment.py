@@ -296,23 +296,6 @@ class TrainDeployment(Resource):
       return {'logs': log_messages}
 
 
-@namespace.route('/logtest')
-class LogTest(Resource):
-  def get(self):
-    from time import sleep
-
-    def func():
-      i = 0
-
-      while True:
-        i += 1
-        sleep(2)
-        yield 'a'*1024 + 'Line {}\n'.format(i)
-
-    return Response(stream_with_context(func()),
-                    headers={'X-Accel-Buffering': 'no'})
-
-
 @namespace.route('/deployments')
 class GetDeployments(Resource):
   """Fetch deployments for a repo"""
@@ -375,8 +358,9 @@ class GetDeployments(Resource):
       resp['deployments'].append({
         'uid': d.uid,
         'status': d.status,
+        'readable_status': d.readable_status(),
         'failed': d.failed,
-        'canceled': False,
+        'succeeded': d.succeeded(),
         'date': utcnow_to_ts(d.intent_updated_at),
         'train_duration_sec': train_duration_sec,
         'commit': {
@@ -425,8 +409,9 @@ class GetDeployment(Resource):
     resp = {
       'uid': deployment.uid,
       'status': deployment.status,
+      'readable_status': deployment.readable_status(),
       'failed': deployment.failed,
-      'canceled': False,
+      'succeeded': deployment.succeeded(),
       'date': utcnow_to_ts(deployment.intent_updated_at),
       'triggered_by': triggered_by,
       'commit': {
