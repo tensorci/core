@@ -357,7 +357,6 @@ class GetDeployments(Resource):
 
       resp['deployments'].append({
         'uid': d.uid,
-        'status': d.status,
         'readable_status': d.readable_status(),
         'failed': d.failed,
         'succeeded': d.succeeded(),
@@ -408,7 +407,6 @@ class GetDeployment(Resource):
 
     resp = {
       'uid': deployment.uid,
-      'status': deployment.status,
       'readable_status': deployment.readable_status(),
       'failed': deployment.failed,
       'succeeded': deployment.succeeded(),
