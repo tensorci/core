@@ -576,16 +576,16 @@ class Deployment(db.Model):
   def readable_status(self):
     return {
       ds.CREATED: 'Created',
-      ds.TRAIN_BUILD_SCHEDULED: 'Train Image Building',
-      ds.BUILDING_FOR_TRAIN: 'Train Image Building',
-      ds.DONE_BUILDING_FOR_TRAIN: 'Deploying Train Image',
-      ds.TRAINING_SCHEDULED: 'Deploying Train Image',
+      ds.TRAIN_BUILD_SCHEDULED: 'Building Train Image',
+      ds.BUILDING_FOR_TRAIN: 'Building Train Image',
+      ds.DONE_BUILDING_FOR_TRAIN: 'Deploying For Training',
+      ds.TRAINING_SCHEDULED: 'Deploying For Training',
       ds.TRAINING: 'Training',
       ds.DONE_TRAINING: 'Trained',
-      ds.API_BUILD_SCHEDULED: 'API Image Building',
-      ds.BUILDING_FOR_API: 'API Image Building',
-      ds.DONE_BUILDING_FOR_API: 'Deploying API Image',
-      ds.PREDICTING_SCHEDULED: 'Deploying API Image',
+      ds.API_BUILD_SCHEDULED: 'Building API Image',
+      ds.BUILDING_FOR_API: 'Building API Image',
+      ds.DONE_BUILDING_FOR_API: 'Deploying To API',
+      ds.PREDICTING_SCHEDULED: 'Deploying To API',
       ds.PREDICTING: 'Predicting'
     }.get(self.status)
 
