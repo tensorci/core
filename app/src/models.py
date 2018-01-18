@@ -59,7 +59,7 @@ from sqlalchemy.dialects.postgresql import JSON
 from sqlalchemy.types import Text
 from src import db, dbi, logger
 from sqlalchemy.orm import joinedload
-from helpers import auth_util, repo_user_roles, instance_types, user_verification_statuses, providers
+from helpers import auth_util, repo_user_roles, instance_types, user_verification_statuses, providers, deployment_intents
 from helpers.deployment_statuses import ds
 from uuid import uuid4
 from operator import attrgetter
@@ -290,8 +290,7 @@ class Repo(db.Model):
       self.image_repo_owner, self.deploy_name, self.model_ext, self.is_destroyed, self.created_at)
 
   def ordered_deployments(self):
-    # TODO: optimize this by order-ing in the actual query
-    return sorted(self.deployments, key=attrgetter('created_at'), reverse=True)
+    return sorted(self.deployments, key=attrgetter('intent_updated_at'), reverse=True)
 
   def model_file(self):
     if not self.model_ext:
@@ -516,13 +515,16 @@ class Deployment(db.Model):
   commit = db.relationship('Commit', backref='deployments')
   train_triggered_by = db.Column(db.String(120))
   serve_triggered_by = db.Column(db.String(120))
+  intent = db.Column(db.String(120))
+  intent_updated_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
   failed = db.Column(db.Boolean, server_default='f')
   created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
   statuses = ds
+  intents = deployment_intents
 
   def __init__(self, repo=None, repo_id=None, commit=None, commit_id=None, status=ds.CREATED,
-               failed=False, train_triggered_by=None, serve_triggered_by=None):
+               failed=False, train_triggered_by=None, serve_triggered_by=None, intent=None, intent_updated_at=None):
     self.uid = uuid4().hex
 
     if repo_id:
@@ -539,18 +541,58 @@ class Deployment(db.Model):
     self.failed = failed
     self.train_triggered_by = train_triggered_by
     self.serve_triggered_by = serve_triggered_by
+    self.intent = intent
+    self.intent_updated_at = intent_updated_at or datetime.datetime.utcnow()
 
   def __repr__(self):
-    return '<Deployment id={}, uid={}, repo_id={}, commit_id={}, status={}, failed={}, train_triggered_by={}, serve_triggered_by={}, created_at={}>'.format(
-      self.id, self.uid, self.repo_id, self.commit_id, self.status, self.failed, self.train_triggered_by, self.serve_triggered_by, self.created_at)
+    return '<Deployment id={}, uid={}, repo_id={}, status={}, commit_id={}, train_triggered_by={}, ' \
+           'serve_triggered_by={}, intent={}, intent_updated_at={}, failed={}, created_at={}>'.format(
+      self.id, self.uid, self.repo_id, self.status, self.commit_id, self.train_triggered_by,
+      self.serve_triggered_by, self.intent, self.intent_updated_at, self.failed, self.created_at)
 
   def fail(self):
     dbi.update(self, {'failed': True})
 
     train_job = self.train_job
 
+    # Mark TrainJob as ended
     if train_job and not train_job.ended_at:
       train_job.end()
+
+  def status_greater_than(self, status):
+    ss = self.statuses.statuses
+    return ss.index(self.status) > ss.index(status)
+
+  def status_less_than(self, status):
+    ss = self.statuses.statuses
+    return ss.index(self.status) < ss.index(status)
+
+  def intent_to_train(self):
+    return self.intent == self.intents.TRAIN
+
+  def intent_to_serve(self):
+    return self.intent == self.intents.SERVE
+
+  def readable_status(self):
+    return {
+      ds.CREATED: 'Created',
+      ds.TRAIN_BUILD_SCHEDULED: 'Train Image Building',
+      ds.BUILDING_FOR_TRAIN: 'Train Image Building',
+      ds.DONE_BUILDING_FOR_TRAIN: 'Deploying Train Image',
+      ds.TRAINING_SCHEDULED: 'Deploying Train Image',
+      ds.TRAINING: 'Training',
+      ds.DONE_TRAINING: 'Trained',
+      ds.API_BUILD_SCHEDULED: 'API Image Building',
+      ds.BUILDING_FOR_API: 'API Image Building',
+      ds.DONE_BUILDING_FOR_API: 'Deploying API Image',
+      ds.PREDICTING_SCHEDULED: 'Deploying API Image',
+      ds.PREDICTING: 'Predicting'
+    }.get(self.status)
+
+  def succeeded(self):
+    return not self.failed and \
+           ((self.intent_to_train() and self.status == self.statuses.DONE_TRAINING) or \
+            (self.intent_to_serve() and self.status == self.statuses.PREDICTING))
 
 
 class TrainJob(db.Model):

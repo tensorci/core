@@ -14,10 +14,9 @@ from src.services.cluster_services.create_cluster import CreateCluster
 
 class BuildServerDeploy(AbstractDeploy):
 
-  def __init__(self, deployment_uid=None, build_for=None, full_push=False, update_prediction_model=False):
+  def __init__(self, deployment_uid=None, build_for=None, update_prediction_model=False):
     super(BuildServerDeploy, self).__init__(deployment_uid)
     self.build_for = build_for
-    self.full_push = full_push
     self.update_prediction_model = update_prediction_model
 
   def deploy(self):
@@ -125,10 +124,11 @@ class BuildServerDeploy(AbstractDeploy):
 
     # Schedule a deploy to the training cluster
     train_deployer = TrainDeploy(deployment_uid=self.deployment_uid,
-                                 with_api_deploy=self.full_push,
                                  update_prediction_model=self.update_prediction_model)
 
     job_queue.add(train_deployer.deploy, meta={'deployment': self.deployment_uid})
+
+    self.update_deployment_status(self.deployment.statuses.TRAINING_SCHEDULED)
 
   def post_api_building(self):
     self.update_deployment_status(self.deployment.statuses.DONE_BUILDING_FOR_API)
@@ -145,6 +145,8 @@ class BuildServerDeploy(AbstractDeploy):
 
     api_deployer = ApiDeploy(deployment_uid=self.deployment_uid)
     job_queue.add(api_deployer.deploy, meta={'deployment': self.deployment_uid})
+
+    self.update_deployment_status(self.deployment.statuses.PREDICTING_SCHEDULED)
 
   def create_cluster_and_deploy(self):
     logger.info('Scheduling API cluster creation...', queue=self.deployment_uid, section=True)

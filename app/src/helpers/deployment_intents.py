@@ -1,0 +1,2 @@
+TRAIN = 'train'
+SERVE = 'serve'

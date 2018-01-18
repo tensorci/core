@@ -1,6 +1,6 @@
 import os
 from src import dbi, logger
-from src.models import Team, Cluster
+from src.models import Team, Cluster, Deployment
 from src.deploys.api_deploy import ApiDeploy
 from src.utils.aws import create_route53_hosted_zone, add_dns_records, os_map
 from src.utils import kops
@@ -18,6 +18,7 @@ class CreateCluster(object):
     self.team = None
     self.cluster = None
     self.bucket = None
+    self.deployment = None
 
   def perform(self):
     self.set_db_reliant_attrs()
@@ -80,6 +81,9 @@ class CreateCluster(object):
 
       api_deployer = ApiDeploy(deployment_uid=self.deployment_uid)
       job_queue.add(api_deployer.deploy, meta={'deployment': self.deployment_uid})
+
+      self.deployment = dbi.find_one(Deployment, {'uid': self.deployment_uid})
+      dbi.update(self.deployment, {'status': self.deployment.statuses.PREDICTING_SCHEDULED})
 
   def validate_cluster(self, state):
     while not kops.validate_cluster(name=self.cluster.name, state=state):
