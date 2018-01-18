@@ -17,6 +17,7 @@ from src.utils.pyredis import redis
 from src.utils.pred_messenger import PredMessenger
 from src.utils.log_formatter import training_log
 from src.helpers.provider_helper import parse_git_url
+from src.helpers.deployment_helper import current_stage, format_stages
 from sqlalchemy.orm import joinedload
 from datetime import datetime
 
@@ -418,7 +419,9 @@ class GetDeployment(Resource):
         'message': commit.message,
         'author': commit.author,
         'author_icon': commit.author_icon
-      }
+      },
+      'current_stage': current_stage(deployment),
+      'stages': format_stages(deployment)
     }
 
     return resp
