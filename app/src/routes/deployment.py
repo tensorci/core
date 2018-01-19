@@ -196,9 +196,12 @@ class ApiDeployment(Resource):
 
     log_stream_key = deployment.api_deploy_log()
 
-    logger.info('New deployment detected to serve: {}'.format(deployment.commit.sha), stream=log_stream_key, section=True)
+    logger.info('New deployment detected to serve: {}'.format(deployment.commit.sha),
+                stream=log_stream_key,
+                section=True,
+                building=True)
 
-    logger.info('Scheduling API build...', stream=log_stream_key.uid, section=True)
+    logger.info('Scheduling API build...', stream=log_stream_key.uid, section=True, building=True)
 
     deployer = BuildServerDeploy(deployment_uid=deployment.uid, build_for=clusters.API)
 
@@ -231,7 +234,7 @@ class TrainDeployment(Resource):
     # Get refs to payload info
     args = dict(request.args.items())
     git_url = args.get('git_url')
-    
+
     if not git_url:
       return INVALID_INPUT_PAYLOAD
 
@@ -291,7 +294,7 @@ class TrainDeployment(Resource):
         return NO_LOGS_TO_SHOW
 
       # Format a list of just the log text messages
-      log_messages = [training_log(data).rstrip() for ts, data in current_logs]
+      log_messages = [training_log(data, with_color=True).rstrip() for ts, data in current_logs]
 
       return {'logs': log_messages}
 
@@ -540,9 +543,9 @@ def perform_train_deploy(intent=None):
 
   log_stream_key = deployment.train_deploy_log()
 
-  logger.info('New SHA detected: {}'.format(commit.sha), stream=log_stream_key, section=True)
+  logger.info('New SHA detected: {}'.format(commit.sha), stream=log_stream_key, section=True, building=True)
 
-  logger.info('Scheduling training build...', stream=log_stream_key, section=True)
+  logger.info('Scheduling training build...', stream=log_stream_key, section=True, building=True)
 
   # Schedule a train build
   deployer = BuildServerDeploy(deployment_uid=deployment.uid, build_for=clusters.TRAIN)

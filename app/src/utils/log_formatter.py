@@ -22,25 +22,28 @@ def deploy_log(log):
   return prefix + text + '\n'
 
 
-def training_log(log, with_color=False):
+def training_log(log, with_color=False, with_ts=True):
   text = log.get('text')
 
   if not text:
     return '\n'
 
-  ms = float(log.get('ts')) or ms_since_epoch()
-  dt = datetime.fromtimestamp(ms / 1000.0, pytz.utc).strftime('%Y-%m-%dT%H:%M:%S.%f')
+  if with_ts:
+    ms = float(log.get('ts')) or ms_since_epoch()
+    prefix = datetime.fromtimestamp(ms / 1000.0, pytz.utc).strftime('%Y-%m-%dT%H:%M:%S.%f') + ' '
+  else:
+    prefix = ''
 
-  prefix = dt
   method = log.get('method')
 
   if method:
-    prefix += ' [{}]'.format(method)
+    prefix += '[{}]:'.format(method)
 
     if with_color:
-      prefix = colorize('{}:'.format(prefix), method)
+      prefix = colorize(prefix, method)
   else:
-    prefix += ':'
+    if prefix:
+      prefix += ':'
 
   return '{} {}\n'.format(prefix, text)
 

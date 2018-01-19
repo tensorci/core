@@ -6,7 +6,7 @@ from src.helpers.definitions import tci_keep_alive
 
 def should_complete_stream(data, deployment):
   # Check if last_entry was specified in the log. Complete the stream if so.
-  complete = data.get('last_entry') is True
+  complete = data.get('last_entry') == 'True'
 
   # Check to see if this was an error log. Complete the stream if so.
   if data.get('level') == 'error':

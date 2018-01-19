@@ -23,7 +23,7 @@ def format_train_building_stage(deployment):
     'show': True,
     'logs': [log_formatter.deploy_log(data).rstrip()
              for ts, data in redis.xrange(deployment.train_deploy_log())
-             if data.get('building')]
+             if data.get('building') == 'True']
   }
 
 
@@ -38,7 +38,7 @@ def format_train_deploying_stage(deployment):
     content['show'] = True
     content['logs'] = [log_formatter.deploy_log(data).rstrip()
                        for ts, data in redis.xrange(deployment.train_deploy_log())
-                       if not data.get('building')]
+                       if data.get('building') != 'True']
 
   return content
 
@@ -52,7 +52,7 @@ def format_training_stage(deployment):
 
   if should_show_stage(deployment, deployment.statuses.TRAINING):
     content['show'] = True
-    content['logs'] = [log_formatter.training_log(data).rstrip()
+    content['logs'] = [log_formatter.training_log(data, with_ts=False).rstrip()
                        for ts, data in redis.xrange(deployment.train_log())]
 
   return content
@@ -76,7 +76,7 @@ def format_api_building_stage(deployment):
     content['show'] = True
     content['logs'] = [log_formatter.deploy_log(data).rstrip()
                        for ts, data in redis.xrange(deployment.api_deploy_log())
-                       if data.get('building')]
+                       if data.get('building') == 'True']
 
   return content
 
@@ -92,7 +92,7 @@ def format_api_deploying_stage(deployment):
     content['show'] = True
     content['logs'] = [log_formatter.deploy_log(data).rstrip()
                        for ts, data in redis.xrange(deployment.api_deploy_log())
-                       if not data.get('building')]
+                       if data.get('building') != 'True']
   return content
 
 
