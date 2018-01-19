@@ -29,8 +29,8 @@ def handle_job_failure(job, exc_type, exc_value, traceback):
     if deployment:
       deployment.fail()
 
-      log_stream_key, deploying = log_info_for_stage(deployment)
+      log_stream_key, building = log_info_for_stage(deployment)
 
       logger.error('Deployment (sha={}) failed unexpectedly.'.format(deployment.commit.sha),
                    stream=log_stream_key,
-                   deploying=deploying)
+                   building=building)

@@ -26,16 +26,15 @@ class CreateCluster(object):
 
     logger.info('Creating API cluster (this only has to happen once)...',
                 stream=self.log_stream_key,
-                deploying=True,
                 section=True)
 
-    logger.info('Adding DNS records (this could take a minute)...', stream=self.log_stream_key, deploying=True)
+    logger.info('Adding DNS records (this could take a minute)...', stream=self.log_stream_key)
 
     # Create Route53 hosted zone for cluster
     hosted_zone_id, ns_addresses = create_route53_hosted_zone(self.cluster.name)
 
     if not hosted_zone_id or not ns_addresses:
-      logger.error('Failure upserting hosted zone.', stream=self.log_stream_key, deploying=True)
+      logger.error('Failure upserting hosted zone.', stream=self.log_stream_key)
       return
 
     # Update the cluster with the Route53 info
@@ -48,7 +47,7 @@ class CreateCluster(object):
     dns_success = add_dns_records(os.environ.get('TL_HOSTED_ZONE_ID'), self.cluster.name, ns_addresses, 'NS')
 
     if not dns_success:
-      logger.error('Failure registering NS records for cluster.', stream=self.log_stream_key, deploying=True)
+      logger.error('Failure registering NS records for cluster.', stream=self.log_stream_key)
       return
 
     sleep(60)
@@ -56,7 +55,7 @@ class CreateCluster(object):
     # Get S3 bucket url
     bucket_url = self.bucket.url()
 
-    logger.info('Spinning up instances...', stream=self.log_stream_key, deploying=True)
+    logger.info('Spinning up instances...', stream=self.log_stream_key)
 
     # Create cluster with kops
     cluster_created = kops.create_cluster(
@@ -71,20 +70,17 @@ class CreateCluster(object):
     )
 
     if not cluster_created:
-      logger.error('Failed to create cluster.', stream=self.log_stream_key, deploying=True)
+      logger.error('Failed to create cluster.', stream=self.log_stream_key)
       return
 
-    logger.info('Validating cluster (this could take awhile)...', stream=self.log_stream_key, deploying=True)
+    logger.info('Validating cluster (this could take awhile)...', stream=self.log_stream_key)
 
     # Wait until our cluster is up and running
     self.validate_cluster(bucket_url)
 
     # Make an API deploy once cluster is validated (if desired)
     if self.with_deploy:
-      logger.info('Scheduling deploy to API cluster...',
-                  stream=self.log_stream_key,
-                  deploying=True,
-                  section=True)
+      logger.info('Scheduling deploy to API cluster...', stream=self.log_stream_key, section=True)
       sleep(5)
 
       api_deployer = ApiDeploy(deployment_uid=self.deployment_uid)
@@ -95,11 +91,11 @@ class CreateCluster(object):
 
   def validate_cluster(self, state):
     while not kops.validate_cluster(name=self.cluster.name, state=state):
-      logger.info('Pinging cluster until response...', stream=self.log_stream_key, deploying=True)
+      logger.info('Pinging cluster until response...', stream=self.log_stream_key)
       sleep(120)
 
     # Register that the cluster is validated
-    logger.info('Cluster successfully created.', stream=self.log_stream_key, deploying=True)
+    logger.info('Cluster successfully created.', stream=self.log_stream_key)
 
     dbi.update(self.cluster, {'validated': True})
 

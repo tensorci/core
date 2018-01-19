@@ -46,7 +46,7 @@ class TrainDeploy(AbstractDeploy):
       'UPDATE_PREDICTION_MODEL': str(self.update_prediction_model).lower()
     }
 
-    logger.info('Deploying...', stream=self.log_stream_key, deploying=True, section=True)
+    logger.info('Deploying...', stream=self.log_stream_key, section=True)
 
     super(TrainDeploy, self).deploy()
 
@@ -57,7 +57,4 @@ class TrainDeploy(AbstractDeploy):
     # Create a TrainJob for this Deployment to track time spent on cluster
     dbi.create(TrainJob, {'deployment': self.deployment})
 
-    logger.info('Successfully deployed to training cluster.',
-                stream=self.log_stream_key,
-                deploying=True,
-                last_entry=True)
+    logger.info('Successfully deployed to training cluster.', stream=self.log_stream_key, last_entry=True)

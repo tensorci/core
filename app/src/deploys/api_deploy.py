@@ -49,10 +49,10 @@ class ApiDeploy(AbstractDeploy):
     context_exported = ExportCluster(cluster=self.cluster).perform()
 
     if not context_exported:
-      logger.error('Failure exporting cluster context.', stream=self.log_stream_key, deploying=True)
+      logger.error('Failure exporting cluster context.', stream=self.log_stream_key)
       return
 
-    logger.info('Deploying...', stream=self.log_stream_key, deploying=True, section=True)
+    logger.info('Deploying...', stream=self.log_stream_key, section=True)
 
     if self.repo.deploy_name:
       self.update_deploy()
@@ -92,19 +92,15 @@ class ApiDeploy(AbstractDeploy):
     if self.repo.elb:
       self.update_deployment_status(self.deployment.statuses.PREDICTING)
 
-      logger.info('Successfully deployed to API.', stream=self.log_stream_key, deploying=True)
+      logger.info('Successfully deployed to API.', stream=self.log_stream_key)
 
       logger.info('Prediction live at https://{}/api/predict'.format(self.repo.domain),
                   stream=self.log_stream_key,
-                  deploying=True,
                   last_entry=True)
     else:
-      logger.info('Successfully deployed to API.', stream=self.log_stream_key, deploying=True)
+      logger.info('Successfully deployed to API.', stream=self.log_stream_key)
 
-      logger.info('Scheduling prediction for publication...',
-                  stream=self.log_stream_key,
-                  deploying=True,
-                  section=True)
+      logger.info('Scheduling prediction for publication...', stream=self.log_stream_key, section=True)
 
       sleep(3)  # wait a hot sec for deployment to be absolutely registered
 

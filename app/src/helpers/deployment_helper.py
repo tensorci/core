@@ -23,7 +23,7 @@ def format_train_building_stage(deployment):
     'show': True,
     'logs': [log_formatter.deploy_log(data).rstrip()
              for ts, data in redis.xrange(deployment.train_deploy_log())
-             if not data.get('deploying')]
+             if data.get('building')]
   }
 
 
@@ -38,7 +38,7 @@ def format_train_deploying_stage(deployment):
     content['show'] = True
     content['logs'] = [log_formatter.deploy_log(data).rstrip()
                        for ts, data in redis.xrange(deployment.train_deploy_log())
-                       if data.get('deploying')]
+                       if not data.get('building')]
 
   return content
 
@@ -76,7 +76,7 @@ def format_api_building_stage(deployment):
     content['show'] = True
     content['logs'] = [log_formatter.deploy_log(data).rstrip()
                        for ts, data in redis.xrange(deployment.api_deploy_log())
-                       if not data.get('deploying')]
+                       if data.get('building')]
 
   return content
 
@@ -92,7 +92,7 @@ def format_api_deploying_stage(deployment):
     content['show'] = True
     content['logs'] = [log_formatter.deploy_log(data).rstrip()
                        for ts, data in redis.xrange(deployment.api_deploy_log())
-                       if data.get('deploying')]
+                       if not data.get('building')]
   return content
 
 
@@ -158,11 +158,11 @@ def log_info_for_stage(deployment):
   statuses = deployment.statuses
 
   return {
-    statuses.BUILDING_FOR_TRAIN: (deployment.train_deploy_log(), False),
-    statuses.TRAINING_SCHEDULED: (deployment.train_deploy_log(), True),
-    statuses.TRAINING: (deployment.train_log(), True),
-    statuses.DONE_TRAINING: (deployment.train_log(), True),
-    statuses.BUILDING_FOR_API: (deployment.api_deploy_log(), False),
-    statuses.PREDICTING_SCHEDULED: (deployment.api_deploy_log(), True),
-    statuses.PREDICTING: (deployment.api_deploy_log(), True),
+    statuses.BUILDING_FOR_TRAIN: (deployment.train_deploy_log(), True),
+    statuses.TRAINING_SCHEDULED: (deployment.train_deploy_log(), False),
+    statuses.TRAINING: (deployment.train_log(), False),
+    statuses.DONE_TRAINING: (deployment.train_log(), False),
+    statuses.BUILDING_FOR_API: (deployment.api_deploy_log(), True),
+    statuses.PREDICTING_SCHEDULED: (deployment.api_deploy_log(), False),
+    statuses.PREDICTING: (deployment.api_deploy_log(), False),
   }.get(current_stage(deployment))
