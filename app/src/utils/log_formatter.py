@@ -22,7 +22,7 @@ def deploy_log(log):
   return prefix + text + '\n'
 
 
-def training_log(log):
+def training_log(log, with_color=False):
   text = log.get('text')
 
   if not text:
@@ -36,7 +36,9 @@ def training_log(log):
 
   if method:
     prefix += ' [{}]'.format(method)
-    prefix = colorize('{}:'.format(prefix), method)
+
+    if with_color:
+      prefix = colorize('{}:'.format(prefix), method)
   else:
     prefix += ':'
 

@@ -213,7 +213,7 @@ class ApiDeployment(Resource):
     })
 
     # Respond with a stream of the deploy logs
-    return Response(stream_with_context(log_streamer.from_list(deployment.uid)),
+    return Response(stream_with_context(log_streamer.stream_deploy_logs(deployment, stream_key=deployment.api_deploy_log())),
                     headers={'X-Accel-Buffering': 'no'})
 
 
@@ -274,19 +274,18 @@ class TrainDeployment(Resource):
       # Get latest deployment for repo
       deployment = deployments[0]
 
-    log_stream_key = deployment.train_log()  # redis key for the log stream
     follow_logs = args.get('follow') == 'true'  # Do they want to follow the real-time logs or no?
 
     if follow_logs:
       # Stream real-time training logs for the latest deploy
-      return Response(stream_with_context(log_streamer.from_stream(log_stream_key)),
+      return Response(stream_with_context(log_streamer.stream_train_logs(deployment)),
                       headers={'X-Accel-Buffering': 'no'})
     else:
       # Following real-time logs is NOT desired here. Just send back a dump of
       # all the current logs up to this point.
 
       # Get all logs from redis stream
-      current_logs = redis.xrange(log_stream_key)
+      current_logs = redis.xrange(deployment.train_log())
 
       if not current_logs:
         return NO_LOGS_TO_SHOW
@@ -553,5 +552,5 @@ def perform_train_deploy(intent=None):
   deployment = dbi.update(deployment, {'status': deployment.statuses.TRAIN_BUILD_SCHEDULED})
 
   # Respond with a stream of the deploy logs
-  return Response(stream_with_context(log_streamer.from_list(deployment.uid)),
+  return Response(stream_with_context(log_streamer.stream_deploy_logs(deployment, stream_key=deployment.train_deploy_log())),
                   headers={'X-Accel-Buffering': 'no'})
