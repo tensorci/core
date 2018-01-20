@@ -201,7 +201,7 @@ class ApiDeployment(Resource):
                 section=True,
                 building=True)
 
-    logger.info('Scheduling API build...', stream=log_stream_key.uid, section=True, building=True)
+    logger.info('Scheduling API build...', stream=log_stream_key, section=True, building=True)
 
     deployer = BuildServerDeploy(deployment_uid=deployment.uid, build_for=clusters.API)
 
@@ -216,7 +216,7 @@ class ApiDeployment(Resource):
     })
 
     # Respond with a stream of the deploy logs
-    return Response(stream_with_context(log_streamer.stream_deploy_logs(deployment, stream_key=deployment.api_deploy_log())),
+    return Response(stream_with_context(log_streamer.stream_deploy_logs(deployment, stream_key=log_stream_key)),
                     headers={'X-Accel-Buffering': 'no'})
 
 
@@ -555,5 +555,5 @@ def perform_train_deploy(intent=None):
   deployment = dbi.update(deployment, {'status': deployment.statuses.TRAIN_BUILD_SCHEDULED})
 
   # Respond with a stream of the deploy logs
-  return Response(stream_with_context(log_streamer.stream_deploy_logs(deployment, stream_key=deployment.train_deploy_log())),
+  return Response(stream_with_context(log_streamer.stream_deploy_logs(deployment, stream_key=log_stream_key)),
                   headers={'X-Accel-Buffering': 'no'})
