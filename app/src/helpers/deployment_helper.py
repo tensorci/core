@@ -18,9 +18,13 @@ def format_stages(deployment):
 
 
 def format_train_building_stage(deployment):
+  stage = deployment.statuses.BUILDING_FOR_TRAIN
+
   return {
     'name': 'Building for training cluster',
     'show': True,
+    'succeeded': stage_succeeded(deployment, stage),
+    'failed': stage_failed(deployment, stage),
     'logs': [log_formatter.deploy_log(data).rstrip()
              for ts, data in redis.xrange(deployment.train_deploy_log())
              if data.get('building') == 'True']
@@ -28,13 +32,17 @@ def format_train_building_stage(deployment):
 
 
 def format_train_deploying_stage(deployment):
+  stage = deployment.statuses.TRAINING_SCHEDULED
+
   content = {
     'name': 'Deploying to training cluster',
     'show': False,
+    'succeeded': stage_succeeded(deployment, stage),
+    'failed': stage_failed(deployment, stage),
     'logs': []
   }
 
-  if should_show_stage(deployment, deployment.statuses.TRAINING_SCHEDULED):
+  if should_show_stage(deployment, stage):
     content['show'] = True
     content['logs'] = [log_formatter.deploy_log(data).rstrip()
                        for ts, data in redis.xrange(deployment.train_deploy_log())
@@ -44,13 +52,17 @@ def format_train_deploying_stage(deployment):
 
 
 def format_training_stage(deployment):
+  stage = deployment.statuses.TRAINING
+
   content = {
     'name': 'Training',
     'show': False,
+    'succeeded': stage_succeeded(deployment, stage),
+    'failed': stage_failed(deployment, stage),
     'logs': []
   }
 
-  if should_show_stage(deployment, deployment.statuses.TRAINING):
+  if should_show_stage(deployment, stage):
     content['show'] = True
     content['logs'] = [log_formatter.training_log(data, with_ts=False).rstrip()
                        for ts, data in redis.xrange(deployment.train_log())]
@@ -66,13 +78,17 @@ def format_trained_stage(deployment):
 
 
 def format_api_building_stage(deployment):
+  stage = deployment.statuses.BUILDING_FOR_API
+
   content = {
     'name': 'Building for API',
     'show': False,
+    'succeeded': stage_succeeded(deployment, stage),
+    'failed': stage_failed(deployment, stage),
     'logs': []
   }
 
-  if should_show_stage(deployment, deployment.statuses.BUILDING_FOR_API):
+  if should_show_stage(deployment, stage):
     content['show'] = True
     content['logs'] = [log_formatter.deploy_log(data).rstrip()
                        for ts, data in redis.xrange(deployment.api_deploy_log())
@@ -82,13 +98,17 @@ def format_api_building_stage(deployment):
 
 
 def format_api_deploying_stage(deployment):
+  stage = deployment.statuses.PREDICTING_SCHEDULED
+
   content = {
     'name': 'Deploying to API',
     'show': False,
+    'succeeded': stage_succeeded(deployment, stage),
+    'failed': stage_failed(deployment, stage),
     'logs': []
   }
 
-  if should_show_stage(deployment, deployment.statuses.PREDICTING_SCHEDULED):
+  if should_show_stage(deployment, stage):
     content['show'] = True
     content['logs'] = [log_formatter.deploy_log(data).rstrip()
                        for ts, data in redis.xrange(deployment.api_deploy_log())
@@ -152,6 +172,15 @@ def ordered_stages():
 def should_show_stage(deployment, stage):
   stages = ordered_stages()
   return stages.index(current_stage(deployment)) >= stages.index(stage)
+
+
+def stage_succeeded(deployment, stage):
+  stages = ordered_stages()
+  return stages.index(current_stage(deployment)) > stages.index(stage)
+
+
+def stage_failed(deployment, stage):
+  return deployment.failed and current_stage(deployment) == stage
 
 
 def log_info_for_stage(deployment):
