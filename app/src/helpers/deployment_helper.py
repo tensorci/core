@@ -61,7 +61,7 @@ def format_training_stage(deployment):
 def format_trained_stage(deployment):
   return {
     'name': 'Trained',
-    'show': deployment.status == deployment.statuses.DONE_TRAINING
+    'show': deployment.status_greater_than(deployment.statuses.TRAINING)
   }
 
 
