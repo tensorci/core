@@ -427,6 +427,7 @@ class GetDeployment(Resource):
     resp = {
       'uid': deployment.uid,
       'readable_status': deployment.readable_status(),
+      'intent': deployment.intent,
       'failed': deployment.failed,
       'succeeded': deployment.succeeded(),
       'date': utcnow_to_ts(deployment.intent_updated_at),

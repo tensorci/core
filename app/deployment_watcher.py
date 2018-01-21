@@ -27,6 +27,7 @@ def handle_update(item):
 
   payload = {
     'readable_status': deployment.readable_status(),
+    'intent': deployment.intent,
     'failed': deployment.failed,
     'succeeded': deployment.succeeded(),
     'current_stage': current_stage(deployment),
