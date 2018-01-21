@@ -51,6 +51,8 @@ Relationships:
   Commit --> has_many --> deployments
   Repo --> has_many --> datasets
   Dataset --> belongs_to --> Repo
+  Repo --> has_many --> envs
+  Env --> belongs_to --> Repo
 """
 import datetime
 import importlib
@@ -681,3 +683,28 @@ class Commit(db.Model):
   def __repr__(self):
     return '<Commit id={}, sha={}, message={}, author={}, author_icon={}, branch={}>'.format(
       self.id, self.sha, self.message, self.author, self.author_icon, self.branch)
+
+
+class Env(db.Model):
+  id = db.Column(db.Integer, primary_key=True)
+  uid = db.Column(db.String, index=True, unique=True, nullable=False)
+  repo_id = db.Column(db.Integer, db.ForeignKey('repo.id'), index=True, nullable=False)
+  repo = db.relationship('Repo', backref='envs')
+  name = db.Column(db.String, nullable=False)
+  value = db.Column(db.String, nullable=False)
+  created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+
+  def __init__(self, repo=None, repo_id=None, name=None, value=None):
+    self.uid = uuid4().hex
+
+    if repo_id:
+      self.repo_id = repo_id
+    else:
+      self.repo = repo
+
+    self.name = name
+    self.value = value
+
+  def __repr__(self):
+    return '<Env id={}, uid={}, repo_id={}, name={}, value={}, created_at={}>'.format(
+      self.id, self.uid, self.repo_id, self.name, self.value, self.created_at)
