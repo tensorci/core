@@ -4,8 +4,7 @@ from src import dbi
 from src.models import Deployment
 from src.helpers import deployment_helper
 from src.utils import pubsub
-
-DEPLOY_UPDATE_QUEUE = 'deploy-update-queue'
+from src.helpers.definitions import deploy_update_queue
 
 
 def handle_update(item):
@@ -42,7 +41,7 @@ def handle_update(item):
 
 def watch():
   while True:
-    item = redis.blpop(DEPLOY_UPDATE_QUEUE, timeout=30)
+    item = redis.blpop(deploy_update_queue, timeout=30)
 
     if not item:
       continue

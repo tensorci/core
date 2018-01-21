@@ -23,21 +23,23 @@ class PublicizePrediction(object):
     self.deploy_name = None
     self.service_name = None
     self.log_stream_key = None
+    self.stage = None
 
   def perform(self):
     self.set_db_reliant_attrs()
 
     logger.info('Publicizing prediction (this only has to happen once)...',
                 stream=self.log_stream_key,
+                stage=self.stage,
                 section=True)
 
-    logger.info('Exposing deployment...', stream=self.log_stream_key)
+    logger.info('Exposing deployment...', stream=self.log_stream_key, stage=self.stage)
 
     # Ensure cluster/context exists in KUBECONFIG
     context_exported = ExportCluster(cluster=self.cluster).perform()
 
     if not context_exported:
-      logger.error('Failure exporting cluster context.', stream=self.log_stream_key)
+      logger.error('Failure exporting cluster context.', stream=self.log_stream_key, stage=self.stage)
       return
 
     # Expose deployment with a LoadBalancer service
@@ -49,7 +51,7 @@ class PublicizePrediction(object):
                              cluster=self.cluster_name)
 
     if not exposed:
-      logger.error('Failure exposing deployment.', stream=self.log_stream_key)
+      logger.error('Failure exposing deployment.', stream=self.log_stream_key, stage=self.stage)
       return
 
     # Annotate service with SSL Cert if port is 443
@@ -68,7 +70,7 @@ class PublicizePrediction(object):
                                    cluster=self.cluster_name)
 
       if not annotated:
-        logger.error('Failure annotating service.', stream=self.log_stream_key)
+        logger.error('Failure annotating service.', stream=self.log_stream_key, stage=self.stage)
         return
 
     # We need the CoreV1Api to poll our services
@@ -81,13 +83,13 @@ class PublicizePrediction(object):
     # Update the repo record with the ELB's url
     self.repo = dbi.update(self.repo, {'elb': elb_url})
 
-    logger.info('Assigning url to prediction...', stream=self.log_stream_key)
+    logger.info('Assigning url to prediction...', stream=self.log_stream_key, stage=self.stage)
 
     # Create a CNAME record for your subdomain with the ELB's url
     cname_record_added = add_dns_records(os.environ.get('TL_HOSTED_ZONE_ID'), self.repo.domain, [elb_url], 'CNAME')
 
     if not cname_record_added:
-      logger.error('Failure upserting CNAME record for deployment.', stream=self.log_stream_key)
+      logger.error('Failure upserting CNAME record for deployment.', stream=self.log_stream_key, stage=self.stage)
       return
 
     sleep(60)
@@ -95,10 +97,11 @@ class PublicizePrediction(object):
     # Ping the url until the hostname is resolved
     self.poll_url()
 
-    logger.info('Publication successful.', stream=self.log_stream_key)
+    logger.info('Publication successful.', stream=self.log_stream_key, stage=self.stage)
 
     logger.info('Prediction live at https://{}/api/predict'.format(self.repo.domain),
                 stream=self.log_stream_key,
+                stage=self.stage,
                 last_entry=True)
 
     # Update the deployment to its final status: PREDICTING
@@ -156,7 +159,7 @@ class PublicizePrediction(object):
 
   def attempt_connection(self):
     url = 'https://{}'.format(self.repo.domain)
-    logger.info('Pinging url until response...', stream=self.log_stream_key)
+    logger.info('Pinging url until response...', stream=self.log_stream_key, stage=self.stage)
 
     try:
       requests.get(url)
@@ -174,3 +177,4 @@ class PublicizePrediction(object):
     self.deploy_name = self.repo.deploy_name
     self.service_name = self.deploy_name
     self.log_stream_key = self.deployment.api_deploy_log()
+    self.stage = self.deployment.statuses.PREDICTING_SCHEDULED

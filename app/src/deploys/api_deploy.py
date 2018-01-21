@@ -14,11 +14,13 @@ class ApiDeploy(AbstractDeploy):
 
   def __init__(self, deployment_uid=None):
     super(ApiDeploy, self).__init__(deployment_uid)
+    self.stage = None
 
   def deploy(self):
     self.set_db_reliant_attrs()
     self.log_stream_key = self.deployment.api_deploy_log()
-    
+    self.stage = self.deployment.statuses.PREDICTING_SCHEDULED
+
     self.container_name = '{}-{}'.format(clusters.API, self.repo.uid)
     self.image = '{}/{}:{}'.format(self.repo.image_repo_owner, self.container_name, self.commit.sha)
     self.deploy_name = '{}-{}-{}'.format(clusters.API, self.repo.uid, ms_since_epoch(as_int=True))
@@ -49,10 +51,10 @@ class ApiDeploy(AbstractDeploy):
     context_exported = ExportCluster(cluster=self.cluster).perform()
 
     if not context_exported:
-      logger.error('Failure exporting cluster context.', stream=self.log_stream_key)
+      logger.error('Failure exporting cluster context.', stream=self.log_stream_key, stage=self.stage)
       return
 
-    logger.info('Deploying...', stream=self.log_stream_key, section=True)
+    logger.info('Deploying...', stream=self.log_stream_key, section=True, stage=self.stage)
 
     if self.repo.deploy_name:
       self.update_deploy()
@@ -92,15 +94,16 @@ class ApiDeploy(AbstractDeploy):
     if self.repo.elb:
       self.update_deployment_status(self.deployment.statuses.PREDICTING)
 
-      logger.info('Successfully deployed to API.', stream=self.log_stream_key)
+      logger.info('Successfully deployed to API.', stream=self.log_stream_key, stage=self.stage)
 
       logger.info('Prediction live at https://{}/api/predict'.format(self.repo.domain),
                   stream=self.log_stream_key,
+                  stage=self.stage,
                   last_entry=True)
     else:
-      logger.info('Successfully deployed to API.', stream=self.log_stream_key)
+      logger.info('Successfully deployed to API.', stream=self.log_stream_key, stage=self.stage)
 
-      logger.info('Scheduling prediction for publication...', stream=self.log_stream_key, section=True)
+      logger.info('Scheduling prediction for publication...', stream=self.log_stream_key, section=True, stage=self.stage)
 
       sleep(3)  # wait a hot sec for deployment to be absolutely registered
 

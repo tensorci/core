@@ -1,6 +1,6 @@
 from src import dbi, logger
 from src.models import Deployment
-from src.helpers.deployment_helper import log_info_for_stage
+from src.helpers.deployment_helper import log_info_for_deployment
 
 
 def handle_job_failure(job, exc_type, exc_value, traceback):
@@ -29,8 +29,8 @@ def handle_job_failure(job, exc_type, exc_value, traceback):
     if deployment:
       deployment.fail()
 
-      log_stream_key, building = log_info_for_stage(deployment)
+      log_stream_key, stage = log_info_for_deployment(deployment)
 
       logger.error('Deployment (sha={}) failed unexpectedly.'.format(deployment.commit.sha),
                    stream=log_stream_key,
-                   building=building)
+                   stage=stage)

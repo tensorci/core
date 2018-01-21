@@ -183,15 +183,18 @@ def stage_failed(deployment, stage):
   return deployment.failed and current_stage(deployment) == stage
 
 
-def log_info_for_stage(deployment):
+def log_info_for_deployment(deployment):
   statuses = deployment.statuses
+  curr_stage = current_stage(deployment)
 
-  return {
-    statuses.BUILDING_FOR_TRAIN: (deployment.train_deploy_log(), True),
-    statuses.TRAINING_SCHEDULED: (deployment.train_deploy_log(), False),
-    statuses.TRAINING: (deployment.train_log(), False),
-    statuses.DONE_TRAINING: (deployment.train_log(), False),
-    statuses.BUILDING_FOR_API: (deployment.api_deploy_log(), True),
-    statuses.PREDICTING_SCHEDULED: (deployment.api_deploy_log(), False),
-    statuses.PREDICTING: (deployment.api_deploy_log(), False),
-  }.get(current_stage(deployment))
+  log_stream_key = {
+    statuses.BUILDING_FOR_TRAIN: deployment.train_deploy_log(),
+    statuses.TRAINING_SCHEDULED: deployment.train_deploy_log(),
+    statuses.TRAINING: deployment.train_log(),
+    statuses.DONE_TRAINING: deployment.train_log(),
+    statuses.BUILDING_FOR_API: deployment.api_deploy_log(),
+    statuses.PREDICTING_SCHEDULED: deployment.api_deploy_log(),
+    statuses.PREDICTING: deployment.api_deploy_log()
+  }.get(curr_stage)
+
+  return log_stream_key, curr_stage

@@ -195,13 +195,14 @@ class ApiDeployment(Resource):
       return DEPLOYMENT_UP_TO_DATE
 
     log_stream_key = deployment.api_deploy_log()
+    stage = deployment.statuses.BUILDING_FOR_API
 
     logger.info('New deployment detected to serve: {}'.format(deployment.commit.sha),
                 stream=log_stream_key,
                 section=True,
-                building=True)
+                stage=stage)
 
-    logger.info('Scheduling API build...', stream=log_stream_key, section=True, building=True)
+    logger.info('Scheduling API build...', stream=log_stream_key, section=True, stage=stage)
 
     deployer = BuildServerDeploy(deployment_uid=deployment.uid, build_for=clusters.API)
 
@@ -542,10 +543,11 @@ def perform_train_deploy(intent=None):
   })
 
   log_stream_key = deployment.train_deploy_log()
+  stage = deployment.statuses.BUILDING_FOR_TRAIN
 
-  logger.info('New SHA detected: {}'.format(commit.sha), stream=log_stream_key, section=True, building=True)
+  logger.info('New SHA detected: {}'.format(commit.sha), stream=log_stream_key, section=True, stage=stage)
 
-  logger.info('Scheduling training build...', stream=log_stream_key, section=True, building=True)
+  logger.info('Scheduling training build...', stream=log_stream_key, section=True, stage=stage)
 
   # Schedule a train build
   deployer = BuildServerDeploy(deployment_uid=deployment.uid, build_for=clusters.TRAIN)

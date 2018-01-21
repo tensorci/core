@@ -601,7 +601,7 @@ class Deployment(db.Model):
     return 'api-deploy:{}'.format(self.uid)
 
   def train_log(self):
-    return 'train-{}'.format(self.uid)
+    return 'train:{}'.format(self.uid)
 
 
 class TrainJob(db.Model):

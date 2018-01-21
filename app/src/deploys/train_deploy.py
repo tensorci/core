@@ -12,10 +12,12 @@ class TrainDeploy(AbstractDeploy):
   def __init__(self, deployment_uid=None, update_prediction_model=False):
     super(TrainDeploy, self).__init__(deployment_uid)
     self.update_prediction_model = update_prediction_model
+    self.stage = None
 
   def deploy(self):
     self.set_db_reliant_attrs()
     self.log_stream_key = self.deployment.train_deploy_log()
+    self.stage = self.deployment.statuses.PREDICTING_SCHEDULED
 
     self.container_name = '{}-{}'.format(clusters.TRAIN, self.repo.uid)
     self.image = '{}/{}:{}'.format(self.repo.image_repo_owner, self.container_name, self.commit.sha)
@@ -46,7 +48,7 @@ class TrainDeploy(AbstractDeploy):
       'UPDATE_PREDICTION_MODEL': str(self.update_prediction_model).lower()
     }
 
-    logger.info('Deploying...', stream=self.log_stream_key, section=True)
+    logger.info('Deploying...', stream=self.log_stream_key, section=True, stage=self.stage)
 
     super(TrainDeploy, self).deploy()
 
@@ -57,4 +59,4 @@ class TrainDeploy(AbstractDeploy):
     # Create a TrainJob for this Deployment to track time spent on cluster
     dbi.create(TrainJob, {'deployment': self.deployment})
 
-    logger.info('Successfully deployed to training cluster.', stream=self.log_stream_key, last_entry=True)
+    logger.info('Successfully deployed to training cluster.', stream=self.log_stream_key, last_entry=True, stage=self.stage)
