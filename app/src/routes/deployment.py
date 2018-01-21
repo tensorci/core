@@ -89,6 +89,11 @@ class DeploymentTrained(Resource):
     # Update deployment to DONE_TRAINING status
     deployment = dbi.update(deployment, {'status': deployment.statuses.DONE_TRAINING})
 
+    # Enqueue this message in order to force the deployment_update_queue to broadcast an update.
+    logger.info('Done training.',
+                stream='done-training:{}'.format(deployment.uid),
+                stage=deployment.statuses.DONE_TRAINING)
+
     # Update the Dataset's last_train_record_count
     # TODO -- this is sloppy and could be inaccurate if records were added in the time it took to train
     # Cache this value in redis somewhere and only update it at this point since the training succeeded.
@@ -111,6 +116,16 @@ class DeploymentTrained(Resource):
 
     # If deployment is meant for the API cluster, continue on...
     if deployment.intent_to_serve():
+      log_stream_key = deployment.api_deploy_log()
+      stage = deployment.statuses.BUILDING_FOR_API
+
+      logger.info('New deployment detected to serve: {}'.format(deployment.commit.sha),
+                  stream=log_stream_key,
+                  section=True,
+                  stage=stage)
+
+      logger.info('Scheduling API build...', stream=log_stream_key, section=True, stage=stage)
+
       deployer = BuildServerDeploy(deployment_uid=deployment.uid, build_for=clusters.API)
       job_queue.add(deployer.deploy, meta={'deployment': deployment.uid})
       dbi.update(deployment, {'status': deployment.statuses.API_BUILD_SCHEDULED})

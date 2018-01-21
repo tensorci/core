@@ -22,31 +22,18 @@ def handle_update(item):
   # Get deployment for uid
   deployment = dbi.find_one(Deployment, {'uid': deployment_uid})
 
+  if not deployment:
+    return
+
   payload = {
+    'readable_status': deployment.readable_status(),
+    'failed': deployment.failed,
+    'succeeded': deployment.succeeded(),
     'current_stage': current_stage(deployment),
     'stages': format_stages(deployment)
   }
 
   pubsub.publish(channel=deployment_uid, data=payload)
-
-  # Get the format stage function for this stage from deployment_helper
-  # format_stage_func_name = 'format_{}_stage'.format(stage)
-  #
-  # # Make sure the function even exists...
-  # if not hasattr(deployment_helper, format_stage_func_name):
-  #   return
-  #
-  # # Get deployment for uid
-  # deployment = dbi.find_one(Deployment, {'uid': deployment_uid})
-  #
-  # if not deployment:
-  #   return
-  #
-  # # Get the most recent formatted stage info for this stage/deployment
-  # stage_info = getattr(deployment_helper, format_stage_func_name)(deployment)
-  #
-  # # Broadcast this update to any clients listening
-  # pubsub.publish(channel=deployment_uid, data={stage: stage_info})
 
 
 def watch():
