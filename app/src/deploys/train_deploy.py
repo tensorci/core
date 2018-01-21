@@ -17,7 +17,7 @@ class TrainDeploy(AbstractDeploy):
   def deploy(self):
     self.set_db_reliant_attrs()
     self.log_stream_key = self.deployment.train_deploy_log()
-    self.stage = self.deployment.statuses.PREDICTING_SCHEDULED
+    self.stage = self.deployment.statuses.TRAINING_SCHEDULED
 
     self.container_name = '{}-{}'.format(clusters.TRAIN, self.repo.uid)
     self.image = '{}/{}:{}'.format(self.repo.image_repo_owner, self.container_name, self.commit.sha)
