@@ -11,7 +11,7 @@ kubernetes==3.0.0
 boto3==1.4.7
 PyGithub==1.35
 requests==2.18.4
-git+git://github.com/nicois/redis-py.git@df6395284674e1acacc68630f86d37dd4f03b5f6
+git+git://github.com/nicois/redis-py.git@master
 uwsgi==2.0.15
 rq==0.9.2
 ansicolors==1.1.8
