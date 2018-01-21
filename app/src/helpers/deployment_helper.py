@@ -27,7 +27,7 @@ def format_train_building_stage(deployment):
     'failed': stage_failed(deployment, stage),
     'logs': [log_formatter.deploy_log(data).rstrip()
              for ts, data in redis.xrange(deployment.train_deploy_log())
-             if data.get('building') == 'True']
+             if data.get('stage') == stage]
   }
 
 
@@ -46,7 +46,7 @@ def format_train_deploying_stage(deployment):
     content['show'] = True
     content['logs'] = [log_formatter.deploy_log(data).rstrip()
                        for ts, data in redis.xrange(deployment.train_deploy_log())
-                       if data.get('building') != 'True']
+                       if data.get('stage') == stage]
 
   return content
 
@@ -92,7 +92,7 @@ def format_api_building_stage(deployment):
     content['show'] = True
     content['logs'] = [log_formatter.deploy_log(data).rstrip()
                        for ts, data in redis.xrange(deployment.api_deploy_log())
-                       if data.get('building') == 'True']
+                       if data.get('stage') == stage]
 
   return content
 
@@ -112,7 +112,7 @@ def format_api_deploying_stage(deployment):
     content['show'] = True
     content['logs'] = [log_formatter.deploy_log(data).rstrip()
                        for ts, data in redis.xrange(deployment.api_deploy_log())
-                       if data.get('building') != 'True']
+                       if data.get('stage') == stage]
   return content
 
 
