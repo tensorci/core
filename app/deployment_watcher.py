@@ -3,7 +3,7 @@ from src.utils.pyredis import redis
 from src import dbi
 from src.models import Deployment
 from src.helpers import deployment_helper
-from src.utils.pubsub import pubsub
+from src.utils import pubsub
 
 DEPLOY_UPDATE_QUEUE = 'deploy-update-queue'
 
@@ -36,10 +36,8 @@ def handle_update(item):
   # Get the most recent formatted stage info for this stage/deployment
   stage_info = getattr(deployment_helper, format_stage_func_name)(deployment)
 
-  payload = {stage: stage_info}
-
   # Broadcast this update to any clients listening
-  pubsub.broadcast(deployment_uid, payload)
+  pubsub.publish(channel=deployment_uid, data={stage: stage_info})
 
 
 def watch():
@@ -53,7 +51,6 @@ def watch():
       handle_update(item)
     except BaseException as e:
       print(e.__dict__)
-      continue
 
 
 if __name__ == '__main__':

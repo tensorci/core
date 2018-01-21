@@ -14,6 +14,8 @@ elif [[ $CORE_ROLE == "migration" ]]; then
   python manage.py db upgrade
 elif [[ $CORE_ROLE == "retrain_watcher" ]]; then
   python retrain_watcher.py
+elif [[ $CORE_ROLE == "deployment_watcher" ]]; then
+  python deployment_watcher.py
 else
   /usr/bin/supervisord
 fi
