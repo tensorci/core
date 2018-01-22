@@ -10,17 +10,10 @@ from src.utils.job_queue import job_queue
 from src.helpers.provider_user_helper import current_provider_user
 from src.services.env_services.update_deploy_env import UpdateDeployEnv
 
-upsert_env_model = api.model('Env', {
-  'uid': fields.String(required=False),
-  'name': fields.String(required=True),
-  'value': fields.String(required=True)
-})
-
 upsert_envs_model = api.model('Envs', {
   'team': fields.String(required=True),
   'repo': fields.String(required=True),
-  'forCluster': fields.String(required=True),
-  'envs': fields.List(fields.Nested(upsert_env_model), required=True)
+  'forCluster': fields.String(required=True)
 })
 
 
@@ -107,50 +100,40 @@ class RestfulEnvs(Resource):
     if not repo_provider_user:
       return REPO_PROVIDER_USER_NOT_FOUND
 
-    # Split env data into existing vs. new envs
-    existing_env_map = {}
-    new_env_data = []
+    latest_envs = api.payload.get('envs', {})
+    curr_envs = {e.name: e for e in repo.api_envs()}
 
-    for data in (api.payload['envs'] or []):
-      # Env exists if it has a uid
-      if data.get('uid'):
-        existing_env_map[data.get('uid')] = data
-      else:
-        new_env_data.append(data)
+    remove_env_names = [name for name, env in curr_envs.iteritems() if name not in latest_envs]
+    update_envs_map = {}
 
-    existing_env_uids = existing_env_map.keys()
+    for name, value in latest_envs:
+      env = None
 
-    try:
-      # If there are any existing envs, fetch them in one query and update individually.
-      if existing_env_uids:
-        existing_envs = dbi.find_all(Env, {'uid': existing_env_uids})
-
-        for env in existing_envs:
-          # Get data to update env with (name & value)
-          env_data = existing_env_map.get(env.uid)
-
-          # Update env's name & value
-          dbi.update(env, {
-            'name': env_data.get('name'),
-            'value': env_data.get('value')
-          })
-
-      # Create new envs
-      for env_data in new_env_data:
-        dbi.create(Env, {
+      # New Env Name
+      if name not in curr_envs:
+        env = dbi.create(Env, {
           'repo': repo,
-          'name': env_data.get('name'),
-          'value': env_data.get('value'),
+          'name': name,
+          'value': value,
           'for_cluster': for_cluster
         })
-    except BaseException as e:
-      logger.error('Error upserting envs for Repo(uid={}) with error: {}'.format(repo.uid, e))
-      return ERROR_UPSERTING_ENVS
+
+      # Name exists, but value changed
+      elif curr_envs.get(name).value != value:
+        env = dbi.update(curr_envs.get(name), {'value': value})
+
+      # If change occured, register that
+      if env:
+        update_envs_map[env.name] = env.value
 
     # If env is for the API cluster and the repo has an active API deploy,
     # schedule an update to the env on that API cluster.
     if for_cluster == clusters.API and repo.deploy_name:
-      job_queue.add(UpdateDeployEnv(repo_uid=repo.uid).perform)
+      update_envs_service = UpdateDeployEnv(repo_uid=repo.uid,
+                                            updates=update_envs_map,
+                                            removals=remove_env_names)
+
+      job_queue.add(update_envs_service.perform)
 
     return {'envs': repo.formatted_envs(cluster=for_cluster)}
 
@@ -191,6 +174,7 @@ class RestfulEnv(Resource):
     # TODO: Validate here (and on the FE) that this repo_provider_user has write access
 
     for_cluster = env.for_cluster
+    env_name = env.name
 
     # Delete the env
     try:
@@ -202,6 +186,6 @@ class RestfulEnv(Resource):
     # If env var is for the API cluster and the repo has an active API deploy,
     # schedule the removal of this env var from that API cluster.
     if for_cluster == clusters.API and repo.deploy_name:
-      job_queue.add(UpdateDeployEnv(repo_uid=repo.uid).perform)
+      job_queue.add(UpdateDeployEnv(repo_uid=repo.uid, removals=[env_name]).perform)
 
     return {'envs': repo.formatted_envs(cluster=for_cluster)}

@@ -23,31 +23,28 @@ def annotate(resource=None, resource_name=None, labels=None, context=None, clust
   return bool_response_cmd(command)
 
 
-def set_envs(deployment_name=None, envs=None, context=None, cluster=None):
-  envs = envs or []
+def set_envs(deployment_name=None, updates=None, removals=None, context=None, cluster=None):
+  updates = updates or {}
+  removals = removals or []
 
-  if not envs:
+  if not updates and not removals:
     return True
 
-  formatted_envs = ['='.join([env.name, env.value]) for env in envs]
+  # Just double check you won't be removing any envs also in the updates map
+  removals = [name for name in removals if name not in updates]
+
+  envs = []
+
+  # First add the updates...
+  for name, value in updates.iteritems():
+    envs.append('{}={}'.format(name, value))
+
+  # Then add any removals...
+  for name in removals:
+    envs.append('{}-'.format(name))
 
   command = ['kubectl', 'set', 'env', 'deployment/{}'.format(deployment_name)] + \
-            formatted_envs + \
-            ['--context', context, '--cluster', cluster]
-
-  return bool_response_cmd(command)
-
-
-def remove_envs(deployment_name=None, env_names=None, context=None, cluster=None):
-  env_names = env_names or []
-
-  if not env_names:
-    return True
-
-  formatted_envs = ['{}-'.format(name) for name in env_names]
-
-  command = ['kubectl', 'set', 'env', 'deployment/{}'.format(deployment_name)] + \
-            formatted_envs + \
+            envs + \
             ['--context', context, '--cluster', cluster]
 
   return bool_response_cmd(command)

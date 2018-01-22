@@ -5,9 +5,10 @@ from src.utils import kubectl
 
 class UpdateDeployEnv(object):
 
-  def __init__(self, repo_uid=None, env_uids=None):
+  def __init__(self, repo_uid=None, updates=None, removals=None):
     self.repo_uid = repo_uid
-    self.env_uids = env_uids or []
+    self.updates = updates or {}
+    self.removals = removals or []
 
   def perform(self):
     repo = dbi.find_one(Repo, {'uid': self.repo_uid})
@@ -18,17 +19,11 @@ class UpdateDeployEnv(object):
       logger.error('Not updating envs for Repo(uid={}) -- No deploy_name on repo.'.format(self.repo_uid))
       return
 
-    envs = dbi.find_all(Env, {'uid': self.env_uids})
-
-    if not envs:
-      logger.error('Not updating envs for Repo(uid={}) -- No envs found for uids: {}.'.format(
-        self.repo_uid, self.env_uids))
-      return
-
     success = kubectl.set_envs(deployment_name=deploy_name,
-                               envs=envs,
+                               updates=self.updates,
+                               removals=self.removals,
                                context=cluster_name,
                                cluster=cluster_name)
 
     if not success:
-      logger.error('Failed to update envs for Repo(uid={}): {}'.format(self.repo_uid, self.env_uids))
+      logger.error('Failed to update envs for Repo(uid={}).'.format(self.repo_uid))
