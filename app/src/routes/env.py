@@ -106,7 +106,7 @@ class RestfulEnvs(Resource):
     remove_env_names = [name for name, env in curr_envs.iteritems() if name not in latest_envs]
     update_envs_map = {}
 
-    for name, value in latest_envs:
+    for name, value in latest_envs.iteritems():
       env = None
 
       # New Env Name
