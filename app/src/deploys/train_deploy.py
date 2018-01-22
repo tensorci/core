@@ -56,7 +56,7 @@ class TrainDeploy(AbstractDeploy):
     super(TrainDeploy, self).deploy()
 
   def add_custom_envs(self):
-    for env in self.repo.envs:
+    for env in self.repo.train_envs():
       if env.name not in self.envs:
         self.envs[env.name] = env.value
 

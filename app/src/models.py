@@ -312,6 +312,12 @@ class Repo(db.Model):
     provider = team.provider
     return '{}/{}/{}'.format(provider.url(), team.slug, self.slug)
 
+  def train_envs(self):
+    return dbi.find_all(Env, {'repo': self, 'for_cluster': clusters.TRAIN})
+
+  def api_envs(self):
+    return dbi.find_all(Env, {'repo': self, 'for_cluster': clusters.API})
+
   def formatted_envs(self, cluster=None):
     query = {'repo': self}
 
