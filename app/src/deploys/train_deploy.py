@@ -48,9 +48,17 @@ class TrainDeploy(AbstractDeploy):
       'UPDATE_PREDICTION_MODEL': str(self.update_prediction_model).lower()
     }
 
+    # Add user-defined environment variables
+    self.add_custom_envs()
+
     logger.info('Deploying...', stream=self.log_stream_key, section=True, stage=self.stage)
 
     super(TrainDeploy, self).deploy()
+
+  def add_custom_envs(self):
+    for env in self.repo.envs:
+      if env.name not in self.envs:
+        self.envs[env.name] = env.value
 
   def on_deploy_success(self):
     # Update deployment status to TRAINING
