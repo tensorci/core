@@ -311,6 +311,13 @@ class Repo(db.Model):
     provider = team.provider
     return '{}/{}/{}'.format(provider.url(), team.slug, self.slug)
 
+  def formatted_envs(self):
+    return [{
+      'uid': env.uid,
+      'name': env.name,
+      'value': env.value
+    } for env in self.envs]
+
 
 class User(db.Model):
   id = db.Column(db.Integer, primary_key=True)

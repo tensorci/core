@@ -54,3 +54,8 @@ USER_NOT_FOUND = {'ok': False, 'code': 2000, 'error': 'user_not_found'}, 404
 
 # Deployment Errors
 DEPLOYMENT_NOT_FOUND = {'ok': False, 'code': 2100, 'error': 'deployment_not_found'}, 404
+
+# Env Errors
+ERROR_UPSERTING_ENVS = {'ok': False, 'code': 2200, 'error': 'error_upserting_envs'}, 500
+ENV_NOT_FOUND = {'ok': False, 'code': 2201, 'error': 'env_not_found'}, 404
+ERROR_DELETING_ENV = {'ok': False, 'code': 2202, 'error': 'error_deleting_env'}, 500
