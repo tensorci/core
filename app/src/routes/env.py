@@ -101,8 +101,16 @@ class RestfulEnvs(Resource):
       return REPO_PROVIDER_USER_NOT_FOUND
 
     latest_envs = api.payload.get('envs', {})
-    curr_envs = {e.name: e for e in repo.api_envs()}
+
+    cluster_specific_envs = {
+      clusters.TRAIN: repo.train_envs(),
+      clusters.API: repo.api_envs()
+    }.get(for_cluster)
+
+    curr_envs = {e.name: e for e in cluster_specific_envs}
+
     remove_envs = {name: env for name, env in curr_envs.iteritems() if name not in latest_envs}
+
     update_envs_map = {}
 
     # Upsert envs
