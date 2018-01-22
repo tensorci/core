@@ -6,7 +6,10 @@ from src.models import Team, RepoProviderUser, Env
 from src.utils import clusters
 from src.api_responses.errors import *
 from src.api_responses.success import *
+from src.utils.job_queue import job_queue
 from src.helpers.provider_user_helper import current_provider_user
+from src.services.env_services.update_deploy_env import UpdateDeployEnv
+from src.services.env_services.remove_deploy_env import RemoveDeployEnv
 
 upsert_env_model = api.model('Env', {
   'uid': fields.String(required=False),
@@ -145,6 +148,11 @@ class RestfulEnvs(Resource):
       logger.error('Error upserting envs for Repo(uid={}) with error: {}'.format(repo.uid, e))
       return ERROR_UPSERTING_ENVS
 
+    # If env is for the API cluster and the repo has an active API deploy,
+    # schedule an update to the env on that API cluster.
+    if for_cluster == clusters.API and repo.deploy_name:
+      job_queue.add(UpdateDeployEnv(repo_uid=repo.uid).perform)
+
     return {'envs': repo.formatted_envs(cluster=for_cluster)}
 
 
@@ -184,6 +192,7 @@ class RestfulEnv(Resource):
     # TODO: Validate here (and on the FE) that this repo_provider_user has write access
 
     for_cluster = env.for_cluster
+    env_name = env.name
 
     # Delete the env
     try:
@@ -191,5 +200,10 @@ class RestfulEnv(Resource):
     except BaseException as e:
       logger.error('Error deleting Env(uid={}) with error: {}'.format(env.uid, e))
       return ERROR_DELETING_ENV
+
+    # If env var is for the API cluster and the repo has an active API deploy,
+    # schedule the removal of this env var from that API cluster.
+    if for_cluster == clusters.API and repo.deploy_name:
+      job_queue.add(RemoveDeployEnv(repo_uid=repo.uid, env_name=env_name).perform)
 
     return {'envs': repo.formatted_envs(cluster=for_cluster)}

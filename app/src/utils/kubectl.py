@@ -7,7 +7,7 @@ def expose(resource=None, type='LoadBalancer', port=80, target_port=80, name=Non
                             '--type', type,
                             '--port', str(port),
                             '--target-port', str(target_port),
-                            '--name', name,
+                            '--name', name,s
                             '--context', context,
                             '--cluster', cluster])
 
