@@ -69,7 +69,7 @@ class RestfulEnvs(Resource):
     if not repo_provider_user:
       return REPO_PROVIDER_USER_NOT_FOUND
 
-    return {'envs': repo.formatted_envs()}
+    return repo.formatted_envs()
 
   @namespace.doc('upsert_envs_for_repo')
   @namespace.expect(upsert_envs_model, validate=True)
