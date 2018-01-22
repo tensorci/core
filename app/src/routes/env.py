@@ -21,7 +21,7 @@ upsert_envs_model = api.model('Envs', {
 
 
 @namespace.route('/envs')
-class Envs(Resource):
+class RestfulEnvs(Resource):
   """Restful interface for a repo's envs"""
 
   @namespace.doc('get_envs_for_repo')
@@ -129,6 +129,7 @@ class Envs(Resource):
       # Create new envs
       for env_data in new_env_data:
         dbi.create(Env, {
+          'repo': repo,
           'name': env_data.get('name'),
           'value': env_data.get('value')
         })
@@ -140,7 +141,7 @@ class Envs(Resource):
 
 
 @namespace.route('/env')
-class Env(Resource):
+class RestfulEnv(Resource):
   """Restful interface for a specific env"""
 
   @namespace.doc('delete_env')

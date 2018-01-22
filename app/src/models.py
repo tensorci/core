@@ -312,11 +312,14 @@ class Repo(db.Model):
     return '{}/{}/{}'.format(provider.url(), team.slug, self.slug)
 
   def formatted_envs(self):
-    return [{
+    envs = [{
       'uid': env.uid,
       'name': env.name,
       'value': env.value
     } for env in self.envs]
+
+    envs.sort(key=lambda e: e['name'].lower())
+    return envs
 
 
 class User(db.Model):
