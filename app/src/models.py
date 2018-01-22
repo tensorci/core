@@ -67,6 +67,7 @@ from uuid import uuid4
 from operator import attrgetter
 from config import config
 from github import Github
+from src.utils import clusters
 
 
 class Provider(db.Model):
@@ -311,15 +312,41 @@ class Repo(db.Model):
     provider = team.provider
     return '{}/{}/{}'.format(provider.url(), team.slug, self.slug)
 
-  def formatted_envs(self):
-    envs = [{
-      'uid': env.uid,
-      'name': env.name,
-      'value': env.value
-    } for env in self.envs]
+  def formatted_envs(self, cluster=None):
+    query = {'repo': self}
 
-    envs.sort(key=lambda e: e['name'].lower())
-    return envs
+    if cluster:
+      query['for_cluster'] = cluster
+
+    envs = dbi.find_all(Env, query)
+
+    def sorted_envs(env_list):
+      data = [{
+        'uid': env.uid,
+        'name': env.name,
+        'value': env.value
+      } for env in env_list]
+
+      data.sort(key=lambda e: e['name'].lower())
+      return data
+
+    # Return here if only one cluster desired.
+    if cluster:
+      return sorted_envs(envs)
+
+    train_envs = []
+    api_envs = []
+
+    for env in envs:
+      if env.for_cluster == clusters.TRAIN:
+        train_envs.append(env)
+      elif env.for_cluster == clusters.API:
+        api_envs.append(env)
+
+    return {
+      'train_envs': sorted_envs(train_envs),
+      'api_envs': sorted_envs(api_envs)
+    }
 
 
 class User(db.Model):
@@ -702,9 +729,10 @@ class Env(db.Model):
   repo = db.relationship('Repo', backref='envs')
   name = db.Column(db.String, nullable=False)
   value = db.Column(db.String, nullable=False)
+  for_cluster = db.Column(db.String(60), nullable=False)
   created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
-  def __init__(self, repo=None, repo_id=None, name=None, value=None):
+  def __init__(self, repo=None, repo_id=None, name=None, value=None, for_cluster=None):
     self.uid = uuid4().hex
 
     if repo_id:
@@ -714,6 +742,7 @@ class Env(db.Model):
 
     self.name = name
     self.value = value
+    self.for_cluster = for_cluster
 
   def __repr__(self):
     return '<Env id={}, uid={}, repo_id={}, name={}, value={}, created_at={}>'.format(

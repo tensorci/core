@@ -3,6 +3,7 @@ from flask_restplus import Resource, fields
 from src.routes import namespace, api
 from src import dbi, logger
 from src.models import Team, RepoProviderUser, Env
+from src.utils import clusters
 from src.api_responses.errors import *
 from src.api_responses.success import *
 from src.helpers.provider_user_helper import current_provider_user
@@ -16,6 +17,7 @@ upsert_env_model = api.model('Env', {
 upsert_envs_model = api.model('Envs', {
   'team': fields.String(required=True),
   'repo': fields.String(required=True),
+  'forCluster': fields.String(required=True),
   'envs': fields.List(fields.Nested(upsert_env_model), required=True)
 })
 
@@ -77,6 +79,11 @@ class RestfulEnvs(Resource):
     if not provider_user:
       return UNAUTHORIZED
 
+    for_cluster = api.payload['forCluster']
+
+    if for_cluster not in (clusters.TRAIN, clusters.API):
+      return INVALID_INPUT_PAYLOAD
+
     team = dbi.find_one(Team, {'slug': api.payload['team'].lower()})
 
     if not team:
@@ -131,13 +138,14 @@ class RestfulEnvs(Resource):
         dbi.create(Env, {
           'repo': repo,
           'name': env_data.get('name'),
-          'value': env_data.get('value')
+          'value': env_data.get('value'),
+          'for_cluster': for_cluster
         })
     except BaseException as e:
       logger.error('Error upserting envs for Repo(uid={}) with error: {}'.format(repo.uid, e))
       return ERROR_UPSERTING_ENVS
 
-    return {'envs': repo.formatted_envs()}
+    return {'envs': repo.formatted_envs(cluster=for_cluster)}
 
 
 @namespace.route('/env')
@@ -175,6 +183,8 @@ class RestfulEnv(Resource):
 
     # TODO: Validate here (and on the FE) that this repo_provider_user has write access
 
+    for_cluster = env.for_cluster
+
     # Delete the env
     try:
       dbi.delete(env)
@@ -182,4 +192,4 @@ class RestfulEnv(Resource):
       logger.error('Error deleting Env(uid={}) with error: {}'.format(env.uid, e))
       return ERROR_DELETING_ENV
 
-    return {'envs': repo.formatted_envs()}
+    return {'envs': repo.formatted_envs(cluster=for_cluster)}
