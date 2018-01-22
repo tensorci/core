@@ -102,10 +102,10 @@ class RestfulEnvs(Resource):
 
     latest_envs = api.payload.get('envs', {})
     curr_envs = {e.name: e for e in repo.api_envs()}
-
-    remove_env_names = [name for name, env in curr_envs.iteritems() if name not in latest_envs]
+    remove_envs = {name: env for name, env in curr_envs.iteritems() if name not in latest_envs}
     update_envs_map = {}
 
+    # Upsert envs
     for name, value in latest_envs.iteritems():
       env = None
 
@@ -126,12 +126,15 @@ class RestfulEnvs(Resource):
       if env:
         update_envs_map[env.name] = env.value
 
+    # Delete envs
+    [dbi.delete(env) for env in remove_envs.values()]
+
     # If env is for the API cluster and the repo has an active API deploy,
     # schedule an update to the env on that API cluster.
     if for_cluster == clusters.API and repo.deploy_name:
       update_envs_service = UpdateDeployEnv(repo_uid=repo.uid,
                                             updates=update_envs_map,
-                                            removals=remove_env_names)
+                                            removals=remove_envs.keys())
 
       job_queue.add(update_envs_service.perform)
 
