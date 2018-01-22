@@ -9,7 +9,6 @@ from src.api_responses.success import *
 from src.utils.job_queue import job_queue
 from src.helpers.provider_user_helper import current_provider_user
 from src.services.env_services.update_deploy_env import UpdateDeployEnv
-from src.services.env_services.remove_deploy_env import RemoveDeployEnv
 
 upsert_env_model = api.model('Env', {
   'uid': fields.String(required=False),
@@ -192,7 +191,6 @@ class RestfulEnv(Resource):
     # TODO: Validate here (and on the FE) that this repo_provider_user has write access
 
     for_cluster = env.for_cluster
-    env_name = env.name
 
     # Delete the env
     try:
@@ -204,6 +202,6 @@ class RestfulEnv(Resource):
     # If env var is for the API cluster and the repo has an active API deploy,
     # schedule the removal of this env var from that API cluster.
     if for_cluster == clusters.API and repo.deploy_name:
-      job_queue.add(RemoveDeployEnv(repo_uid=repo.uid, env_name=env_name).perform)
+      job_queue.add(UpdateDeployEnv(repo_uid=repo.uid).perform)
 
     return {'envs': repo.formatted_envs(cluster=for_cluster)}

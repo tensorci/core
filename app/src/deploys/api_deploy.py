@@ -8,6 +8,7 @@ from src.services.cluster_services.export_cluster import ExportCluster
 from src.utils.job_queue import job_queue
 from src.helpers import ms_since_epoch
 from kubernetes import client, config
+from src.helpers.deployment_helper import api_deploy_envs
 
 
 class ApiDeploy(AbstractDeploy):
@@ -28,24 +29,8 @@ class ApiDeploy(AbstractDeploy):
     self.ports = [80]
     self.replicas = 3
 
-    if self.dataset:
-      dataset_table = self.dataset.table()
-    else:
-      dataset_table = ''
-
-    self.envs = {
-      'AWS_ACCESS_KEY_ID': os.environ.get('AWS_ACCESS_KEY_ID'),
-      'AWS_SECRET_ACCESS_KEY': os.environ.get('AWS_SECRET_ACCESS_KEY'),
-      'AWS_REGION_NAME': os.environ.get('AWS_REGION_NAME'),
-      'S3_BUCKET_NAME': self.cluster.bucket.name,
-      'DATASET_DB_URL': os.environ.get('DATASET_DB_URL'),
-      'DATASET_TABLE_NAME': dataset_table,
-      'REPO_SLUG': self.repo.slug,
-      'REPO_UID': self.repo.uid,
-      'CLIENT_ID': self.repo.client_id,
-      'CLIENT_SECRET': self.repo.client_secret,
-      'INTERNAL_MSG_TOKEN': self.repo.internal_msg_token
-    }
+    self.envs = api_deploy_envs(self.repo, cluster=self.cluster, dataset=self.dataset)
+    self.add_custom_envs()
 
     # Ensure cluster/context exists in KUBECONFIG
     context_exported = ExportCluster(cluster=self.cluster).perform()
@@ -60,6 +45,11 @@ class ApiDeploy(AbstractDeploy):
       self.update_deploy()
     else:
       super(ApiDeploy, self).deploy()
+
+  def add_custom_envs(self):
+    for env in self.repo.api_envs():
+      if env.name not in self.envs:
+        self.envs[env.name] = env.value
 
   def update_deploy(self):
     body = {

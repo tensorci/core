@@ -1,3 +1,4 @@
+import os
 from src.utils import log_formatter
 from src.utils.pyredis import redis
 from src.models import Deployment
@@ -198,3 +199,33 @@ def log_info_for_deployment(deployment):
   }.get(curr_stage)
 
   return log_stream_key, curr_stage
+
+
+def api_deploy_envs(repo, cluster=None, dataset=None):
+  if not cluster:
+    cluster = repo.team.cluster
+
+  if not dataset:
+    datasets = repo.datasets
+
+    if datasets:
+      dataset = datasets[0]
+
+  if dataset:
+    dataset_table = dataset.table()
+  else:
+    dataset_table = ''
+
+  return {
+    'AWS_ACCESS_KEY_ID': os.environ.get('AWS_ACCESS_KEY_ID'),
+    'AWS_SECRET_ACCESS_KEY': os.environ.get('AWS_SECRET_ACCESS_KEY'),
+    'AWS_REGION_NAME': os.environ.get('AWS_REGION_NAME'),
+    'S3_BUCKET_NAME': cluster.bucket.name,
+    'DATASET_DB_URL': os.environ.get('DATASET_DB_URL'),
+    'DATASET_TABLE_NAME': dataset_table,
+    'REPO_SLUG': repo.slug,
+    'REPO_UID': repo.uid,
+    'CLIENT_ID': repo.client_id,
+    'CLIENT_SECRET': repo.client_secret,
+    'INTERNAL_MSG_TOKEN': repo.internal_msg_token
+  }
