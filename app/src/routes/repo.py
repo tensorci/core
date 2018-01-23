@@ -154,7 +154,8 @@ class RestfulRepos(Resource):
         'retrain_step_size': d.retrain_step_size,
         'last_train_record_count': d.last_train_record_count,
         'created_at': utcnow_to_ts(d.created_at),
-        'has_write_access': repo_provider_user.has_write_access()
+        'has_write_access': repo_provider_user.has_write_access(),
+        'preview': dataset_db.sample(table=d.table(), limit=5)
       } for d in repo.datasets]
 
     return resp

@@ -184,22 +184,14 @@ class RestfulDataset(Resource):
       'retrain_step_size': d.retrain_step_size,
       'last_train_record_count': d.last_train_record_count,
       'created_at': utcnow_to_ts(d.created_at),
-      'has_write_access': repo_provider_user.has_write_access()
+      'has_write_access': repo_provider_user.has_write_access(),
+      'preview': dataset_db.sample(table=d.table(), limit=5)
     } for d in repo.datasets]
-
-    # datasets = [{
-    #   'name': 'tensorci-customer',
-    #   'uid': 'abc',
-    #   'num_records': 142,
-    #   'retrain_step_size': None,
-    #   'last_train_record_count': 0,
-    #   'created_at': utcnow_to_ts(),
-    #   'has_write_access': True
-    # }]
 
     return {'datasets': datasets}
 
 
+# ** DEPRECATED **
 @namespace.route('/dataset/preview')
 class RestfulDataset(Resource):
   """Fetch preview for dataset"""
@@ -233,20 +225,5 @@ class RestfulDataset(Resource):
       return REPO_PROVIDER_USER_NOT_FOUND
 
     preview_records = dataset_db.sample(table=dataset.table(), limit=10)
-
-    # preview_records = [
-    #   {
-    #     'name': 'Ben Whittle',
-    #     'email': 'ben@gmail.com'
-    #   },
-    #   {
-    #     'name': 'Gab Maher',
-    #     'email': 'gab@gmail.com'
-    #   },
-    #   {
-    #     'name': 'Gary Peters',
-    #     'email': 'gary@gmail.com'
-    #   }
-    # ]
 
     return {'preview': preview_records}
