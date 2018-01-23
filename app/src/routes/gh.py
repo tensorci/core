@@ -113,5 +113,5 @@ class OAuthCallback(Resource):
     # Create redirect response with session token
     token = auth_util.serialize_token(session.id, session.token)
 
-    return redirect('{}/oauth_redirect?auth={}&username={}'.format(
-      config.DASH_URL, url_encode_str(token), provider_user.username))
+    return redirect('{}/oauth_redirect?auth={}&username={}&icon={}'.format(
+      config.DASH_URL, url_encode_str(token), provider_user.username, provider_user.icon))

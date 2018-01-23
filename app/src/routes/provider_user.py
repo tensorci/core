@@ -70,18 +70,6 @@ class GetLocalStorageInfo(Resource):
     if not provider_user:
       return UNAUTHORIZED
 
-    user = provider_user.user
-
-    if not user:
-      return USER_NOT_FOUND
-
-    resp = {
-      'user': {
-        'username': provider_user.username,
-        'icon': provider_user.icon
-      }
-    }
-
     provider = provider_user.provider
     teams = sorted([tpu.team for tpu in provider_user.team_provider_users], key=attrgetter('slug'))
 
@@ -102,7 +90,9 @@ class GetLocalStorageInfo(Resource):
       else:
         formatted_teams.append(formatted_team)
 
-    resp['teams'] = [username_team] + formatted_teams
+    resp = {
+      'teams': [username_team] + formatted_teams
+    }
 
     return resp, 200
 
