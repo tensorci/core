@@ -6,10 +6,11 @@ from src.routes import namespace, api
 from src.api_responses.errors import *
 from src.api_responses.success import *
 from src.helpers.provider_user_helper import current_provider_user
-from src import logger, dbi
-from src.helpers import auth_util
+from src import logger, dbi, db
+from sqlalchemy.orm import joinedload
+from src.helpers import auth_util, utcnow_to_ts
 from slugify import slugify
-from src.models import Team, Repo, RepoProviderUser, Provider, TeamProviderUser
+from src.models import Team, Repo, RepoProviderUser, Provider, TeamProviderUser, Deployment
 from src.helpers.provider_helper import parse_git_url
 from src.services.team_services.create_team import CreateTeam
 
@@ -45,9 +46,13 @@ class RestfulRepos(Resource):
     if not provider_user:
       return UNAUTHORIZED
 
+    # Parse input info
     args = dict(request.args.items())
     team_slug = args.get('team')
+    repo_slug = args.get('repo')
+    with_deployments = args.get('with_deployments')
 
+    # Get team
     if not team_slug:
       logger.error('No team provided during request for team repos')
       return INVALID_INPUT_PAYLOAD
@@ -58,6 +63,7 @@ class RestfulRepos(Resource):
     if not team:
       return TEAM_NOT_FOUND
 
+    # Get all repos for team, ordered by slug
     repos = [r for r in provider_user.repos() if r.team_id == team.id]
 
     formatted_repos = [{
@@ -67,7 +73,68 @@ class RestfulRepos(Resource):
 
     formatted_repos.sort(key=lambda x: x['slug'])
 
-    return {'repos': formatted_repos}
+    resp = {
+      'repos': formatted_repos
+    }
+
+    if not with_deployments or not formatted_repos:
+      return resp
+
+    # if repo_slug provided to get deployments for, try to find/use this repo.
+    if repo_slug:
+      repo = [r for r in repos if r.slug == repo_slug.lower()]
+
+      # If repo not part of team, just return early
+      if not repo:
+        return resp
+    else:
+      # if no repo_slug provided, just use the first repo ordered by slug
+      repo = [r for r in repos if r.slug == formatted_repos[0]['slug']]
+
+    repo = repo[0]
+
+    resp['repo'] = repo.slug
+
+    # TODO: Consolidate the following copypasta from /api/deployments
+
+    resp['deployments'] = []
+
+    deployments = db.session.query(Deployment) \
+      .options(joinedload(Deployment.commit)) \
+      .filter_by(repo_id=repo.id) \
+      .order_by(Deployment.intent_updated_at).all()
+
+    if not deployments:
+      return resp
+
+    deployments.reverse()
+
+    for d in deployments:
+      commit = d.commit
+      train_job = d.train_job
+
+      if train_job:
+        train_duration_sec = train_job.duration().seconds
+      else:
+        train_duration_sec = 0
+
+      resp['deployments'].append({
+        'uid': d.uid,
+        'readable_status': d.readable_status(),
+        'failed': d.failed,
+        'succeeded': d.succeeded(),
+        'date': utcnow_to_ts(d.intent_updated_at),
+        'train_duration_sec': train_duration_sec,
+        'commit': {
+          'sha': commit.sha,
+          'branch': commit.branch,
+          'message': commit.message,
+          'author': commit.author,
+          'author_icon': commit.author_icon
+        }
+      })
+
+    return resp
 
   @namespace.doc('create_tensorci_repos')
   @namespace.expect(create_repos_model, validate=True)
