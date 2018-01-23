@@ -13,7 +13,7 @@ from slugify import slugify
 from src.models import Team, Repo, RepoProviderUser, Provider, TeamProviderUser, Deployment
 from src.helpers.provider_helper import parse_git_url
 from src.services.team_services.create_team import CreateTeam
-
+from src.utils import dataset_db
 
 create_repo_model = api.model('Repo', {
   'repo_name': fields.String(required=True),
@@ -51,6 +51,7 @@ class RestfulRepos(Resource):
     team_slug = args.get('team')
     repo_slug = args.get('repo')
     with_deployments = args.get('with_deployments')
+    with_datasets = args.get('with_datasets')
 
     # Get team
     if not team_slug:
@@ -77,10 +78,13 @@ class RestfulRepos(Resource):
       'repos': formatted_repos
     }
 
-    if not with_deployments or not formatted_repos:
+    extra_data_requested = with_deployments or with_datasets
+
+    # Return if no repos OR if no other data is desired
+    if not formatted_repos or not extra_data_requested:
       return resp
 
-    # if repo_slug provided to get deployments for, try to find/use this repo.
+    # if repo_slug provided to get extra data for, try to find/use this repo.
     if repo_slug:
       repo = [r for r in repos if r.slug == repo_slug.lower()]
 
@@ -92,47 +96,66 @@ class RestfulRepos(Resource):
       repo = [r for r in repos if r.slug == formatted_repos[0]['slug']]
 
     repo = repo[0]
-
     resp['repo'] = repo.slug
 
-    # TODO: Consolidate the following copypasta from /api/deployments
+    if with_deployments:
+      # TODO: Consolidate the following copypasta from /api/deployments:
+      resp['deployments'] = []
 
-    resp['deployments'] = []
+      deployments = db.session.query(Deployment) \
+        .options(joinedload(Deployment.commit)) \
+        .filter_by(repo_id=repo.id) \
+        .order_by(Deployment.intent_updated_at).all()
 
-    deployments = db.session.query(Deployment) \
-      .options(joinedload(Deployment.commit)) \
-      .filter_by(repo_id=repo.id) \
-      .order_by(Deployment.intent_updated_at).all()
+      if not deployments:
+        return resp
 
-    if not deployments:
-      return resp
+      deployments.reverse()
 
-    deployments.reverse()
+      for d in deployments:
+        commit = d.commit
+        train_job = d.train_job
 
-    for d in deployments:
-      commit = d.commit
-      train_job = d.train_job
+        if train_job:
+          train_duration_sec = train_job.duration().seconds
+        else:
+          train_duration_sec = 0
 
-      if train_job:
-        train_duration_sec = train_job.duration().seconds
-      else:
-        train_duration_sec = 0
-
-      resp['deployments'].append({
-        'uid': d.uid,
-        'readable_status': d.readable_status(),
-        'failed': d.failed,
-        'succeeded': d.succeeded(),
-        'date': utcnow_to_ts(d.intent_updated_at),
-        'train_duration_sec': train_duration_sec,
-        'commit': {
-          'sha': commit.sha,
-          'branch': commit.branch,
-          'message': commit.message,
-          'author': commit.author,
-          'author_icon': commit.author_icon
-        }
+        resp['deployments'].append({
+          'uid': d.uid,
+          'readable_status': d.readable_status(),
+          'failed': d.failed,
+          'succeeded': d.succeeded(),
+          'date': utcnow_to_ts(d.intent_updated_at),
+          'train_duration_sec': train_duration_sec,
+          'commit': {
+            'sha': commit.sha,
+            'branch': commit.branch,
+            'message': commit.message,
+            'author': commit.author,
+            'author_icon': commit.author_icon
+          }
+        })
+    elif with_datasets:
+      # Make sure this provider_user is associated with this dataset (through repo)
+      # TODO: Do this above regardless?
+      repo_provider_user = dbi.find_one(RepoProviderUser, {
+        'repo': repo,
+        'provider_user': provider_user
       })
+
+      if not repo_provider_user:
+        return REPO_PROVIDER_USER_NOT_FOUND
+
+      resp['datasets'] = [{
+        'name': d.name,
+        'uid': d.uid,
+        'num_records': dataset_db.record_count(table=d.table()),
+        'retrain_step_size': d.retrain_step_size,
+        'last_train_record_count': d.last_train_record_count,
+        'created_at': utcnow_to_ts(d.created_at),
+        'has_write_access': repo_provider_user.has_write_access()
+      } for d in repo.datasets]
 
     return resp
 
