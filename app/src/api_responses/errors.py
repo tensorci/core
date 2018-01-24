@@ -18,6 +18,7 @@ NO_MODEL_FILE_FOUND = {'ok': False, 'code': 1204, 'error': 'no_model_file_found'
 INVALID_REPO_PERMISSIONS = {'ok': False, 'code': 1205, 'error': 'action_requires_higher_permissions'}, 401
 REPO_NOT_REGISTERED = {'ok': False, 'code': 1206, 'error': 'repo_not_registered'}, 404
 REPO_NOT_FOUND = {'ok': False, 'code': 1207, 'error': 'repo_not_found'}, 404
+ERROR_FETCHING_AVAILABLE_REPOS = {'ok': False, 'code': 1208, 'error': 'error_fetching_available_external_repos'}, 500
 
 # ProviderUser Errors
 AUTHENTICATION_FAILED = {'ok': False, 'code': 1300, 'error': 'authentication_failed'}, 401
