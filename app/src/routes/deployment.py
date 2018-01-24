@@ -22,13 +22,13 @@ from sqlalchemy.orm import joinedload
 from datetime import datetime
 
 train_deployment_model = api.model('Deployment', {
-  'git_url': fields.String(required=True),
-  'model_ext': fields.String(required=True)
+  'git_url': fields.String(required=True)
 })
 
 deployment_trained_model = api.model('Deployment', {
   'deployment_uid': fields.String(required=True),
-  'update_prediction_model': fields.Boolean(required=True)
+  'update_prediction_model': fields.Boolean(required=True),
+  'model_ext': fields.String(required=True)
 })
 
 api_deployment_model = api.model('Deployment', {
@@ -70,6 +70,7 @@ class DeploymentTrained(Resource):
     # Get required params
     deployment_uid = api.payload['deployment_uid']
     update_prediction_model = api.payload['update_prediction_model']
+    model_ext = api.payload['model_ext'] or ''
 
     # Get deployment for uid
     deployment = dbi.find_one(Deployment, {'uid': deployment_uid})
@@ -88,6 +89,9 @@ class DeploymentTrained(Resource):
 
     # Update deployment to DONE_TRAINING status
     deployment = dbi.update(deployment, {'status': deployment.statuses.DONE_TRAINING})
+
+    # Update repo's model_ext column
+    dbi.update(deployment.repo, {'model_ext': model_ext})
 
     # Enqueue this message in order to force the deployment_update_queue to broadcast an update.
     logger.info('Done training.',
@@ -452,10 +456,7 @@ def perform_train_deploy(intent=None):
   if not provider_user:
     return UNAUTHORIZED
 
-  # Get refs to payload info
   git_url = api.payload['git_url']
-  model_ext = api.payload['model_ext']
-
   provider_domain, team_name, repo_name = parse_git_url(git_url)
 
   # Find the provider by the passed domain
@@ -490,9 +491,6 @@ def perform_train_deploy(intent=None):
 
   if repo_provider_user.role < RepoProviderUser.roles.MEMBER_WRITE:
     return INVALID_REPO_PERMISSIONS
-
-  # Always update the repo's model extension
-  repo = dbi.update(repo, {'model_ext': model_ext})
 
   try:
     # Fetch the first page of commits for this repo from the provider's API
@@ -571,6 +569,9 @@ def perform_train_deploy(intent=None):
 
   # Update deployment status to TRAIN_BUILD_SCHEDULED
   deployment = dbi.update(deployment, {'status': deployment.statuses.TRAIN_BUILD_SCHEDULED})
+
+  if api.payload.get('with_log_stream') is False:
+    return DEPLOYMENT_CREATION_SUCCESS
 
   # Respond with a stream of the deploy logs
   return Response(stream_with_context(log_streamer.stream_deploy_logs(deployment, stream_key=log_stream_key)),

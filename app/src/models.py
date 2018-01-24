@@ -296,10 +296,12 @@ class Repo(db.Model):
     return sorted(self.deployments, key=attrgetter('intent_updated_at'), reverse=True)
 
   def model_file(self):
-    if not self.model_ext:
+    if self.model_ext is None:
       return None
-
-    return '{}.{}'.format(self.slug, self.model_ext)
+    elif not self.model_ext:
+      return self.slug
+    else:
+      return '{}.{}'.format(self.slug, self.model_ext)
 
   def api_url(self):
     return 'https://{}/api'.format(self.domain)
