@@ -27,8 +27,7 @@ train_deployment_model = api.model('Deployment', {
 
 deployment_trained_model = api.model('Deployment', {
   'deployment_uid': fields.String(required=True),
-  'update_prediction_model': fields.Boolean(required=True),
-  'model_ext': fields.String(required=True)
+  'update_prediction_model': fields.Boolean(required=True)
 })
 
 api_deployment_model = api.model('Deployment', {
@@ -70,7 +69,7 @@ class DeploymentTrained(Resource):
     # Get required params
     deployment_uid = api.payload['deployment_uid']
     update_prediction_model = api.payload['update_prediction_model']
-    model_ext = api.payload['model_ext'] or ''
+    model_ext = api.payload.get('model_ext', '')
 
     # Get deployment for uid
     deployment = dbi.find_one(Deployment, {'uid': deployment_uid})
