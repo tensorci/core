@@ -17,10 +17,6 @@ update_dataset_model = api.model('Dataset', {
   'retrainStepSize': fields.Integer(required=True)
 })
 
-delete_dataset_model = api.model('Dataset', {
-  'uid': fields.String(required=True)
-})
-
 
 @namespace.route('/dataset')
 class RestfulDataset(Resource):
@@ -134,15 +130,20 @@ class RestfulDataset(Resource):
     return DATASET_SUCCESSFULLY_UPDATED
 
   @namespace.doc('delete_dataset')
-  @namespace.expect(delete_dataset_model, validate=True)
   def delete(self):
     provider_user = current_provider_user()
 
     if not provider_user:
       return UNAUTHORIZED
 
+    args = dict(request.args.items())
+    dataset_uid = args.get('uid')
+
+    if not dataset_uid:
+      return INVALID_INPUT_PAYLOAD
+
     # Find dataset for provided uid
-    dataset = dbi.find_one(Dataset, {'uid': api.payload['uid']})
+    dataset = dbi.find_one(Dataset, {'uid': dataset_uid})
 
     if not dataset:
       return DATASET_NOT_FOUND
@@ -170,7 +171,7 @@ class RestfulDataset(Resource):
       # Drop the dataset table
       dataset_db.drop_table(table_name)
     except BaseException as e:
-      logger.error('Error deleting Dataset(uid={}) and dropping table with error: {}'.format(dataset.uid, e))
+      logger.error('Error deleting Dataset(uid={}) and dropping table with error: {}'.format(dataset_uid, e))
       return DATASET_DELETION_FAILED
 
     return DATASET_SUCCESSFULLY_DELETED
