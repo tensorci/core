@@ -17,6 +17,10 @@ update_dataset_model = api.model('Dataset', {
   'retrainStepSize': fields.Integer(required=True)
 })
 
+delete_dataset_model = api.model('Dataset', {
+  'uid': fields.String(required=True)
+})
+
 
 @namespace.route('/dataset')
 class RestfulDataset(Resource):
@@ -128,6 +132,48 @@ class RestfulDataset(Resource):
     dbi.update(dataset, {'retrain_step_size': api.payload['retrainStepSize']})
 
     return DATASET_SUCCESSFULLY_UPDATED
+
+  @namespace.doc('delete_dataset')
+  @namespace.expect(delete_dataset_model, validate=True)
+  def delete(self):
+    provider_user = current_provider_user()
+
+    if not provider_user:
+      return UNAUTHORIZED
+
+    # Find dataset for provided uid
+    dataset = dbi.find_one(Dataset, {'uid': api.payload['uid']})
+
+    if not dataset:
+      return DATASET_NOT_FOUND
+
+    # Make sure this provider_user is associated with this dataset (through repo)
+    repo_provider_user = dbi.find_one(RepoProviderUser, {
+      'repo': dataset.repo,
+      'provider_user': provider_user
+    })
+
+    if not repo_provider_user:
+      return REPO_PROVIDER_USER_NOT_FOUND
+
+    # Make sure repo_provider_user has write access to this repo (and therefore, its datasets)
+    if not repo_provider_user.has_write_access():
+      return UNAUTHORIZED
+
+    try:
+      # Get ref to the table name
+      table_name = dataset.table()
+
+      # Hard delete the dataset record
+      dbi.delete(dataset)
+
+      # Drop the dataset table
+      dataset_db.drop_table(table_name)
+    except BaseException as e:
+      logger.error('Error deleting Dataset(uid={}) and dropping table with error: {}'.format(dataset.uid, e))
+      return DATASET_DELETION_FAILED
+
+    return DATASET_SUCCESSFULLY_DELETED
 
 
 @namespace.route('/datasets')

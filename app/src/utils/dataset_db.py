@@ -14,6 +14,10 @@ def create_table(name):
   engine.execute('CREATE TABLE {} (id serial PRIMARY KEY NOT NULL, data json NOT NULL);'.format(name))
 
 
+def drop_table(name):
+  engine.execute('DROP TABLE {};'.format(name))
+
+
 def populate_records(records, table=None):
   for r in records:
     engine.execute('INSERT INTO {} (data) VALUES (\'{}\');'.format(table, json.dumps(r)))

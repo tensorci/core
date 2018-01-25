@@ -31,6 +31,7 @@ DATASET_NAME_TAKEN = {'ok': False, 'code': 1500, 'error': 'dataset_name_taken'},
 DATASET_CREATION_FAILED = {'ok': False, 'code': 1501, 'error': 'dataset_creation_failed'}, 500
 NO_FILE_PROVIDED = {'ok': False, 'code': 1502, 'error': 'no_file_provided'}, 500
 DATASET_NOT_FOUND = {'ok': False, 'code': 1503, 'error': 'dataset_not_found'}, 404
+DATASET_DELETION_FAILED = {'ok': False, 'code': 1504, 'error': 'dataset_deletion_failed'}, 500
 
 # Bucket Errors
 BUCKET_NOT_FOUND = {'ok': False, 'code': 1600, 'error': 'bucket_not_found'}, 404
