@@ -47,6 +47,10 @@ class ProviderUserLogin(Resource):
     # Get user for provider_user
     user = provider_user.user
 
+    # Ensure user has even set their basic auth pw...
+    if not user.hashed_pw:
+      return AUTHENTICATION_FAILED
+
     # Fail if password from payload doesn't equal the user's password
     # if not auth_util.verify_pw(user.hashed_pw or '', pw):
     if user.hashed_pw != pw:
