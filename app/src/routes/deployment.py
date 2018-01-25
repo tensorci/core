@@ -334,11 +334,11 @@ class GetDeployments(Resource):
     repo_slug = args.get('repo')
 
     if not team_slug:
-      logger.error('No team provided during request for project datasets')
+      logger.error('No team provided during request for deployments')
       return INVALID_INPUT_PAYLOAD
 
     if not repo_slug:
-      logger.error('No repo provided during request for project datasets')
+      logger.error('No repo provided during request for deployments')
       return INVALID_INPUT_PAYLOAD
 
     team_slug = team_slug.lower()
