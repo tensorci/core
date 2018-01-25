@@ -10,10 +10,11 @@ class CreateDataset(object):
     self.name = name
     self.repo = repo
     self.fileobj = fileobj
+    self.dataset = None
 
   def perform(self):
     # Create Dataset record in core DB
-    dataset = dbi.create(Dataset, {
+    self.dataset = dbi.create(Dataset, {
       'repo': self.repo,
       'name': self.name
     })
@@ -26,7 +27,7 @@ class CreateDataset(object):
       raise BaseException('Data is not a JSON array')
 
     # Create a new table in our dataset DB for the dataset's records
-    table_name = dataset.table()
+    table_name = self.dataset.table()
     dataset_db.create_table(table_name)
 
     # Batch insert the data into the table

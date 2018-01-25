@@ -15,6 +15,8 @@ Tables:
   Deployment
   TrainJob
   Dataset
+  Commit
+  Env
 
 Relationships:
 

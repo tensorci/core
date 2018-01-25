@@ -11,6 +11,8 @@ from src.helpers.provider_helper import parse_git_url
 from slugify import slugify
 from src.utils import dataset_db
 from src.helpers import utcnow_to_ts
+from src.utils.job_queue import job_queue
+from src.services.env_services.update_deploy_env import UpdateDeployEnv
 
 update_dataset_model = api.model('Dataset', {
   'uid': fields.String(required=True),
@@ -91,6 +93,11 @@ class RestfulDataset(Resource):
       # Create the dataset
       svc = CreateDataset(dataset_slug, repo=repo, fileobj=f)
       svc.perform()
+
+      # If first dataset for repo and an API deploy exists, update its DATASET_TABLE_NAME env var.
+      if len(repo.datasets) == 1 and repo.deploy_name:
+        env_updates = {'DATASET_TABLE_NAME': svc.dataset.table()}
+        job_queue.add(UpdateDeployEnv(repo_uid=repo.uid, updates=env_updates).perform)
     except BaseException as e:
       logger.error('Error creating Dataset(name={}, repo={}): {}'.format(dataset_slug, repo.slug, e))
       return DATASET_CREATION_FAILED
@@ -148,6 +155,8 @@ class RestfulDataset(Resource):
     if not dataset:
       return DATASET_NOT_FOUND
 
+    repo = dataset.repo
+
     # Make sure this provider_user is associated with this dataset (through repo)
     repo_provider_user = dbi.find_one(RepoProviderUser, {
       'repo': dataset.repo,
@@ -162,7 +171,7 @@ class RestfulDataset(Resource):
       return UNAUTHORIZED
 
     try:
-      # Get ref to the table name
+      # Get ref to the table nam
       table_name = dataset.table()
 
       # Hard delete the dataset record
@@ -170,6 +179,10 @@ class RestfulDataset(Resource):
 
       # Drop the dataset table
       dataset_db.drop_table(table_name)
+
+      # Remove the DATASET_TABLE_NAME env var from this project's API if it exists
+      if repo.deploy_name:
+        job_queue.add(UpdateDeployEnv(repo_uid=repo.uid, removals=['DATASET_TABLE_NAME']).perform)
     except BaseException as e:
       logger.error('Error deleting Dataset(uid={}) and dropping table with error: {}'.format(dataset_uid, e))
       return DATASET_DELETION_FAILED
