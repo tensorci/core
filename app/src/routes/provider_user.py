@@ -97,10 +97,13 @@ class GetLocalStorageInfo(Resource):
       else:
         formatted_teams.append(formatted_team)
 
+    user = provider_user.user
+
     resp = {
       'teams': [username_team] + formatted_teams,
       'login_info': {
-        'first_login': provider_user.user.is_first_login()
+        'first_login': user.is_first_login(),
+        'seen_basic_auth_prompt': user.seen_basic_auth_prompt
       }
     }
 
