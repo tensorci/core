@@ -17,3 +17,4 @@ DATASET_SUCCESSFULLY_DELETED = {'ok': True, 'message': 'Dataset Successfully Del
 
 # User
 UPDATE_USER_PW_SUCCESS = {'ok': True, 'message': 'Successfully Updated User Password'}, 200
+SUCCESSFULLY_UPDATED_USER = {'ok': True, 'message': 'Successfully Updated User'}, 200

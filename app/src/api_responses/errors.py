@@ -53,6 +53,7 @@ REPO_PROVIDER_USER_NOT_FOUND = {'ok': False, 'code': 1901, 'error': 'repo_provid
 
 # User Errors
 USER_NOT_FOUND = {'ok': False, 'code': 2000, 'error': 'user_not_found'}, 404
+ERROR_UPDATING_USER = {'ok': False, 'code': 2001, 'error': 'error_updating_user'}, 500
 
 # Deployment Errors
 DEPLOYMENT_NOT_FOUND = {'ok': False, 'code': 2100, 'error': 'deployment_not_found'}, 404

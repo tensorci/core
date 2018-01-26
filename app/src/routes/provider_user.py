@@ -60,6 +60,9 @@ class ProviderUserLogin(Resource):
     session = provider_user.create_session()
     token = auth_util.serialize_token(session.id, session.token)
 
+    # Register user login
+    user.register_login()
+
     return {'ok': True, 'message': 'Login Successful'}, 200, {auth_header_name: token}
 
 
@@ -95,7 +98,10 @@ class GetLocalStorageInfo(Resource):
         formatted_teams.append(formatted_team)
 
     resp = {
-      'teams': [username_team] + formatted_teams
+      'teams': [username_team] + formatted_teams,
+      'login_info': {
+        'first_login': provider_user.user.is_first_login()
+      }
     }
 
     return resp, 200

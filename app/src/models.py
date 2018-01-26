@@ -366,21 +366,32 @@ class User(db.Model):
   hashed_pw = db.Column(db.String(240))
   verification_status = db.Column(db.Integer, nullable=False)
   verification_secret = db.Column(db.String(64))
+  login_count = db.Column(db.Integer, default=0)
+  seen_basic_auth_prompt = db.Column(db.Boolean, server_default='f')
   is_destroyed = db.Column(db.Boolean, server_default='f')
   created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
   ver_statuses = user_verification_statuses
 
-  def __init__(self, email=None, hashed_pw=None, verification_status=user_verification_statuses.NOT_CONTACTED):
+  def __init__(self, email=None, hashed_pw=None, verification_status=user_verification_statuses.NOT_CONTACTED,
+               login_count=0, seen_basic_auth_prompt=False):
     self.uid = uuid4().hex
     self.email = email
     self.hashed_pw = hashed_pw
     self.verification_status = verification_status
     self.verification_secret = auth_util.fresh_secret()
+    self.login_count = login_count
+    self.seen_basic_auth_prompt = seen_basic_auth_prompt
 
   def __repr__(self):
-    return '<User id={}, uid={}, email={}, hashed_pw={}, verification_status={}, is_destroyed={}, created_at={}>'.format(
-      self.id, self.uid, self.email, self.hashed_pw, self.verification_status, self.is_destroyed, self.created_at)
+    return '<User id={}, uid={}, email={}, hashed_pw={}, verification_status={}, login_count={}, seen_basic_auth_prompt={}, is_destroyed={}, created_at={}>'.format(
+      self.id, self.uid, self.email, self.hashed_pw, self.verification_status, self.login_count, self.seen_basic_auth_prompt, self.is_destroyed, self.created_at)
+
+  def register_login(self):
+    dbi.update(self, {'login_count': (self.login_count or 0) + 1})
+
+  def is_first_login(self):
+    return self.login_count == 1
 
 
 class ProviderUser(db.Model):

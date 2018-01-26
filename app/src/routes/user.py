@@ -10,6 +10,38 @@ set_password_model = api.model('User', {
   'password': fields.String(required=True)
 })
 
+update_user_model = api.model('User', {
+  'seen_basic_auth_prompt': fields.Boolean(required=False)
+})
+
+
+@namespace.route('/user')
+class RestfulUser(Resource):
+  """Restful interface for a User"""
+
+  @namespace.doc('update_user')
+  @namespace.expect(update_user_model, validate=True)
+  def put(self):
+    provider_user = current_provider_user()
+
+    if not provider_user:
+      return UNAUTHORIZED
+
+    user = provider_user.user
+
+    if not user:
+      return USER_NOT_FOUND
+
+    updates = api.payload or {}
+
+    try:
+      dbi.update(user, updates)
+    except BaseException as e:
+      logger.error('Error updating User(uid={}) with error: {}'.format(user.uid, e))
+      return ERROR_UPDATING_USER
+
+    return SUCCESSFULLY_UPDATED_USER
+
 
 @namespace.route('/user/password')
 class UserPassword(Resource):
