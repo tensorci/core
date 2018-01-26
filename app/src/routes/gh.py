@@ -87,9 +87,6 @@ class OAuthCallback(Resource):
       # Upsert User for email
       user, is_new = dbi.upsert(User, {'email': primary_email})
 
-      # Register a login for this user
-      user.register_login()
-
       # Create provider user
       provider_user = dbi.create(ProviderUser, {
         'provider': github,
@@ -102,6 +99,9 @@ class OAuthCallback(Resource):
       'access_token': access_token,
       'icon': gh_user.avatar_url
     })
+
+    # Register a login for this user
+    provider_user.user.register_login()
 
     try:
       # Create teams for provider_user
