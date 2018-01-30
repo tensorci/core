@@ -234,6 +234,9 @@ class ApiDeployment(Resource):
       'intent_updated_at': datetime.utcnow()
     })
 
+    if api.payload.get('with_log_stream') is False:
+      return API_DEPLOYMENT_SUCCESS
+
     # Respond with a stream of the deploy logs
     return Response(stream_with_context(log_streamer.stream_deploy_logs(deployment, stream_key=log_stream_key)),
                     headers={'X-Accel-Buffering': 'no'})

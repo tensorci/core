@@ -7,6 +7,7 @@ REPOS_CREATION_SUCCESS = {'ok': True, 'message': 'Repos Successfully Created'}, 
 
 # Deployment
 DEPLOYMENT_CREATION_SUCCESS = {'ok': True, 'message': 'Deployment Successfully Created'}, 201
+API_DEPLOYMENT_SUCCESS = {'ok': True, 'message': 'API Deployment Successfully Started'}, 201
 DEPLOYMENT_UP_TO_DATE = {'ok': True, 'log': 'Everything up-to-date.'}, 200
 NO_LOGS_TO_SHOW = {'ok': True, 'log': 'No logs to show.'}, 200
 
