@@ -3,6 +3,8 @@ from src import logger, dbi
 from pyredis import redis
 from src.helpers.definitions import tci_keep_alive
 
+# TODO: This file is disgusting -- make it less disgusting
+
 
 def should_complete_stream(data, deployment):
   # Check if last_entry was specified in the log. Complete the stream if so.
@@ -57,17 +59,27 @@ def stream_deploy_logs(deployment, stream_key=None, block=30000):
       except:
         break
   else:
+    ts = '0-0'
+
     while not complete:
       try:
-        item = redis.xread(stream_key, block=block)
+        # Get all logs since timestamp=ts
+        result = redis.xread(block=block, **{stream_key: ts})
 
-        if not item:
+        if not result:
           yield tci_keep_alive + '\n'
           continue
 
-        ts, data = item[0]
-        complete = should_complete_stream(data, deployment)
-        yield log_formatter.deploy_log(data)
+        items = result.get(stream_key)
+
+        if not items:
+          yield tci_keep_alive + '\n'
+          continue
+
+        for item in items:
+          ts, data = item
+          complete = should_complete_stream(data, deployment)
+          yield log_formatter.deploy_log(data)
       except:
         break
 
