@@ -203,8 +203,10 @@ class ApiDeployment(Resource):
     # which ever one comes first
     deployment = None
     for dep in deployments:
-      if (dep.intent_to_serve() and dep.failed) or \
-        (dep.intent_to_train() and not dep.failed and dep.status == dep.statuses.DONE_TRAINING):
+      successfully_done_training = dep.intent_to_train() and not dep.failed and dep.status == dep.statuses.DONE_TRAINING
+      failed_while_serving = dep.intent_to_serve() and dep.failed
+
+      if successfully_done_training or failed_while_serving:
         deployment = dep
         break
 
