@@ -10,6 +10,7 @@ from src.helpers.provider_user_helper import current_provider_user
 from operator import attrgetter
 from src.config import config
 
+
 provider_user_login_model = api.model('User', {
   'username': fields.String(required=True),
   'password': fields.String(required=True),
