@@ -121,15 +121,25 @@ def stream_train_logs(deployment, block=30000):
       except:
         break
   else:
+    ts = '0-0'
+
     while True:
       try:
-        item = redis.xread(stream_key, block=block)
+        # Get all logs since timestamp=ts
+        result = redis.xread(block=block, **{stream_key: ts})
 
-        if not item:
+        if not result:
           yield tci_keep_alive + '\n'
           continue
 
-        ts, data = item[0]
-        yield log_formatter.training_log(data, with_color=True)
+        items = result.get(stream_key)
+
+        if not items:
+          yield tci_keep_alive + '\n'
+          continue
+
+        for item in items:
+          ts, data = item
+          yield log_formatter.training_log(data, with_color=True)
       except:
         break
