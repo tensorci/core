@@ -115,7 +115,7 @@ class BuildServerDeploy(AbstractDeploy):
         logger.error('Build job failed.', stream=self.log_stream_key, stage=self.get_stage(building=True))
         watcher.stop()
 
-      if phase == 'completed':
+      if phase == 'succeeded':
         logger.info('Successfully built image.', stream=self.log_stream_key, stage=self.get_stage(building=True))
         self.on_build_success()
         watcher.stop()

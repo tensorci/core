@@ -13,11 +13,11 @@ def deploy_log(log):
   if log.get('level') == 'error':
     prefix = '[ERROR] '
   elif log.get('level') == 'warn':
-    prefix = '  !    '
+    prefix = '   !    '
   elif log.get('section'):
-    prefix = ' ----> '
+    prefix = ' -----> '
   else:
-    prefix = '       '
+    prefix = '        '
 
   return prefix + text + '\n'
 
