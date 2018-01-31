@@ -128,7 +128,7 @@ class AbstractDeploy(object):
     return volumes
 
   def configure_pod(self, containers=None, volumes=None):
-    metadata = client.V1ObjectMeta(labels={'app': self.deploy_name})
+    metadata = client.V1ObjectMeta(name=self.deploy_name, labels={'app': self.deploy_name})
 
     pod_spec = client.V1PodSpec(
       containers=containers,
