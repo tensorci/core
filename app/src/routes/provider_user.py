@@ -101,6 +101,10 @@ class GetLocalStorageInfo(Resource):
     user = provider_user.user
 
     resp = {
+      'user': {
+        'username': provider_user.username,
+        'icon': provider_user.icon
+      },
       'teams': [username_team] + formatted_teams,
       'login_info': {
         'first_login': user.is_first_login(),
