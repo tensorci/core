@@ -51,28 +51,36 @@ class AbstractDeploy(object):
     # Configure volumes
     volumes = self.configure_volumes()
 
-    # Build up: container --> pod spec --> pod template spec
-    pod_template_spec = self.configure_pod_template_spec(containers=[container],
-                                                         volumes=volumes)
-
-    # Configure deploy spec
-    deploy_spec = self.configure_deploy_spec(pod_template_spec)
-
-    # Configure deploy object
-    deploy_obj = self.configure_deploy_obj(deploy_spec)
-
     # Get an api_client for cluster's config, then use that to build the api
     api_client = config.new_client_from_config(context=self.cluster_name)
 
+    # Job flag actually just creates a pod right now, not an actual job.
+    # Will switch back to actually using jobs once k8s 1.8>= is supported and backoffLimit can be used.
     if self.job:
-      self.api = client.BatchV1Api(api_client=api_client)
-      deploy_method = self.api.create_namespaced_job
-    else:
-      self.api = client.ExtensionsV1beta1Api(api_client=api_client)
-      deploy_method = self.api.create_namespaced_deployment
+      # Configure pod
+      pod = self.configure_pod(containers=[container], volumes=volumes)
 
-    # Execute deploy
-    deploy_method(namespace=self.namespace, body=deploy_obj)
+      # Configure API
+      self.api = client.CoreV1Api(api_client=api_client)
+
+      # Execute deploy
+      self.api.create_namespaced_pod(namespace=self.namespace, body=pod)
+    else:
+      # Build up: container --> pod spec --> pod template spec
+      pod_template_spec = self.configure_pod_template_spec(containers=[container],
+                                                           volumes=volumes)
+
+      # Configure deploy spec
+      deploy_spec = self.configure_deploy_spec(pod_template_spec)
+
+      # Configure deploy object
+      deploy_obj = self.configure_deploy_obj(deploy_spec)
+
+      # Configure API
+      self.api = client.ExtensionsV1beta1Api(api_client=api_client)
+
+      # Execute deploy
+      self.api.create_namespaced_deployment(namespace=self.namespace, body=deploy_obj)
 
     self.on_deploy_success()
 
@@ -118,6 +126,17 @@ class AbstractDeploy(object):
         volumes.append(vol)
 
     return volumes
+
+  def configure_pod(self, containers=None, volumes=None):
+    metadata = client.V1ObjectMeta(labels={'app': self.deploy_name})
+
+    pod_spec = client.V1PodSpec(
+      containers=containers,
+      volumes=volumes,
+      restart_policy=self.restart_policy
+    )
+
+    return client.V1Pod(metadata=metadata, spec=pod_spec)
 
   def configure_pod_template_spec(self, containers=None, volumes=None):
     metadata = client.V1ObjectMeta(labels={'app': self.deploy_name})

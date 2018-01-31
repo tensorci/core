@@ -97,10 +97,14 @@ class BuildServerDeploy(AbstractDeploy):
 
     label_selector = 'app={}'.format(self.deploy_name)
 
-    for e in watcher.stream(self.api.list_namespaced_job, namespace=self.namespace, label_selector=label_selector):
+    for e in watcher.stream(self.api.list_namespaced_pod, namespace=self.namespace, label_selector=label_selector):
       etype = e.get('type')
       raw_obj = e.get('raw_object', {})
       status = raw_obj.get('status', {})
+
+      logger.info('Type: {}'.format(etype))
+      logger.info('Raw: {}'.format(raw_obj))
+      logger.info('Status: {}'.format(status))
 
       if etype == 'ADDED':
         logger.info('Job {} started.'.format(self.deploy_name))
