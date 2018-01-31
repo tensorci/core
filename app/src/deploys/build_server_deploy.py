@@ -98,25 +98,24 @@ class BuildServerDeploy(AbstractDeploy):
     label_selector = 'app={}'.format(self.deploy_name)
 
     for e in watcher.stream(self.api.list_namespaced_pod, namespace=self.namespace, label_selector=label_selector):
-      etype = e.get('type')
+      etype = e.get('type', '').lower()
       raw_obj = e.get('raw_object', {})
       status = raw_obj.get('status', {})
+      phase = status.get('phase', '').lower()
 
-      logger.info('Type: {}'.format(etype))
-      logger.info('Raw: {}'.format(raw_obj))
-      logger.info('Status: {}'.format(status))
+      logger.info('Status: {}\nPhase: {}\n'.format(status, phase))
 
-      if etype == 'ADDED':
+      if etype == 'added':
         logger.info('Job {} started.'.format(self.deploy_name))
 
-      if status.get('failed') is not None:
+      if phase == 'failed':
         logger.error('FAILED JOB, {}, for deployment(sha={}) of repo(slug={}).'.format(
           self.deploy_name, self.commit.sha, self.repo.slug))
 
         logger.error('Build job failed.', stream=self.log_stream_key, stage=self.get_stage(building=True))
         watcher.stop()
 
-      if status.get('succeeded'):
+      if phase == 'completed':
         logger.info('Successfully built image.', stream=self.log_stream_key, stage=self.get_stage(building=True))
         self.on_build_success()
         watcher.stop()
