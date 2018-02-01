@@ -3,6 +3,7 @@ def formatted_graphs(graphs):
 
   for graph in graphs:
     formatted_graph = {
+      'uid': graph.uid,
       'title': graph.title,
       'x_axis': graph.x_axis,
       'y_axis': graph.y_axis,
