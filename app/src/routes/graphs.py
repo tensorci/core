@@ -16,28 +16,27 @@ class RestfulEnvs(Resource):
 
   @namespace.doc('get_graphs_for_deployment')
   def get(self):
-    # provider_user = current_provider_user()
-    #
-    # if not provider_user:
-    #   return UNAUTHORIZED
-    #
-    # args = dict(request.args.items())
-    # deployment_uid = args.get('deployment_uid')
-    #
-    # if not deployment_uid:
-    #   logger.error('No deployment_uid provided when fetching graphs for deployment.')
-    #   return INVALID_INPUT_PAYLOAD
-    #
-    # deployment = db.session.query(Deployment).options(
-    #   joinedload(Deployment.graphs)
-    #   .subqueryload(Graph.graph_data_groups)
-    #   .subqueryload(GraphDataGroup.graph_data_points)).filter(Deployment.uid == deployment_uid).all()
-    #
-    # if not deployment:
-    #   logger.error('No deployment found for uid: {}'.format(deployment_uid))
-    #   return DEPLOYMENT_NOT_FOUND
-    #
-    # graphs = formatted_graphs(deployment.graphs)
-    #
-    # return {'graphs': graphs}
-    return {'graphs': []}
+    provider_user = current_provider_user()
+
+    if not provider_user:
+      return UNAUTHORIZED
+
+    args = dict(request.args.items())
+    deployment_uid = args.get('deployment_uid')
+
+    if not deployment_uid:
+      logger.error('No deployment_uid provided when fetching graphs for deployment.')
+      return INVALID_INPUT_PAYLOAD
+
+    deployment = db.session.query(Deployment).options(
+      joinedload(Deployment.graphs)
+      .subqueryload(Graph.graph_data_groups)
+      .subqueryload(GraphDataGroup.graph_data_points)).filter(Deployment.uid == deployment_uid).all()
+
+    if not deployment:
+      logger.error('No deployment found for uid: {}'.format(deployment_uid))
+      return DEPLOYMENT_NOT_FOUND
+
+    graphs = formatted_graphs(deployment.graphs)
+
+    return {'graphs': graphs}

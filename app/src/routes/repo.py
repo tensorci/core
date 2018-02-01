@@ -626,121 +626,19 @@ class RestfulRepos(Resource):
           .order_by(Deployment.intent_updated_at).all()
 
         if not deployments:
-          # return resp
-          formatted_repo['deployments'] = [{
-            'uid': 'abcdef',
-            'readable_status': 'Predicting',
-            'failed': False,
-            'succeeded': True,
-            'date': utcnow_to_ts(),
-            'commit': {
-              'sha': 'dfhgjjgfydtcghvjbjhgfdchgvb',
-              'branch': 'master',
-              'message': 'This is a commit'
-            }
-          }]
-
-          resp['graphs'] = [
-            {
-              'title': 'Loss vs. Iterations',
-              'x_axis': 'Iterations',
-              'y_axis': 'Loss',
-              'data_groups': [
-                {
-                  'name': 'Training Set',
-                  'color': '#ff7277',
-                  'data': [
-                    {
-                      'x': 10,
-                      'y': 2.401
-                    },
-                    {
-                      'x': 20,
-                      'y': 2.4
-                    },
-                    {
-                      'x': 30,
-                      'y': 2.3
-                    },
-                    {
-                      'x': 40,
-                      'y': 2
-                    },
-                    {
-                      'x': 50,
-                      'y': 1.4
-                    },
-                    {
-                      'x': 60,
-                      'y': 1.3
-                    },
-                    {
-                      'x': 70,
-                      'y': 1
-                    },
-                    {
-                      'x': 80,
-                      'y': 0.9
-                    },
-                    {
-                      'x': 90,
-                      'y': 0.8
-                    },
-                    {
-                      'x': 100,
-                      'y': 0.75
-                    }
-                  ]
-                },
-                {
-                  'name': 'Test Set',
-                  'color': '#35ACC4',
-                  'data': [
-                    {
-                      'x': 10,
-                      'y': 3
-                    },
-                    {
-                      'x': 20,
-                      'y': 2.2
-                    },
-                    {
-                      'x': 30,
-                      'y': 2.1
-                    },
-                    {
-                      'x': 40,
-                      'y': 1.954
-                    },
-                    {
-                      'x': 50,
-                      'y': 1.7
-                    },
-                    {
-                      'x': 60,
-                      'y': 1.6
-                    },
-                    {
-                      'x': 70,
-                      'y': 1.3
-                    },
-                    {
-                      'x': 80,
-                      'y': 1.3
-                    },
-                    {
-                      'x': 90,
-                      'y': 1.1
-                    },
-                    {
-                      'x': 100,
-                      'y': 0.85
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
+          # # return resp
+          # formatted_repo['deployments'] = [{
+          #   'uid': 'abcdef',
+          #   'readable_status': 'Predicting',
+          #   'failed': False,
+          #   'succeeded': True,
+          #   'date': utcnow_to_ts(),
+          #   'commit': {
+          #     'sha': 'dfhgjjgfydtcghvjbjhgfdchgvb',
+          #     'branch': 'master',
+          #     'message': 'This is a commit'
+          #   }
+          # }]
 
           return resp
 
