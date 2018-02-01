@@ -16,6 +16,8 @@ elif [[ $CORE_ROLE == "retrain_watcher" ]]; then
   python retrain_watcher.py
 elif [[ $CORE_ROLE == "deployment_watcher" ]]; then
   python deployment_watcher.py
+elif [[ $CORE_ROLE == "graph_watcher" ]]; then
+  python graph_watcher.py
 else
   /usr/bin/supervisord
 fi

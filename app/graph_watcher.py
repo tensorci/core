@@ -55,7 +55,8 @@ def handle_new_data_point(item):
     return
 
   payload = {'graphs': formatted_graphs(deployment.graphs)}
-  pubsub.publish(channel=deployment_uid, data=payload)
+
+  pubsub.publish(channel='{}:metrics'.format(graph_uid), data=payload)
 
 
 def watch():
