@@ -9,7 +9,7 @@ from src.api_responses.errors import *
 from src.api_responses.success import *
 from src.helpers.provider_user_helper import current_provider_user
 from src.helpers.graph_helper import formatted_graphs
-from src.definitions import train_cluster_header_name
+from src.helpers.definitions import train_cluster_header_name
 
 create_graph_model = api.model('Graph', {
   'deployment_uid': fields.String(required=True),
