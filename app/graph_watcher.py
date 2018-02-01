@@ -49,7 +49,7 @@ def handle_new_data_point(item):
   deployment = db.session.query(Deployment).options(
     joinedload(Deployment.graphs)
       .subqueryload(Graph.graph_data_groups)
-      .subqueryload(GraphDataGroup.graph_data_points)).filter(Deployment.uid == deployment_uid).all()
+      .subqueryload(GraphDataGroup.graph_data_points)).filter(Deployment.uid == deployment_uid).first()
 
   if not deployment:
     return

@@ -667,7 +667,7 @@ class RestfulRepos(Resource):
           joinedload(Deployment.graphs)
             .subqueryload(Graph.graph_data_groups)
             .subqueryload(GraphDataGroup.graph_data_points))\
-          .filter(Deployment.uid == deployment_uid).all()
+          .filter(Deployment.uid == deployment_uid).first()
 
         if not deployment:
           logger.error('No deployment found for uid: {}'.format(deployment_uid))
