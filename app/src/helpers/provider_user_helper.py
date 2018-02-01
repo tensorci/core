@@ -1,8 +1,8 @@
 from flask import request
 from auth_util import unserialize_token
 from src import dbi
-from src.helpers.definitions import auth_header_name, cookie_name
-from src.models import ProviderUser, Session
+from src.helpers.definitions import auth_header_name
+from src.models import Session
 from src.helpers import decode_url_encoded_str
 
 

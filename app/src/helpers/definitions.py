@@ -6,6 +6,7 @@ configs_dir = source_dir + '/configs'
 
 auth_header_name = 'TensorCI-Api-Token'
 core_header_name = 'Core-Api-Token'
+train_cluster_header_name = 'TensorCi-Train-Secret'
 cookie_name = 'tensorci-user'
 tci_keep_alive = '<tci-keep-alive>'
 deploy_update_queue = 'deploy-update-queue'
