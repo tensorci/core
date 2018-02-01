@@ -17,6 +17,9 @@ Tables:
   Dataset
   Commit
   Env
+  Graph
+  GraphDataGroup
+  GraphDataPoint
 
 Relationships:
 
@@ -55,6 +58,12 @@ Relationships:
   Dataset --> belongs_to --> Repo
   Repo --> has_many --> envs
   Env --> belongs_to --> Repo
+  Deployment --> has_many --> graphs
+  Graph --> belongs_to --> Deployment
+  Graph --> has_many --> graph_data_groups
+  GraphDataGroup --> belongs_to --> Graph
+  GraphDataGroup --> has_many --> graph_data_points
+  GraphDataPoint --> belongs_to --> GraphDataGroup
 """
 import datetime
 import importlib
@@ -768,3 +777,77 @@ class Env(db.Model):
   def __repr__(self):
     return '<Env id={}, uid={}, repo_id={}, name={}, value={}, created_at={}>'.format(
       self.id, self.uid, self.repo_id, self.name, self.value, self.created_at)
+
+
+class Graph(db.Model):
+  id = db.Column(db.Integer, primary_key=True)
+  uid = db.Column(db.String, index=True, unique=True, nullable=False)
+  deployment_id = db.Column(db.Integer, db.ForeignKey('deployment.id'), index=True, nullable=False)
+  deployment = db.relationship('Deployment', backref='graphs')
+  title = db.Column(db.String)
+  x_axis = db.Column(db.String, nullable=False)
+  y_axis = db.Column(db.String, nullable=False)
+  created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+  is_destroyed = db.Column(db.Boolean, server_default='f')
+
+  def __init__(self, deployment=None, deployment_id=None, title=None, x_axis=None, y_axis=None):
+    self.uid = uuid4().hex
+
+    if deployment:
+      self.deployment_id = deployment_id
+    else:
+      self.deployment = deployment
+
+    self.title = title
+    self.x_axis = x_axis
+    self.y_axis = y_axis
+
+  def __repr__(self):
+    return '<Graph id={}, uid={}, deployment_id={}, title={}, x_axis={}, y_axis={}, created_at={}, is_destroyed={}>'.format(
+      self.id, self.uid, self.deployment_id, self.title, self.x_axis, self.y_axis, self.created_at, self.is_destroyed)
+
+
+class GraphDataGroup(db.Model):
+  id = db.Column(db.Integer, primary_key=True)
+  uid = db.Column(db.String, index=True, unique=True, nullable=False)
+  graph_id = db.Column(db.Integer, db.ForeignKey('graph.id'), index=True, nullable=False)
+  graph = db.relationship('Graph', backref='graph_data_groups')
+  name = db.Column(db.String)
+  created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+  is_destroyed = db.Column(db.Boolean, server_default='f')
+
+  def __init__(self, graph=None, graph_id=None, name='default'):
+    self.uid = uuid4().hex
+
+    if graph:
+      self.graph_id = graph_id
+    else:
+      self.graph = graph
+
+    self.name = name
+
+  def __repr__(self):
+    return '<GraphDataGroup id={}, uid={}, graph_id={}, name={}, created_at={}, is_destroyed={}>'.format(
+      self.id, self.uid, self.graph_id, self.name, self.created_at, self.is_destroyed)
+
+
+class GraphDataPoint(db.Model):
+  id = db.Column(db.Integer, primary_key=True)
+  graph_data_group_id = db.Column(db.Integer, db.ForeignKey('graph_data_group.id'), index=True, nullable=False)
+  graph_data_group = db.relationship('GraphDataGroup', backref='graph_data_points')
+  data = db.Column(db.JSON)
+  created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+
+  def __init__(self, graph_data_group=None, graph_data_group_id=None, data=None):
+    self.uid = uuid4().hex
+
+    if graph_data_group_id:
+      self.graph_data_group_id = graph_data_group_id
+    else:
+      self.graph_data_group = graph_data_group
+
+    self.data = data or {}
+
+  def __repr__(self):
+    return '<GraphDataPoint id={}, graph_data_group_id={}, data={}, created_at={}>'.format(
+      self.id, self.graph_data_group_id, self.data, self.created_at)
