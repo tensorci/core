@@ -58,7 +58,7 @@ class RestfulEnvs(Resource):
   @namespace.doc('create_graph_for_deployment')
   @namespace.expect(create_graph_model, validate=True)
   def post(self):
-    if request.headers.get(train_cluster_header_name) != os.environ.get('TRAIN_CLUSTER_SECRET'):
+    if request.headers.get(train_cluster_header_name) != os.environ.get('TENSORCI_TRAIN_SECRET'):
       return UNAUTHORIZED
 
     provider_user = current_provider_user()
