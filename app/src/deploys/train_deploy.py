@@ -45,7 +45,8 @@ class TrainDeploy(AbstractDeploy):
       'REPO_UID': self.repo.uid,
       'DEPLOYMENT_UID': self.deployment_uid,
       'REDIS_URL': os.environ.get('REDIS_URL'),
-      'UPDATE_PREDICTION_MODEL': str(self.update_prediction_model).lower()
+      'UPDATE_PREDICTION_MODEL': str(self.update_prediction_model).lower(),
+      'TENSORCI_TRAIN_SECRET': os.environ.get('TENSORCI_TRAIN_SECRET')
     }
 
     # Add user-defined environment variables
