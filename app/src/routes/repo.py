@@ -10,10 +10,11 @@ from src import logger, dbi, db
 from sqlalchemy.orm import joinedload
 from src.helpers import auth_util, utcnow_to_ts
 from slugify import slugify
-from src.models import Team, Repo, RepoProviderUser, Provider, TeamProviderUser, Deployment
+from src.models import Team, Repo, RepoProviderUser, Provider, TeamProviderUser, Deployment, Graph, GraphDataGroup, GraphDataPoint
 from src.helpers.provider_helper import parse_git_url
 from src.services.team_services.create_team import CreateTeam
 from src.utils import dataset_db
+from src.helpers.graph_helper import formatted_graphs
 
 create_repo_model = api.model('Repo', {
   'repo_name': fields.String(required=True),
@@ -550,3 +551,230 @@ class GetRepoCreds(Resource):
 
     return resp
 
+
+@namespace.route('/metrics')
+class RestfulRepos(Resource):
+  """
+  Get initial data for metrics page
+  """
+  @namespace.doc('get_metrics_dash_info')
+  def get(self):
+    provider_user = current_provider_user()
+
+    if not provider_user:
+      return UNAUTHORIZED
+
+    # Parse input info
+    args = dict(request.args.items())
+    team_slug = args.get('team')
+    repo_slug = args.get('repo')
+    deployment_uid = args.get('deployment_uid')
+
+    # Get team
+    if not team_slug:
+      logger.error('No team provided during request for metrics.')
+      return INVALID_INPUT_PAYLOAD
+
+    team_slug = team_slug.lower()
+    team = dbi.find_one(Team, {'slug': team_slug})
+
+    if not team:
+      return TEAM_NOT_FOUND
+
+    # Get all repos for team, ordered by slug
+    repos = [r for r in provider_user.repos() if r.team_id == team.id]
+
+    resp = {
+      'repos': [],
+      'graphs': []
+    }
+
+    if not repos:
+      return resp
+
+    formatted_repos = [{
+      'slug': repo.slug,
+      'name': repo.name,
+      'deployments': []
+    } for repo in repos]
+
+    formatted_repos.sort(key=lambda x: x['slug'])
+
+    # if repo_slug provided to get deployments for, try to find/use this repo.
+    if repo_slug:
+      repo = [r for r in repos if r.slug == repo_slug.lower()]
+
+      # If repo not part of team, just return early
+      if not repo:
+        return resp
+    else:
+      # if no repo_slug provided, just use the first repo ordered by slug
+      repo = [r for r in repos if r.slug == formatted_repos[0]['slug']]
+
+    # Repo we want deployments for
+    repo = repo[0]
+    resp['repo'] = repo.slug
+    resp['repos'] = formatted_repos
+
+    for formatted_repo in resp['repos']:
+      # Find the repo we're interested in
+      if formatted_repo['slug'] == repo.slug:
+        # Get deployments/commit for this repo
+        deployments = db.session.query(Deployment) \
+          .options(joinedload(Deployment.commit)) \
+          .filter_by(repo_id=repo.id) \
+          .order_by(Deployment.intent_updated_at).all()
+
+        if not deployments:
+          # return resp
+          formatted_repo['deployments'] = [{
+            'uid': 'abcdef',
+            'readable_status': 'Predicting',
+            'failed': False,
+            'succeeded': True,
+            'date': utcnow_to_ts(),
+            'commit': {
+              'sha': 'dfhgjjgfydtcghvjbjhgfdchgvb',
+              'branch': 'master',
+              'message': 'This is a commit'
+            }
+          }]
+
+          resp['graphs'] = [
+            {
+              'title': 'Loss vs. Iterations',
+              'x_axis': 'Iterations',
+              'y_axis': 'Loss',
+              'data_groups': [
+                {
+                  'name': 'Training Set',
+                  'color': '#ff7277',
+                  'data': [
+                    {
+                      'x': 10,
+                      'y': 2.401
+                    },
+                    {
+                      'x': 20,
+                      'y': 2.4
+                    },
+                    {
+                      'x': 30,
+                      'y': 2.3
+                    },
+                    {
+                      'x': 40,
+                      'y': 2
+                    },
+                    {
+                      'x': 50,
+                      'y': 1.4
+                    },
+                    {
+                      'x': 60,
+                      'y': 1.3
+                    },
+                    {
+                      'x': 70,
+                      'y': 1
+                    },
+                    {
+                      'x': 80,
+                      'y': 0.9
+                    },
+                    {
+                      'x': 90,
+                      'y': 0.8
+                    },
+                    {
+                      'x': 100,
+                      'y': 0.75
+                    }
+                  ]
+                },
+                {
+                  'name': 'Test Set',
+                  'color': '#35ACC4',
+                  'data': [
+                    {
+                      'x': 10,
+                      'y': 3
+                    },
+                    {
+                      'x': 20,
+                      'y': 2.2
+                    },
+                    {
+                      'x': 30,
+                      'y': 2.1
+                    },
+                    {
+                      'x': 40,
+                      'y': 1.954
+                    },
+                    {
+                      'x': 50,
+                      'y': 1.7
+                    },
+                    {
+                      'x': 60,
+                      'y': 1.6
+                    },
+                    {
+                      'x': 70,
+                      'y': 1.3
+                    },
+                    {
+                      'x': 80,
+                      'y': 1.3
+                    },
+                    {
+                      'x': 90,
+                      'y': 1.1
+                    },
+                    {
+                      'x': 100,
+                      'y': 0.85
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+
+          return resp
+
+        deployments.reverse()
+
+        for d in deployments:
+          commit = d.commit
+
+          formatted_repo['deployments'].append({
+            'uid': d.uid,
+            'readable_status': d.readable_status(),
+            'failed': d.failed,
+            'succeeded': d.succeeded(),
+            'date': utcnow_to_ts(d.intent_updated_at),
+            'commit': {
+              'sha': commit.sha,
+              'branch': commit.branch,
+              'message': commit.message
+            }
+          })
+
+        # Find which deployment to get graphs for
+        deployment_uid = deployment_uid or deployments[0].uid
+
+        deployment = db.session.query(Deployment).options(
+          joinedload(Deployment.graphs)
+            .subqueryload(Graph.graph_data_groups)
+            .subqueryload(GraphDataGroup.graph_data_points))\
+          .filter(Deployment.uid == deployment_uid).all()
+
+        if not deployment:
+          logger.error('No deployment found for uid: {}'.format(deployment_uid))
+          return DEPLOYMENT_NOT_FOUND
+
+        resp['graphs'] = formatted_graphs(deployment.graphs)
+
+    return resp

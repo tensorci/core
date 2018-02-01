@@ -813,10 +813,11 @@ class GraphDataGroup(db.Model):
   graph_id = db.Column(db.Integer, db.ForeignKey('graph.id'), index=True, nullable=False)
   graph = db.relationship('Graph', backref='graph_data_groups')
   name = db.Column(db.String)
+  color = db.Column(db.String)
   created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
   is_destroyed = db.Column(db.Boolean, server_default='f')
 
-  def __init__(self, graph=None, graph_id=None, name='default'):
+  def __init__(self, graph=None, graph_id=None, name='default', color='#333'):
     self.uid = uuid4().hex
 
     if graph:
@@ -825,10 +826,11 @@ class GraphDataGroup(db.Model):
       self.graph = graph
 
     self.name = name
+    self.color = color
 
   def __repr__(self):
-    return '<GraphDataGroup id={}, uid={}, graph_id={}, name={}, created_at={}, is_destroyed={}>'.format(
-      self.id, self.uid, self.graph_id, self.name, self.created_at, self.is_destroyed)
+    return '<GraphDataGroup id={}, uid={}, graph_id={}, name={}, color={}, created_at={}, is_destroyed={}>'.format(
+      self.id, self.uid, self.graph_id, self.name, self.color, self.created_at, self.is_destroyed)
 
 
 class GraphDataPoint(db.Model):
