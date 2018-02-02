@@ -785,8 +785,8 @@ class Graph(db.Model):
   deployment_id = db.Column(db.Integer, db.ForeignKey('deployment.id'), index=True, nullable=False)
   deployment = db.relationship('Deployment', backref='graphs')
   title = db.Column(db.String)
-  x_axis = db.Column(db.String, nullable=False)
-  y_axis = db.Column(db.String, nullable=False)
+  x_axis = db.Column(db.String)
+  y_axis = db.Column(db.String)
   created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
   is_destroyed = db.Column(db.Boolean, server_default='f')
 
