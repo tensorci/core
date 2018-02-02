@@ -44,12 +44,12 @@ def handle_new_data_point(item):
     }
   })
 
-  deployment_uid = graph.deployment_uid
+  deployment_id = graph.deployment_id
 
   deployment = db.session.query(Deployment).options(
     joinedload(Deployment.graphs)
       .subqueryload(Graph.graph_data_groups)
-      .subqueryload(GraphDataGroup.graph_data_points)).filter(Deployment.uid == deployment_uid).first()
+      .subqueryload(GraphDataGroup.graph_data_points)).filter(Deployment.id == deployment_id).first()
 
   if not deployment:
     return
