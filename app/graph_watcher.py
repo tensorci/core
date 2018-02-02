@@ -28,7 +28,7 @@ def handle_new_data_point(item):
   if not graph:
     return
 
-  group = dbi.upsert(GraphDataGroup, {
+  group, is_new = dbi.upsert(GraphDataGroup, {
     'graph': graph,
     'name': series,
   })

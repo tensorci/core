@@ -76,7 +76,7 @@ class RestfulEnvs(Resource):
       logger.error('No deployment found for uid: {}'.format(deployment_uid))
       return DEPLOYMENT_NOT_FOUND
 
-    graph = dbi.upsert(Graph, {
+    graph, is_new = dbi.upsert(Graph, {
       'deployment': deployment,
       'title': title
     })
