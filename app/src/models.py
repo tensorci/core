@@ -793,7 +793,7 @@ class Graph(db.Model):
   def __init__(self, deployment=None, deployment_id=None, title=None, x_axis=None, y_axis=None):
     self.uid = uuid4().hex
 
-    if deployment:
+    if deployment_id:
       self.deployment_id = deployment_id
     else:
       self.deployment = deployment
@@ -820,7 +820,7 @@ class GraphDataGroup(db.Model):
   def __init__(self, graph=None, graph_id=None, name='default', color='#333'):
     self.uid = uuid4().hex
 
-    if graph:
+    if graph_id:
       self.graph_id = graph_id
     else:
       self.graph = graph
