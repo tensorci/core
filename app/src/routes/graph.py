@@ -9,7 +9,7 @@ from src.api_responses.errors import *
 from src.api_responses.success import *
 from src.helpers.provider_user_helper import current_provider_user
 from src.helpers.graph_helper import formatted_graphs
-from src.helpers.definitions import train_cluster_header_name
+from src.helpers.definitions import train_cluster_header_name, core_header_name
 
 create_graph_model = api.model('Graph', {
   'deployment_uid': fields.String(required=True),
@@ -58,12 +58,10 @@ class RestfulEnvs(Resource):
   @namespace.doc('create_graph_for_deployment')
   @namespace.expect(create_graph_model, validate=True)
   def post(self):
-    if request.headers.get(train_cluster_header_name) != os.environ.get('TENSORCI_TRAIN_SECRET'):
+    if request.headers.get(core_header_name) != os.environ.get('CORE_API_TOKEN'):
       return UNAUTHORIZED
 
-    provider_user = current_provider_user()
-
-    if not provider_user:
+    if request.headers.get(train_cluster_header_name) != os.environ.get('TENSORCI_TRAIN_SECRET'):
       return UNAUTHORIZED
 
     payload = api.payload or {}
