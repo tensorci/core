@@ -1,7 +1,10 @@
+from operator import attrgetter
+
+
 def formatted_graphs(graphs):
   resp = []
 
-  for graph in graphs:
+  for graph in sorted(graphs, key=attrgetter('created_at'), reverse=True):
     formatted_graph = {
       'uid': graph.uid,
       'title': graph.title,
@@ -10,11 +13,14 @@ def formatted_graphs(graphs):
       'data_groups': []
     }
 
-    for group in graph.graph_data_groups:
+    for group in sorted(graph.graph_data_groups, key=attrgetter('created_at'), reverse=True):
+      data = [data_point.data for data_point in group.graph_data_points]
+      data.sort(key=lambda d: d['x'])
+
       formatted_group = {
         'name': group.name,
         'color': group.color,
-        'data': [data_point.data for data_point in group.graph_data_points]
+        'data': data
       }
 
       formatted_graph['data_groups'].append(formatted_group)
