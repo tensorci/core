@@ -673,6 +673,7 @@ class RestfulRepos(Resource):
           logger.error('No deployment found for uid: {}'.format(deployment_uid))
           return DEPLOYMENT_NOT_FOUND
 
+        resp['uid'] = deployment_uid
         resp['graphs'] = formatted_graphs(deployment.graphs)
 
     return resp
