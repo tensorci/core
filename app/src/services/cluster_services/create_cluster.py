@@ -105,5 +105,6 @@ class CreateCluster(object):
     self.team = dbi.find_one(Team, {'uid': self.team_uid})
     self.cluster = self.team.cluster
     self.bucket = self.cluster.bucket
+    self.deployment = dbi.find_one(Deployment, {'uid': self.deployment_uid})
     self.log_stream_key = self.deployment.api_deploy_log()
     self.stage = self.deployment.statuses.PREDICTING_SCHEDULED
