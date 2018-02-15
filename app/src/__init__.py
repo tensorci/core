@@ -3,6 +3,7 @@ import sys
 import os
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
+from flask_socketio import SocketIO
 from config import config
 from utils.logger import Logger
 
@@ -21,6 +22,13 @@ db = SQLAlchemy(app)
 # Set up API routes
 from routes import api
 api.init_app(app)
+
+# Set up websocket connection
+socket = SocketIO(app)
+
+@socket.on('connect', namespace='/tensorci')
+def connect():
+  logger.info('CONNECTED')
 
 # Execute any startup scripts here
 if os.environ.get('AUTO_EXPORT_CLUSTERS') == 'true':
