@@ -3,8 +3,8 @@ from src.utils.pyredis import redis
 from src import dbi
 from src.models import Deployment
 from src.helpers.deployment_helper import current_stage, format_stages
-from src.utils import pubsub
-from src.helpers.definitions import deploy_update_queue
+from src.utils import core_socket
+from src.helpers.definitions import deploy_update_queue, sse_broadcast_queue
 
 
 def handle_update(item):
@@ -34,7 +34,12 @@ def handle_update(item):
     'stages': format_stages(deployment)
   }
 
-  pubsub.publish(channel=deployment_uid, data=payload)
+  data = {
+    'payload': payload,
+    'namespace': '/' + deployment_uid
+  }
+
+  redis.rpush(sse_broadcast_queue, json.dumps(data))
 
 
 def watch():

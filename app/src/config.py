@@ -16,6 +16,7 @@ class ProdConfig(Config):
   def __init__(self):
     self.SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
     self.CORE_URL = os.environ.get('CORE_URL') or 'https://api.{}/api'.format(self.DOMAIN)
+    self.SOCKET_URL = os.environ.get('SOCKET_URL') or 'https://api.{}'.format(self.DOMAIN)
     self.DASH_URL = os.environ.get('DASH_URL') or 'https://app.{}'.format(self.DOMAIN)
     self.MARKETING_URL = os.environ.get('MARKETING_URL') or 'https://www.{}'.format(self.DOMAIN)
 
@@ -28,6 +29,7 @@ class StagingConfig(Config):
   def __init__(self):
     self.SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
     self.CORE_URL = os.environ.get('CORE_URL') or 'https://api.{}/api'.format(self.DOMAIN)
+    self.SOCKET_URL = os.environ.get('SOCKET_URL') or 'https://api.{}'.format(self.DOMAIN)
     self.DASH_URL = os.environ.get('DASH_URL') or 'https://app.{}'.format(self.DOMAIN)
     self.MARKETING_URL = os.environ.get('MARKETING_URL') or 'https://www.{}'.format(self.DOMAIN)
 
@@ -39,6 +41,7 @@ class DevConfig(Config):
   def __init__(self):
     self.SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
     self.CORE_URL = os.environ.get('CORE_URL') or 'https://api.{}/api'.format(self.DOMAIN)
+    self.SOCKET_URL = os.environ.get('SOCKET_URL') or 'https://api.{}'.format(self.DOMAIN)
     self.DASH_URL = os.environ.get('DASH_URL') or 'https://app.{}'.format(self.DOMAIN)
     self.MARKETING_URL = os.environ.get('MARKETING_URL') or 'https://www.{}'.format(self.DOMAIN)
 
@@ -51,6 +54,7 @@ class TestConfig(Config):
     self.SQLALCHEMY_DATABASE_URI = os.environ.get('TEST_DB_URL')
     self.DASH_URL = os.environ.get('DASH_URL') or 'http://localhost'
     self.CORE_URL = os.environ.get('CORE_URL') or 'http://localhost/api'
+    self.SOCKET_URL = os.environ.get('SOCKET_URL') or 'http://localhost'
 
 
 def get_config():

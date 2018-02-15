@@ -2,8 +2,8 @@ import json
 from src.utils.pyredis import redis
 from src import dbi, db
 from src.models import Graph, GraphDataGroup, GraphDataPoint, Deployment
-from src.utils import pubsub
-from src.helpers.definitions import graph_update_queue
+from src.utils import core_socket
+from src.helpers.definitions import graph_update_queue, sse_broadcast_queue
 from src.helpers.graph_helper import formatted_graphs
 from sqlalchemy.orm import joinedload
 
@@ -56,7 +56,12 @@ def handle_new_data_point(item):
 
   payload = {'graphs': formatted_graphs(deployment.graphs)}
 
-  pubsub.publish(channel=graph_uid, data=payload)
+  data = {
+    'payload': payload,
+    'namespace': '/' + graph_uid
+  }
+
+  redis.rpush(sse_broadcast_queue, json.dumps(data))
 
 
 def watch():
