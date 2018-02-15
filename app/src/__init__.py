@@ -26,10 +26,6 @@ api.init_app(app)
 # Set up websocket connection
 socket = SocketIO(app)
 
-@socket.on('connect', namespace='/tensorci')
-def connect():
-  logger.info('CONNECTED')
-
 # Execute any startup scripts here
 if os.environ.get('AUTO_EXPORT_CLUSTERS') == 'true':
   from initializers import export_clusters

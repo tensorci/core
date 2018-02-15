@@ -15,6 +15,5 @@ git+https://github.com/nicois/redis-py.git@master
 uwsgi==2.0.15
 rq==0.9.2
 ansicolors==1.1.8
-pubnub==4.0.13
 flask-socketio
 gevent
