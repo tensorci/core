@@ -3,7 +3,7 @@ import sys
 import os
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from flask_socketio import SocketIO, emit
+from flask_socketio import SocketIO
 from config import config
 from utils.logger import Logger
 from utils.sse_broadcaster import SSEBroadcaster
@@ -25,7 +25,7 @@ from routes import api
 api.init_app(app)
 
 # Set up websocket connection and SSE broadcaster
-socket = SocketIO(app, binary=True)
+socket = SocketIO(app)
 SSEBroadcaster(socket)
 
 # Execute any startup scripts here
