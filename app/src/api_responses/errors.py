@@ -25,6 +25,8 @@ AUTHENTICATION_FAILED = {'ok': False, 'code': 1300, 'error': 'authentication_fai
 
 # Deployment Errors
 NO_DEPLOYMENT_TO_SERVE = {'ok': False, 'code': 1400, 'error': 'no_deployment_to_serve'}, 404
+DEPLOYMENT_UP_TO_DATE = {'ok': False, 'code': 1401, 'error': 'up_to_date', 'log': 'Everything up-to-date.'}, 500
+NO_LOGS_TO_SHOW = {'ok': False, 'code': 1402, 'error': 'no_logs', 'log': 'No logs to show.'}, 500
 
 # Dataset Errors
 DATASET_NAME_TAKEN = {'ok': False, 'code': 1500, 'error': 'dataset_name_taken'}, 500
