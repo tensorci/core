@@ -22,6 +22,7 @@ class BuildServerDeploy(AbstractDeploy):
   def deploy(self):
     self.set_db_reliant_attrs()
     self.log_stream_key = self.get_log_stream_key()
+    self.repo_access_token = self.get_repo_access_token()
     
     self.container_name = '{}-{}-{}'.format(self.build_for, clusters.BUILD_SERVER, self.repo.uid)
     self.image = '{}/{}'.format(config.IMAGE_REPO_OWNER, image_names.BUILD_SERVER)
@@ -45,9 +46,11 @@ class BuildServerDeploy(AbstractDeploy):
     self.envs = {
       'DOCKER_USERNAME': os.environ.get('DOCKER_USERNAME'),
       'DOCKER_PASSWORD': os.environ.get('DOCKER_PASSWORD'),
-      'REPO_SLUG': self.repo.slug,
       'REPO_UID': self.repo.uid,
-      'GIT_REPO': self.repo.url(),
+      'REPO_SLUG': self.repo.slug,
+      'TEAM_SLUG': self.team.slug,
+      'PROVIDER_DOMAIN': self.provider.domain,
+      'REPO_ACCESS_TOKEN': self.repo_access_token,
       'IMAGE_OWNER': self.repo.image_repo_owner,
       'FOR_CLUSTER': self.build_for,
       'SHA': self.commit.sha,
@@ -67,6 +70,36 @@ class BuildServerDeploy(AbstractDeploy):
       clusters.TRAIN: self.deployment.train_deploy_log(),
       clusters.API: self.deployment.api_deploy_log()
     }.get(self.build_for)
+
+  def get_repo_access_token(self):
+    """
+    TODO: Make this more secure by getting the access_token from the provider_user actually
+    triggering the build rather than just getting any random provider_user with write access
+    to the repo and using his access token.
+    """
+    # Get all repo_provider_users for this repo, regardless of their permissions.
+    repo_provider_users = self.repo.repo_provider_users or []
+
+    # If no repo_provider_users exist, something's wrong
+    if not repo_provider_users:
+      logger.error('No repo_provider_users found for Repo(id={})...'.format(self.repo.id))
+      return ''
+
+    # Find the first repo_provider_user with write access
+    rpu_with_write_access = None
+    for rpu in repo_provider_users:
+      if rpu.has_write_access():
+        rpu_with_write_access = rpu
+        break
+
+    # If no one has write access just use the first repo_provide_user
+    if rpu_with_write_access:
+      provider_user = rpu_with_write_access.provider_user
+    else:
+      provider_user = repo_provider_users[0].provider_user
+
+    # Return an access token with write permissions to this repo.
+    return provider_user.access_token
 
   def get_stage(self, building=False):
     statuses = self.deployment.statuses
