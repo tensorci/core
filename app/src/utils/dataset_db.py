@@ -1,6 +1,8 @@
 import os
 import json
+import psycopg2
 from sqlalchemy import create_engine
+from StringIO import StringIO
 
 dataset_db_url = os.environ.get('DATASET_DB_URL')
 
@@ -18,9 +20,26 @@ def drop_table(name):
   engine.execute('DROP TABLE {};'.format(name))
 
 
-def populate_records(records, table=None):
+def populate_records(records, table=None, sep='|'):
+  # Ensure table is empty
+  engine.execute('DELETE FROM {};'.format(table))
+
+  # Create a string buffer from all of our records
+  i = 0
+  data = []
   for r in records:
-    engine.execute('INSERT INTO {} (data) VALUES (\'{}\');'.format(table, json.dumps(r)))
+    i += 1
+    data.append('{}{}{}'.format(i, sep, json.dumps(r).replace('\\', '\\\\')))
+
+  buffer = StringIO('\n'.join(data))
+
+  # Get psycopg2 connection and cursor
+  conn = psycopg2.connect(os.environ.get('DATASET_DB_URL'))
+  cursor = conn.cursor()
+
+  # Bulk insert the records
+  cursor.copy_from(buffer, table, sep=sep)
+  cursor.commit()
 
 
 def record_count(table=None):
