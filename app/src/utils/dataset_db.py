@@ -39,7 +39,7 @@ def populate_records(records, table=None, sep='|'):
 
   # Bulk insert the records
   cursor.copy_from(buffer, table, sep=sep)
-  cursor.commit()
+  conn.commit()
 
 
 def record_count(table=None):
