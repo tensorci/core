@@ -1,7 +1,7 @@
 from src import dbi
 from src.models import Team, TeamProviderUser
+from src.utils.slug import to_slug
 from create_team import CreateTeam
-from slugify import slugify
 
 
 class UpsertTeamsFromOrgs(object):
@@ -17,7 +17,7 @@ class UpsertTeamsFromOrgs(object):
     for r in available_repos:
       owner = r.owner
       team_name = owner.login
-      team_slug = slugify(team_name, separator='-', to_lower=True)
+      team_slug = to_slug(team_name)
 
       if team_slug not in available_teams_map:
         available_teams_map[team_slug] = {

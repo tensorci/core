@@ -1,5 +1,4 @@
 import os
-from slugify import slugify
 from flask_restplus import Resource, fields
 from flask import request, Response, stream_with_context
 from src.helpers import utcnow_to_ts
@@ -16,6 +15,7 @@ from src.utils.job_queue import job_queue
 from src.utils.pyredis import redis
 from src.utils.pred_messenger import PredMessenger
 from src.utils.log_formatter import training_log
+from src.utils.slug import to_slug
 from src.helpers.provider_helper import parse_git_url
 from src.helpers.deployment_helper import current_stage, format_stages
 from sqlalchemy.orm import joinedload
@@ -168,11 +168,11 @@ class ApiDeployment(Resource):
       return PROVIDER_MISMATCH
 
     # Find repo for this team through provider
-    team_slug = slugify(team_name, separator='-', to_lower=True)
+    team_slug = to_slug(team_name)
     team = dbi.find_one(Team, {'slug': team_slug, 'provider': provider})
 
     if team:
-      repo_slug = slugify(repo_name, separator='-', to_lower=True)
+      repo_slug = to_slug(repo_name)
       repo = dbi.find_one(Repo, {'team': team, 'slug': repo_slug})
     else:
       repo = None
@@ -274,11 +274,11 @@ class TrainDeployment(Resource):
       return PROVIDER_MISMATCH
 
     # Find repo for this team through provider
-    team_slug = slugify(team_name, separator='-', to_lower=True)
+    team_slug = to_slug(team_name)
     team = dbi.find_one(Team, {'slug': team_slug, 'provider': provider})
 
     if team:
-      repo_slug = slugify(repo_name, separator='-', to_lower=True)
+      repo_slug = to_slug(repo_name)
       repo = dbi.find_one(Repo, {'team': team, 'slug': repo_slug})
     else:
       repo = None
@@ -473,11 +473,11 @@ def perform_train_deploy(intent=None):
     return PROVIDER_MISMATCH
 
   # Find repo for this team through provider
-  team_slug = slugify(team_name, separator='-', to_lower=True)
+  team_slug = to_slug(team_name)
   team = dbi.find_one(Team, {'slug': team_slug, 'provider': provider})
 
   if team:
-    repo_slug = slugify(repo_name, separator='-', to_lower=True)
+    repo_slug = to_slug(repo_name)
     repo = dbi.find_one(Repo, {'team': team, 'slug': repo_slug})
   else:
     repo = None

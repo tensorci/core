@@ -9,11 +9,11 @@ from src.helpers.provider_user_helper import current_provider_user
 from src import logger, dbi, db
 from sqlalchemy.orm import joinedload
 from src.helpers import auth_util, utcnow_to_ts
-from slugify import slugify
 from src.models import Team, Repo, RepoProviderUser, Provider, TeamProviderUser, Deployment, Graph, GraphDataGroup, GraphDataPoint
 from src.helpers.provider_helper import parse_git_url
 from src.services.team_services.create_team import CreateTeam
 from src.utils import dataset_db
+from src.utils.slug import to_slug
 from src.helpers.graph_helper import formatted_graphs
 
 create_repo_model = api.model('Repo', {
@@ -186,7 +186,7 @@ class RestfulRepos(Resource):
 
     # Upsert each team and each repo for that team
     for team_name, repos in teams_map.items():
-      team_slug = slugify(team_name, separator='-', to_lower=True)
+      team_slug = to_slug(team_name)
 
       # Upsert team
       team = dbi.find_one(Team, {'slug': team_slug, 'provider': provider})
@@ -201,7 +201,7 @@ class RestfulRepos(Resource):
 
       for repo_info in repos:
         repo_name = repo_info.get('repo_name')
-        repo_slug = slugify(repo_name, separator='-', to_lower=True)
+        repo_slug = to_slug(repo_name)
 
         # Create new repo if team is new OR if repo doesn't exist yet
         if team_is_new or not dbi.find_one(Repo, {'team': team, 'slug': repo_slug}):
@@ -258,7 +258,7 @@ class RegisterRepo(Resource):
 
     # Check if team/repo/repo_provider_user already exists -- need to get
     # permissions for the repo_provider_user.
-    team_slug = slugify(team_name, separator='-', to_lower=True)
+    team_slug = to_slug(team_name)
     team = dbi.find_one(Team, {'slug': team_slug, 'provider': provider})
     repo = None
     repo_provider_user = None
@@ -266,7 +266,7 @@ class RegisterRepo(Resource):
 
     # If the team already exists, check to see if the repo exists, too.
     if team:
-      repo_slug = slugify(repo_name, separator='-', to_lower=True)
+      repo_slug = to_slug(repo_name)
       repo = dbi.find_one(Repo, {'team': team, 'slug': repo_slug})
 
     # If the repo already exists, check to see if the repo_provider_user exists, too.
@@ -423,11 +423,11 @@ class FetchModel(Resource):
       return PROVIDER_MISMATCH
 
     # Find team and repo
-    team_slug = slugify(team_name, separator='-', to_lower=True)
+    team_slug = to_slug(team_name)
     team = dbi.find_one(Team, {'slug': team_slug, 'provider': provider})
 
     if team:
-      repo_slug = slugify(repo_name, separator='-', to_lower=True)
+      repo_slug = to_slug(repo_name)
       repo = dbi.find_one(Repo, {'team': team, 'slug': repo_slug})
     else:
       repo = None

@@ -142,6 +142,8 @@ class BuildServerDeploy(AbstractDeploy):
         logger.info('Job {} started.'.format(self.deploy_name))
 
       if phase == 'failed':
+        self.deployment.fail()
+
         logger.error('FAILED JOB, {}, for deployment(sha={}) of repo(slug={}).'.format(
           self.deploy_name, self.commit.sha, self.repo.slug))
 

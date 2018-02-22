@@ -67,7 +67,6 @@ Relationships:
 """
 import datetime
 import importlib
-from slugify import slugify
 from sqlalchemy.dialects.postgresql import JSON
 from sqlalchemy.types import Text
 from src import db, dbi, logger
@@ -79,6 +78,7 @@ from operator import attrgetter
 from config import config
 from github import Github
 from src.utils import clusters
+from src.utils.slug import to_slug
 
 
 class Provider(db.Model):
@@ -95,7 +95,7 @@ class Provider(db.Model):
   def __init__(self, name=None, domain=None):
     self.uid = uuid4().hex
     self.name = name
-    self.slug = slugify(name, separator='-', to_lower=True)
+    self.slug = to_slug(name)
     self.domain = domain
 
   def __repr__(self):
@@ -144,7 +144,7 @@ class Team(db.Model):
   def __init__(self, name=None, slug=None, provider=None, provider_id=None, icon=None):
     self.uid = uuid4().hex
     self.name = name
-    self.slug = slug or slugify(name, separator='-', to_lower=True)
+    self.slug = slug or to_slug(name)
 
     if provider_id:
       self.provider_id = provider_id
@@ -282,7 +282,7 @@ class Repo(db.Model):
       self.team = team
 
     self.name = name
-    self.slug = slug or slugify(self.name, separator='-', to_lower=True)
+    self.slug = slug or to_slug(self.name)
     self.elb = elb
 
     if not domain:
@@ -718,7 +718,7 @@ class Dataset(db.Model):
       self.repo = repo
 
     self.name = name
-    self.slug = slugify(name, separator='-', to_lower=True)
+    self.slug = to_slug(name)
     self.retrain_step_size = retrain_step_size
     self.last_train_record_count = last_train_record_count
 

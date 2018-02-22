@@ -8,10 +8,10 @@ from src.api_responses.errors import *
 from src.api_responses.success import *
 from src.services.dataset_services.create_dataset import CreateDataset
 from src.helpers.provider_helper import parse_git_url
-from slugify import slugify
 from src.utils import dataset_db
 from src.helpers import utcnow_to_ts
 from src.utils.job_queue import job_queue
+from src.utils.slug import to_slug
 from src.services.env_services.update_deploy_env import UpdateDeployEnv
 
 update_dataset_model = api.model('Dataset', {
@@ -55,11 +55,11 @@ class RestfulDataset(Resource):
       return NO_FILE_PROVIDED
 
     # Find repo for this team through provider
-    team_slug = slugify(team_name, separator='-', to_lower=True)
+    team_slug = to_slug(team_name)
     team = dbi.find_one(Team, {'slug': team_slug, 'provider': provider})
 
     if team:
-      repo_slug = slugify(repo_name, separator='-', to_lower=True)
+      repo_slug = to_slug(repo_name)
       repo = dbi.find_one(Repo, {'team': team, 'slug': repo_slug})
     else:
       repo_slug = None
