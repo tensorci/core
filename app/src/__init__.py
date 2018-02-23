@@ -6,7 +6,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_socketio import SocketIO
 from config import config
 from utils.logger import Logger
-from utils.sse_broadcaster import SSEBroadcaster
+from utils.pyredis import redis_url
 
 # Create and configure the Flask app
 app = Flask(__name__)
@@ -24,9 +24,8 @@ db = SQLAlchemy(app)
 from routes import api
 api.init_app(app)
 
-# Set up websocket connection and SSE broadcaster
-socket = SocketIO(app)
-SSEBroadcaster(socket)
+# Set up websocket connection with Flask-SocketIO server
+socket = SocketIO(app, message_queue=redis_url)
 
 # Execute any startup scripts here
 if os.environ.get('AUTO_EXPORT_CLUSTERS') == 'true':
