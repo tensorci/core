@@ -1,12 +1,10 @@
 import json
-from flask_socketio import SocketIO
-from src.utils.pyredis import redis, redis_url
+from src.utils.pyredis import redis
 from src import dbi
 from src.models import Deployment
 from src.helpers.deployment_helper import current_stage, format_stages
 from src.helpers.definitions import deploy_update_queue
-
-socket_io = SocketIO(message_queue=redis_url)
+from src.utils.pubsub import publish
 
 
 def handle_update(item):
@@ -36,7 +34,7 @@ def handle_update(item):
     'stages': format_stages(deployment)
   }
 
-  socket_io.emit('message', payload, namespace='/{}'.format(deployment_uid))
+  publish(deployment_uid, payload)
 
 
 def watch():

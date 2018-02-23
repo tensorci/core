@@ -28,10 +28,5 @@ RUN ssh-keygen -f /root/.ssh/id_rsa -t rsa -N ''
 # Make our startup script executable.
 RUN chmod +x /app/startup
 
-# Copy and set entrypoint
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
-
 # Start the app
 CMD ["/app/startup"]

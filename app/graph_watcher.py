@@ -1,13 +1,11 @@
 import json
-from flask_socketio import SocketIO
-from src.utils.pyredis import redis, redis_url
+from sqlalchemy.orm import joinedload
 from src import dbi, db
 from src.models import Graph, GraphDataGroup, GraphDataPoint, Deployment
 from src.helpers.definitions import graph_update_queue
 from src.helpers.graph_helper import formatted_graphs
-from sqlalchemy.orm import joinedload
-
-socket_io = SocketIO(message_queue=redis_url)
+from src.utils.pubsub import publish
+from src.utils.pyredis import redis
 
 
 def handle_new_data_point(item):
@@ -58,7 +56,7 @@ def handle_new_data_point(item):
 
   payload = {'graphs': formatted_graphs(deployment.graphs)}
 
-  socket_io.emit('message', payload, namespace='/{}'.format(graph_uid))
+  publish(graph_uid, payload)
 
 
 def watch():
