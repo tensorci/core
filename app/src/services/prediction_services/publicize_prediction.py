@@ -1,32 +1,42 @@
 import os
-from src import dbi, logger
-from src.models import Deployment
-from src.utils.aws import add_dns_records
-from src.services.cluster_services.export_cluster import ExportCluster
-from time import sleep
 import requests
 from kubernetes import client, config
+from src import dbi, logger
+from src.deploys.api_worker_deploy import ApiWorkerDeploy
+from src.models import Deployment
+from src.services.cluster_services.export_cluster import ExportCluster
 from src.utils import kubectl
+from src.utils.aws import add_dns_records
+from src.utils.job_queue import job_queue
+from time import sleep
 
 
 class PublicizePrediction(object):
 
-  def __init__(self, deployment_uid=None, port=80, target_port=80):
+  def __init__(self, deployment_uid=None, port=80, target_port=80,
+               deploy_name=None, service_name=None, with_deploy=True):
+
     self.deployment_uid = deployment_uid
     self.port = port
     self.target_port = target_port
+    self.deploy_name = deploy_name
+    self.service_name = service_name
+    self.with_deploy = with_deploy
+
     self.deployment = None
     self.repo = None
     self.team = None
     self.cluster = None
+
     self.cluster_name = None
-    self.deploy_name = None
-    self.service_name = None
     self.log_stream_key = None
     self.stage = None
 
   def perform(self):
     self.set_db_reliant_attrs()
+
+    self.log_stream_key = self.deployment.api_deploy_log()
+    self.stage = self.deployment.statuses.PREDICTING_SCHEDULED
 
     logger.info('Publicizing prediction (this only has to happen once)...',
                 stream=self.log_stream_key,
@@ -99,13 +109,11 @@ class PublicizePrediction(object):
 
     logger.info('Publication successful.', stream=self.log_stream_key, stage=self.stage)
 
-    logger.info('Prediction live at https://{}/api/predict'.format(self.repo.domain),
-                stream=self.log_stream_key,
-                stage=self.stage,
-                last_entry=True)
+    if self.with_deploy:
+      logger.info('Spinning up workers...', stream=self.log_stream_key, stage=self.stage)
 
-    # Update the deployment to its final status: PREDICTING
-    dbi.update(self.deployment, {'status': self.deployment.statuses.PREDICTING})
+      api_worker_deployer = ApiWorkerDeploy(deployment_uid=self.deployment_uid)
+      job_queue.add(api_worker_deployer.deploy, meta={'deployment': self.deployment_uid})
 
   def wait_for_elb(self):
     elb = self.get_elb()
@@ -174,7 +182,3 @@ class PublicizePrediction(object):
     self.team = self.repo.team
     self.cluster = self.team.cluster
     self.cluster_name = self.cluster.name
-    self.deploy_name = self.repo.deploy_name
-    self.service_name = self.deploy_name
-    self.log_stream_key = self.deployment.api_deploy_log()
-    self.stage = self.deployment.statuses.PREDICTING_SCHEDULED

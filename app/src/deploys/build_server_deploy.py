@@ -2,6 +2,7 @@ import os
 from abstract_deploy import AbstractDeploy
 from train_deploy import TrainDeploy
 from api_deploy import ApiDeploy
+from api_update import ApiUpdate
 from src.utils import image_names, clusters
 from src.config import config
 from src.helpers import ms_since_epoch
@@ -204,7 +205,13 @@ class BuildServerDeploy(AbstractDeploy):
   def create_api_deploy(self):
     logger.info('Scheduling deploy to API cluster...', stream=self.log_stream_key, section=True, stage=self.get_stage())
 
-    api_deployer = ApiDeploy(deployment_uid=self.deployment_uid)
+    # Get the correct deployer class based on if API deploy already exists.
+    if self.repo.deploy_name:
+      deployer = ApiUpdate
+    else:
+      deployer = ApiDeploy
+
+    api_deployer = deployer(deployment_uid=self.deployment_uid)
     job_queue.add(api_deployer.deploy, meta={'deployment': self.deployment_uid})
 
     self.update_deployment_status(self.deployment.statuses.PREDICTING_SCHEDULED)
