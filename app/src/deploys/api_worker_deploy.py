@@ -44,12 +44,6 @@ class ApiWorkerDeploy(AbstractDeploy):
 
   def on_deploy_success(self):
     self.repo = dbi.update(self.repo, {'deploy_name': self.deploy_name})
-
     self.update_deployment_status(self.deployment.statuses.PREDICTING)
-
     logger.info('Successfully deployed to API.', stream=self.log_stream_key, stage=self.stage)
-
-    logger.info('Prediction live at https://{}/api/predict'.format(self.repo.domain),
-                stream=self.log_stream_key,
-                stage=self.stage,
-                last_entry=True)
+    logger.info('Prediction live', stream=self.log_stream_key, stage=self.stage, last_entry=True)

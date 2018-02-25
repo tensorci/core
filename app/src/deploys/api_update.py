@@ -71,11 +71,7 @@ class ApiUpdate(object):
     self.deployment = dbi.update(self.deployment, {'status': new_status})
 
     logger.info('Successfully deployed to API.', stream=self.log_stream_key, stage=self.stage)
-
-    logger.info('Prediction live at https://{}/api/predict'.format(self.repo.domain),
-                stream=self.log_stream_key,
-                stage=self.stage,
-                last_entry=True)
+    logger.info('Prediction live.', stream=self.log_stream_key, stage=self.stage, last_entry=True)
 
   def set_db_reliant_attrs(self):
     self.deployment = dbi.find_one(Deployment, {'uid': self.deployment_uid})
