@@ -102,10 +102,10 @@ class PublicizePrediction(object):
       logger.error('Failure upserting CNAME record for deployment.', stream=self.log_stream_key, stage=self.stage)
       return
 
-    sleep(60)
+    sleep(180)
 
     # Ping the url until the hostname is resolved
-    self.poll_url()
+    # self.poll_url()
 
     logger.info('Publication successful.', stream=self.log_stream_key, stage=self.stage)
 
