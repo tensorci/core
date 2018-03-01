@@ -135,8 +135,10 @@ class DeploymentTrained(Resource):
 
     # If the API cluster just needs to pull the latest trained model, tell it to do so.
     elif update_prediction_model:
-      pred_messenger = PredMessenger(repo_uid=deployment.repo.uid)
-      job_queue.add(pred_messenger.update_model)
+      pass
+      # TODO: Should we even do this automatically every time? And if so, it's not an API anymore...it's a websocket
+      # pred_messenger = PredMessenger(repo_uid=deployment.repo.uid)
+      # job_queue.add(pred_messenger.update_model)
 
     return '', 200
 
