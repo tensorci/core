@@ -225,7 +225,6 @@ def api_deploy_envs(repo, cluster=None, dataset=None):
     'DATASET_TABLE_NAME': dataset_table,
     'REPO_SLUG': repo.slug,
     'REPO_UID': repo.uid,
-    'DOMAIN': repo.domain,
     'CLIENT_ID': repo.client_id,
     'CLIENT_SECRET': repo.client_secret,
     'INTERNAL_MSG_TOKEN': repo.internal_msg_token
