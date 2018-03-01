@@ -26,7 +26,7 @@ class ApiDeploy(AbstractDeploy):
     self.image = '{}/{}:{}'.format(self.repo.image_repo_owner, self.container_name, self.commit.sha)
     self.deploy_name = '{}-{}-{}'.format(clusters.API, self.repo.uid, ms_since_epoch(as_int=True))
     self.cluster_name = self.cluster.name
-    self.ports = [80]
+    self.ports = [443]
     self.replicas = 3
 
     self.envs = api_deploy_envs(self.repo, cluster=self.cluster, dataset=self.dataset)
@@ -86,7 +86,7 @@ class ApiDeploy(AbstractDeploy):
 
       logger.info('Successfully deployed to API.', stream=self.log_stream_key, stage=self.stage)
 
-      logger.info('Prediction live at https://{}/api/predict'.format(self.repo.domain),
+      logger.info('Prediction live at wss://{}'.format(self.repo.domain),
                   stream=self.log_stream_key,
                   stage=self.stage,
                   last_entry=True)
@@ -98,5 +98,5 @@ class ApiDeploy(AbstractDeploy):
       sleep(3)  # wait a hot sec for deployment to be absolutely registered
 
       # Set up ELB and CNAME record for deployment if not already there
-      publicize_pred_svc = PublicizePrediction(deployment_uid=self.deployment_uid, port=443)
+      publicize_pred_svc = PublicizePrediction(deployment_uid=self.deployment_uid, port=443, target_port=443)
       job_queue.add(publicize_pred_svc.perform, meta={'deployment': self.deployment_uid})

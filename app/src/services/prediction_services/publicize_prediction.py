@@ -99,7 +99,7 @@ class PublicizePrediction(object):
 
     logger.info('Publication successful.', stream=self.log_stream_key, stage=self.stage)
 
-    logger.info('Prediction live at https://{}/api/predict'.format(self.repo.domain),
+    logger.info('Prediction live at wss://{}'.format(self.repo.domain),
                 stream=self.log_stream_key,
                 stage=self.stage,
                 last_entry=True)
