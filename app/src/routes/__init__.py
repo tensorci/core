@@ -12,3 +12,4 @@ from repo import *
 from user import *
 from env import *
 from graph import *
+from demo import *
