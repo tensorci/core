@@ -677,3 +677,106 @@ class RestfulRepos(Resource):
         resp['graphs'] = formatted_graphs(deployment.graphs)
 
     return resp
+
+
+@namespace.route('/repos_with_prediction')
+class RestfulRepos(Resource):
+  """
+  Get repos for a team with the prediction for the first repo
+  """
+  @namespace.doc('get_tensorci_repos_for_provider_user_for_team_and_prediction')
+  def get(self):
+    provider_user = current_provider_user()
+
+    if not provider_user:
+      return UNAUTHORIZED
+
+    # Parse input info
+    args = dict(request.args.items())
+    team_slug = args.get('team')
+    repo_slug = args.get('repo')
+
+    # Get team
+    if not team_slug:
+      logger.error('No team provided during request for team repos')
+      return INVALID_INPUT_PAYLOAD
+
+    team_slug = team_slug.lower()
+    team = dbi.find_one(Team, {'slug': team_slug})
+
+    if not team:
+      return TEAM_NOT_FOUND
+
+    # Get all repos for team, ordered by slug
+    repos = [r for r in provider_user.repos() if r.team_id == team.id]
+
+    formatted_repos = [{
+      'slug': repo.slug,
+      'name': repo.name
+    } for repo in repos]
+
+    formatted_repos.sort(key=lambda x: x['slug'])
+
+    resp = {
+      'repos': formatted_repos
+    }
+
+    # if repo_slug provided to get extra data for, try to find/use this repo.
+    if repo_slug:
+      repo = [r for r in repos if r.slug == repo_slug.lower()]
+
+      # If repo not part of team, just return early
+      if not repo:
+        return resp
+    else:
+      # if no repo_slug provided, just use the first repo ordered by slug
+      repo = [r for r in repos if r.slug == formatted_repos[0]['slug']]
+
+    repo = repo[0]
+    resp['repo'] = repo.slug
+    resp['prediction'] = repo.prediction_info()
+
+    return resp, 200
+
+
+@namespace.route('/repo/prediction_info')
+class RestfulRepos(Resource):
+  """
+  Get prediction info for a repo
+  """
+  @namespace.doc('get_tensorci_repos_for_provider_user_for_team_and_prediction')
+  def get(self):
+    provider_user = current_provider_user()
+
+    if not provider_user:
+      return UNAUTHORIZED
+
+    # Parse input info
+    args = dict(request.args.items())
+    team_slug = args.get('team')
+    repo_slug = args.get('repo')
+
+    # Get team
+    if not team_slug:
+      logger.error('No team provided during request for team repos')
+      return INVALID_INPUT_PAYLOAD
+
+    team_slug = team_slug.lower()
+    team = dbi.find_one(Team, {'slug': team_slug})
+
+    if not team:
+      return TEAM_NOT_FOUND
+
+    # Get all repos for team, ordered by slug
+    repo = [r for r in provider_user.repos() if r.team_id == team.id and r.slug == repo_slug]
+
+    if not repo:
+      return REPO_NOT_FOUND
+
+    repo = repo[0]
+
+    resp = {
+      'prediction': repo.prediction_info()
+    }
+
+    return resp, 200

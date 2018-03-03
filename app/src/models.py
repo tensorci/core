@@ -71,7 +71,7 @@ from sqlalchemy.dialects.postgresql import JSON
 from sqlalchemy.types import Text
 from src import db, dbi, logger
 from sqlalchemy.orm import joinedload
-from helpers import auth_util, repo_user_roles, instance_types, user_verification_statuses, providers, deployment_intents
+from helpers import auth_util, repo_user_roles, instance_types, user_verification_statuses, providers, deployment_intents, utcnow_to_ts
 from helpers.deployment_statuses import ds
 from uuid import uuid4
 from operator import attrgetter
@@ -79,6 +79,7 @@ from config import config
 from github import Github
 from src.utils import clusters
 from src.utils.slug import to_slug
+from src.utils.pyredis import redis
 
 
 class Provider(db.Model):
@@ -365,6 +366,34 @@ class Repo(db.Model):
     return {
       'train_envs': sorted_envs(train_envs),
       'api_envs': sorted_envs(api_envs)
+    }
+
+  def request_count_key(self):
+    return 'request-count:{}'.format(self.uid)
+
+  def request_count(self):
+    try:
+      curr_req_count = int(redis.get(self.request_count_key()))
+    except:
+      curr_req_count = 0
+
+    return curr_req_count
+
+  def prediction_info(self):
+    if not self.deploy_name:
+      return None
+
+    latest_dep = None
+    for dep in self.ordered_deployments():
+      if dep.intent == deployment_intents.SERVE:
+        latest_dep = dep
+
+    if not latest_dep:
+      return None
+
+    return {
+      'last_updated': utcnow_to_ts(latest_dep.intent_updated_at),
+      'pred_count': self.request_count()
     }
 
 
