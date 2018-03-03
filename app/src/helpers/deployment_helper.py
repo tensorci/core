@@ -227,5 +227,6 @@ def api_deploy_envs(repo, cluster=None, dataset=None):
     'REPO_UID': repo.uid,
     'CLIENT_ID': repo.client_id,
     'CLIENT_SECRET': repo.client_secret,
-    'INTERNAL_MSG_TOKEN': repo.internal_msg_token
+    'INTERNAL_MSG_TOKEN': repo.internal_msg_token,
+    'REDIS_URL': os.environ.get('REDIS_URL')
   }

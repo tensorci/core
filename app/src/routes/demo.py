@@ -5,6 +5,7 @@ from operator import attrgetter
 from src.routes import namespace
 from src import dbi, logger
 from src.models import ProviderUser
+from src.helpers import auth_util, url_encode_str
 from src.api_responses.errors import *
 from src.api_responses.success import *
 
@@ -55,7 +56,14 @@ class DemoAuth(Resource):
 
     user = provider_user.user
 
+    # Create new Session for provider_user
+    session = provider_user.create_session()
+
+    # Create redirect response with session token
+    token = url_encode_str(auth_util.serialize_token(session.id, session.token))
+
     resp = {
+      'token': token,
       'user': {
         'username': provider_user.username,
         'icon': provider_user.icon
