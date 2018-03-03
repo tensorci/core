@@ -384,7 +384,7 @@ class Repo(db.Model):
       return None
 
     latest_dep = None
-    for dep in self.ordered_deployments():
+    for dep in sorted(self.deployments, key=attrgetter('intent_updated_at')):
       if dep.intent == deployment_intents.SERVE:
         latest_dep = dep
 
