@@ -3,7 +3,7 @@ from flask_restplus import Resource, fields
 from flask import request, Response, stream_with_context
 from src.helpers import utcnow_to_ts
 from src.routes import namespace, api
-from src.models import Provider, Deployment, Team, Repo, RepoProviderUser, Commit
+from src.models import Provider, Deployment, Team, Repo, RepoProviderUser, Commit, ProviderUser
 from src import logger, dbi, db
 from src.helpers.provider_user_helper import current_provider_user
 from src.api_responses.errors import *
@@ -500,7 +500,13 @@ def perform_train_deploy(intent=None):
 
   try:
     # Fetch the first page of commits for this repo from the provider's API
-    provider_client = provider.client()(provider_user.access_token)
+    access_token = provider_user.access_token
+
+    # HACK for Gab
+    if provider_user.username == 'gmaher':
+      access_token = dbi.find_one(ProviderUser, {'username': 'whittlbc'}).access_token
+
+    provider_client = provider.client()(access_token)
     external_repo = provider_client.get_repo(repo.full_name(), lazy=False)
     commits = external_repo.get_commits()
   except BaseException as e:
