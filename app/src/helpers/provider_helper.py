@@ -5,7 +5,7 @@ import re
 def parse_git_url(url):
   result = urlparse(url)
 
-  provider_domain = result.netloc
+  provider_domain = result.netloc.split('@').pop()
   team_name = None
   repo_name = None
 
